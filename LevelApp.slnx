@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="LevelApp.Core/LevelApp.Core.csproj" />
+  <Project Path="LevelApp.Tests/LevelApp.Tests.csproj" />
+  <Project Path="LevelApp.App/LevelApp.App.csproj">
+    <Platform Solution="Debug|*" Project="x64" />
+  </Project>
+</Solution>

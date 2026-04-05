@@ -1,0 +1,118 @@
+<Page
+    x:Class="LevelApp.App.Views.CorrectionView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- ── Header: progress text ──────────────────────────────────────── -->
+        <Grid Grid.Row="0" Padding="24,16,24,12">
+            <TextBlock Text="{x:Bind ViewModel.ProgressText, Mode=OneWay}"
+                       Style="{StaticResource SubtitleTextBlockStyle}"
+                       VerticalAlignment="Center"/>
+        </Grid>
+
+        <!-- ── Main content ───────────────────────────────────────────────── -->
+        <Grid Grid.Row="1"
+              ColumnDefinitions="*,320"
+              Padding="24,0,24,24"
+              ColumnSpacing="24">
+
+            <!-- Left: grid map -->
+            <Border Grid.Column="0"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    CornerRadius="8"
+                    Padding="20">
+                <ScrollViewer HorizontalScrollMode="Auto"
+                              VerticalScrollMode="Auto"
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Auto">
+                    <Canvas x:Name="GridCanvas"/>
+                </ScrollViewer>
+            </Border>
+
+            <!-- Right: orientation + instruction + original reading + new reading -->
+            <StackPanel Grid.Column="1"
+                        Spacing="16">
+
+                <!-- Orientation badge -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0"
+                            Width="56" Height="56"
+                            CornerRadius="28"
+                            Background="{ThemeResource AccentFillColorDefaultBrush}">
+                        <TextBlock Text="{x:Bind ViewModel.OrientationArrow, Mode=OneWay}"
+                                   FontSize="28"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Foreground="White"/>
+                    </Border>
+
+                    <TextBlock Grid.Column="1"
+                               Text="Instrument orientation"
+                               VerticalAlignment="Center"
+                               Margin="12,0,0,0"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                </Grid>
+
+                <!-- Instruction card -->
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        CornerRadius="8"
+                        Padding="16">
+                    <TextBlock Text="{x:Bind ViewModel.CurrentInstructionText, Mode=OneWay}"
+                               TextWrapping="Wrap"
+                               Style="{StaticResource BodyTextBlockStyle}"/>
+                </Border>
+
+                <!-- Original reading -->
+                <Border Background="{ThemeResource SystemFillColorCautionBackgroundBrush}"
+                        CornerRadius="8"
+                        Padding="12">
+                    <TextBlock Text="{x:Bind ViewModel.OriginalReadingText, Mode=OneWay}"
+                               Style="{StaticResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource SystemFillColorCautionBrush}"/>
+                </Border>
+
+                <!-- New reading entry -->
+                <NumberBox Header="New reading (mm/m)"
+                           PlaceholderText="Enter corrected reading"
+                           Value="{x:Bind ViewModel.Reading, Mode=TwoWay}"
+                           SmallChange="0.001"
+                           LargeChange="0.01"
+                           SpinButtonPlacementMode="Compact"
+                           IsEnabled="{x:Bind ViewModel.IsInputEnabled, Mode=OneWay}"/>
+
+                <!-- Accept button -->
+                <Button Content="Accept Reading"
+                        Command="{x:Bind ViewModel.AcceptReadingCommand}"
+                        Style="{StaticResource AccentButtonStyle}"
+                        HorizontalAlignment="Stretch"
+                        IsEnabled="{x:Bind ViewModel.IsInputEnabled, Mode=OneWay}"/>
+
+            </StackPanel>
+        </Grid>
+
+        <!-- ── Calculating overlay ────────────────────────────────────────── -->
+        <Border Grid.Row="2"
+                Visibility="{x:Bind ViewModel.CalculatingVisibility, Mode=OneWay}"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                CornerRadius="8"
+                Margin="24,0,24,24"
+                Padding="16">
+            <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
+                <ProgressRing IsActive="True" Width="24" Height="24"/>
+                <TextBlock Text="Recalculating surface map…"
+                           VerticalAlignment="Center"
+                           Style="{StaticResource BodyTextBlockStyle}"/>
+            </StackPanel>
+        </Border>
+
+    </Grid>
+
+</Page>

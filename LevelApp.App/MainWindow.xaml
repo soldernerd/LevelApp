@@ -1,0 +1,15 @@
+<Window
+    x:Class="LevelApp.App.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="LevelApp">
+
+    <!--
+        RootFrame is the single navigation host for the whole application.
+        The NavigationService wires to this Frame after construction.
+        All three workflow views (ProjectSetup, Measurement, Results) are
+        pushed onto this Frame in sequence.
+    -->
+    <Frame x:Name="RootFrame" />
+
+</Window>

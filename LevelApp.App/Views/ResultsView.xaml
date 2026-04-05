@@ -1,0 +1,113 @@
+<Page
+    x:Class="LevelApp.App.Views.ResultsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- ── Header ─────────────────────────────────────────────────────── -->
+        <Grid Grid.Row="0" Padding="24,16,24,12"
+              ColumnDefinitions="*,Auto,Auto">
+
+            <TextBlock Grid.Column="0"
+                       Text="{x:Bind ViewModel.ProjectName, Mode=OneWay}"
+                       Style="{StaticResource TitleTextBlockStyle}"
+                       VerticalAlignment="Center"/>
+
+            <Button Grid.Column="1"
+                    Content="Save Project"
+                    Command="{x:Bind ViewModel.SaveProjectCommand}"
+                    Margin="0,0,8,0"
+                    VerticalAlignment="Center"/>
+
+            <Button Grid.Column="2"
+                    Content="New Measurement"
+                    Command="{x:Bind ViewModel.NewMeasurementCommand}"
+                    VerticalAlignment="Center"/>
+        </Grid>
+
+        <!-- ── Main content ───────────────────────────────────────────────── -->
+        <Grid Grid.Row="1"
+              ColumnDefinitions="*,300"
+              Padding="24,0,24,24"
+              ColumnSpacing="24">
+
+            <!-- Left: 3D surface plot -->
+            <Border Grid.Column="0"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    CornerRadius="8"
+                    Padding="20">
+                <ScrollViewer HorizontalScrollMode="Auto"
+                              VerticalScrollMode="Auto"
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Auto">
+                    <ContentControl x:Name="PlotContainer"
+                                    HorizontalContentAlignment="Left"
+                                    VerticalContentAlignment="Top"/>
+                </ScrollViewer>
+            </Border>
+
+            <!-- Right: statistics + flagged steps + correction -->
+            <StackPanel Grid.Column="1" Spacing="16">
+
+                <!-- Flatness card -->
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        CornerRadius="8"
+                        Padding="16">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Flatness (peak-to-valley)"
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <TextBlock Text="{x:Bind ViewModel.FlatnessText, Mode=OneWay}"
+                                   Style="{StaticResource SubtitleTextBlockStyle}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Sigma card -->
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        CornerRadius="8"
+                        Padding="16">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Residual RMS"
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <TextBlock Text="{x:Bind ViewModel.SigmaText, Mode=OneWay}"
+                                   Style="{StaticResource SubtitleTextBlockStyle}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Flagged steps card -->
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        CornerRadius="8"
+                        Padding="16">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="{x:Bind ViewModel.FlaggedCountText, Mode=OneWay}"
+                                   Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                        <ItemsControl ItemsSource="{x:Bind ViewModel.FlaggedSteps, Mode=OneWay}"
+                                      Visibility="{x:Bind ViewModel.FlaggedListVisibility, Mode=OneWay}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Label}"
+                                               Style="{StaticResource CaptionTextBlockStyle}"
+                                               TextWrapping="Wrap"
+                                               Margin="0,2,0,2"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- Start Correction Session button — visible only when steps are flagged -->
+                <Button Content="Start Correction Session"
+                        Command="{x:Bind ViewModel.StartCorrectionSessionCommand}"
+                        Visibility="{x:Bind ViewModel.CorrectButtonVisibility, Mode=OneWay}"
+                        Style="{StaticResource AccentButtonStyle}"
+                        HorizontalAlignment="Stretch"/>
+
+            </StackPanel>
+        </Grid>
+
+    </Grid>
+
+</Page>

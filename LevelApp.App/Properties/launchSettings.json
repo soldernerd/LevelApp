@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "LevelApp.App": {
+      "commandName": "Project",
+      "nativeDebugging": false
+    }
+  }
+}
