@@ -18,15 +18,14 @@ The software guides the operator through a defined measurement procedure, acquir
 - **Project persistence** — projects are saved as `.levelproj` files (JSON), human-readable and version-control friendly
 - **Open existing project** — load a `.levelproj` file at any time; if the file contains all readings but no computed result the solver runs automatically on load
 - **Preferences** — configurable default project folder, remembered across sessions
+- **About dialog** — Help → About LevelApp shows the current version, copyright, license, and links to the license text and GitHub repository
 - **Extensible architecture** — geometry modules, measurement strategies, instrument providers and display modules are all plugin-style interfaces; new object types and instruments can be added without touching existing code
 
 ---
 
 ## Screenshots
 
-| Project Setup | Guided Measurement | Results |
-|---|---|---|
-| ![Setup](docs/screenshots/setup.png) | ![Measurement](docs/screenshots/measurement.png) | ![Results](docs/screenshots/results.png) |
+*(Screenshots coming soon.)*
 
 ---
 

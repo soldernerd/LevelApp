@@ -25,6 +25,7 @@ public static class ProjectSerializer
         var file = new LevelProjectFile
         {
             SchemaVersion = CurrentSchemaVersion,
+            AppVersion    = Core.AppVersion.Full,
             Project       = project
         };
         return JsonSerializer.Serialize(file, Options);
@@ -48,9 +49,10 @@ public static class ProjectSerializer
     }
 }
 
-/// <summary>Root wrapper that carries the schema version alongside the project.</summary>
+/// <summary>Root wrapper that carries schema/app version alongside the project.</summary>
 internal sealed class LevelProjectFile
 {
     public string   SchemaVersion { get; set; } = ProjectSerializer.CurrentSchemaVersion;
+    public string?  AppVersion    { get; set; }
     public Project? Project       { get; set; }
 }

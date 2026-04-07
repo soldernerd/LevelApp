@@ -4,7 +4,7 @@
 
 > Living document. Update as the project evolves.
 
-> Last updated: 2026-04-07 *(revised to reflect post-WP01 bug fixes)*
+> Last updated: 2026-04-07 *(revised to reflect WP0.02: versioning & About dialog)*
 
 
 
@@ -59,6 +59,7 @@ The industry reference for this domain is **Wyler AG, Winterthur** (wylerag.com)
 LevelApp/
 ├── LevelApp.slnx
 ├── LevelApp.Core/                 ← No UI dependencies. Fully unit-testable.
+│   ├── AppVersion.cs              ← Single source of truth for Major.Minor.Patch
 │   ├── Interfaces/
 │   │   ├── IGeometryCalculator.cs
 │   │   ├── IGeometryModule.cs
@@ -106,7 +107,8 @@ LevelApp/
 │   │   ├── CorrectionView.xaml
 │   │   └── Dialogs/
 │   │       ├── PreferencesDialog.xaml   ← default project folder setting
-│   │       └── NewMeasurementDialog.xaml
+│   │       ├── NewMeasurementDialog.xaml
+│   │       └── AboutDialog.xaml         ← version, copyright, license, GitHub link
 │   ├── ViewModels/
 │   │   ├── ViewModelBase.cs       ← inherits ObservableObject
 │   │   ├── MainViewModel.cs       ← shell state: window title, dirty flag, unsaved-changes dialog
@@ -443,6 +445,7 @@ User preferences (currently: default project folder) are persisted to `%LOCALAPP
 ```json
 {
   "schemaVersion": "1.0",
+  "appVersion": "0.2.1",
   "project": {
     "id": "<uuid>",
     "name": "Granite plate workshop 3",
@@ -612,6 +615,13 @@ The vertical exaggeration (`maxZPixels`) is computed per render as `max(10, (col
 14. `CorrectionView` — guided correction session
 15. `CorrectionRound` storage and recalculation
 
+### WP0.02 — Versioning & About ✓ Complete (v0.2.1)
+- `AppVersion.cs` — single source of truth for `Major.Minor.Patch`
+- `appVersion` field written to `.levelproj` root at save time
+- `Help > About LevelApp...` menu item and `AboutDialog`
+- Assembly/file version metadata in `.csproj`
+- Commit message convention: `[vX.Y.Z] description`
+
 ### Future phases
 - `UnionJackStrategy`
 - `SurfacePlateModule` (concrete `IGeometryModule` implementation; enables strategy/module plugin registry)
@@ -627,7 +637,57 @@ The vertical exaggeration (`maxZPixels`) is computed per render as `max(10, (col
 
 
 
-## 13. Open Questions
+## 13. Versioning Convention
+
+
+
+`LevelApp.Core/AppVersion.cs` is the single source of truth for the version number. **Never hardcode a version string anywhere else** — not in XAML, not in C#, not in comments.
+
+
+
+```csharp
+public static class AppVersion
+{
+    public const int Major = 0;
+    public const int Minor = 2;
+    public const int Patch = 1;
+
+    public static string Full    => $"{Major}.{Minor}.{Patch}";
+    public static string Display => $"v{Full}";
+}
+```
+
+
+
+`LevelApp.App/LevelApp.App.csproj` carries `<Version>`, `<AssemblyVersion>`, and `<FileVersion>` kept in sync manually with `AppVersion.cs`.
+
+
+
+Every saved `.levelproj` file records the writing app version as `"appVersion"` at the root level (informational only — not validated on load).
+
+
+
+### Commit message format
+
+```
+[vX.Y.Z] Short imperative description
+```
+
+Examples:
+```
+[v0.2.1] WP0.02: versioning, appVersion in project file, About dialog
+[v0.3.0] WP0.03: ...
+```
+
+Bump `AppVersion.cs` **before** committing so the delivered commit already carries the correct version.
+
+
+
+---
+
+
+
+## 14. Open Questions
 
 
 
@@ -643,7 +703,7 @@ The vertical exaggeration (`maxZPixels`) is computed per render as `max(10, (col
 
 
 
-## 14. Model Switching Notes
+## 15. Model Switching Notes
 
 
 
@@ -651,10 +711,6 @@ When starting a new session with an AI assistant, paste this document as context
 
 
 
-> "I'm building LevelApp — a C# WinUI 3 Windows app for precision level measurement evaluation. The architecture document is below. We are currently at build step [N]. Please continue from where we left off."
-
-
-
-Then paste this document.
+> 'I'm building LevelApp — a C# WinUI 3 Windows app for precision level measurement evaluation. The architecture document is below. New features are implemented from work package files in docs/workpackages/. Please read both before starting any work.'
 
 

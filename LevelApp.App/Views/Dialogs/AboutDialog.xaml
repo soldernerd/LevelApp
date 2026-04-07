@@ -1,0 +1,29 @@
+<ContentDialog
+    x:Class="LevelApp.App.Views.Dialogs.AboutDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="About LevelApp"
+    CloseButtonText="Close"
+    DefaultButton="Close">
+
+    <StackPanel Spacing="8" MinWidth="320">
+
+        <TextBlock x:Name="VersionText"
+                   Style="{StaticResource BodyTextBlockStyle}"/>
+
+        <TextBlock Text="Copyright © 2026 Lukas Fässler"
+                   Style="{StaticResource BodyTextBlockStyle}"/>
+
+        <TextBlock Text="Licensed under the GNU General Public License v3.0"
+                   Style="{StaticResource BodyTextBlockStyle}"/>
+
+        <StackPanel Orientation="Horizontal" Spacing="16" Margin="0,8,0,0">
+            <HyperlinkButton Content="View license"
+                             NavigateUri="https://www.gnu.org/licenses/gpl-3.0.html"/>
+            <HyperlinkButton Content="View on GitHub"
+                             NavigateUri="https://github.com/soldernerd/LevelApp"/>
+        </StackPanel>
+
+    </StackPanel>
+
+</ContentDialog>

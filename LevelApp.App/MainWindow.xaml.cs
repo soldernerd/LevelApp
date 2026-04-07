@@ -71,4 +71,13 @@ public sealed partial class MainWindow : Window
         };
         await dialog.ShowAsync();
     }
+
+    private async void OnAboutClicked(object sender, RoutedEventArgs e)
+    {
+        var dialog = new AboutDialog
+        {
+            XamlRoot = RootFrame.XamlRoot
+        };
+        await dialog.ShowAsync();
+    }
 }

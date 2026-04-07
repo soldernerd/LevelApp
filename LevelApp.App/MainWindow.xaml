@@ -27,6 +27,11 @@
                                 Click="OnPreferencesClicked"/>
             </MenuBarItem>
 
+            <MenuBarItem Title="Help">
+                <MenuFlyoutItem Text="About LevelApp..."
+                                Click="OnAboutClicked"/>
+            </MenuBarItem>
+
         </MenuBar>
 
         <!-- ── Navigation host ───────────────────────────────────────────────── -->
