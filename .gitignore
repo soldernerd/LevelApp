@@ -92,3 +92,6 @@ coverage/
 *.tmp
 *.temp
 ~$*
+
+# Windows shortcuts
+*.lnk
