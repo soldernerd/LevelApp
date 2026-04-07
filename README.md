@@ -16,6 +16,8 @@ The software guides the operator through a defined measurement procedure, acquir
 - **3D surface plot** — colour-mapped dot-and-wire visualisation of the fitted height map
 - **Flatness result** — peak-to-valley flatness value and residual RMS displayed alongside the plot
 - **Project persistence** — projects are saved as `.levelproj` files (JSON), human-readable and version-control friendly
+- **Open existing project** — load a `.levelproj` file at any time; if the file contains all readings but no computed result the solver runs automatically on load
+- **Preferences** — configurable default project folder, remembered across sessions
 - **Extensible architecture** — geometry modules, measurement strategies, instrument providers and display modules are all plugin-style interfaces; new object types and instruments can be added without touching existing code
 
 ---
@@ -58,7 +60,7 @@ git clone https://github.com/soldernerd/LevelApp.git
 cd LevelApp
 ```
 
-Open `LevelApp.sln` in Visual Studio 2022 and build the solution (`Ctrl+Shift+B`). Run the `App` project.
+Open `LevelApp.slnx` in Visual Studio 2022 and build the solution (`Ctrl+Shift+B`). Run the `LevelApp.App` project.
 
 ### Create a project
 
@@ -94,18 +96,20 @@ After all steps are complete the app runs the least-squares solver and displays:
 
 ```
 LevelApp/
-├── Core/                        # No UI dependencies — fully unit-testable
+├── LevelApp.Core/               # No UI dependencies — fully unit-testable
 │   ├── Models/                  # Project, Session, Step, Result data models
 │   ├── Interfaces/              # IGeometryModule, IMeasurementStrategy,
 │   │                            # IInstrumentProvider, IResultDisplay
-│   └── Geometry/SurfacePlate/   # SurfacePlateModule, FullGridStrategy,
-│                                # SurfacePlateCalculator
-├── Instruments/
-│   └── ManualEntry/             # ManualEntryProvider (keyboard input)
-├── App/                         # WinUI 3 application
-│   ├── Views/                   # ProjectSetupView, MeasurementView, ResultsView
+│   ├── Geometry/SurfacePlate/   # FullGridStrategy, SurfacePlateCalculator
+│   └── Serialization/           # ProjectSerializer, ObjectValueConverter,
+│                                # OrientationConverter
+├── LevelApp.App/                # WinUI 3 application
+│   ├── Views/                   # ProjectSetupView, MeasurementView,
+│   │                            # ResultsView, CorrectionView, Dialogs/
 │   ├── ViewModels/              # MVVM view models
+│   ├── Services/                # ProjectFileService, SettingsService
 │   └── DisplayModules/          # SurfacePlot3DDisplay
+├── LevelApp.Tests/              # xUnit unit tests (Core only)
 └── docs/
     └── architecture.md          # Full architecture and design reference
 ```

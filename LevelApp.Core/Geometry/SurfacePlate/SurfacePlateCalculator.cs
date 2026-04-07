@@ -6,6 +6,13 @@ namespace LevelApp.Core.Geometry.SurfacePlate;
 /// <summary>
 /// Least-squares surface fitting for a rectangular grid measured with a precision level.
 ///
+/// Parameter convention
+/// ────────────────────
+/// columnsCount / rowsCount in ObjectDefinition.Parameters are the number of grid
+/// *nodes* in each axis, not the number of intervals.
+/// A plate with columnsCount=4, rowsCount=3 has 4×3 = 12 grid nodes,
+/// 3 column intervals, and 2 row intervals.
+///
 /// Each step contributes one linear equation:  h[to] − h[from] = reading × stepLen / 1000
 ///   (reading in mm/m; stepLen in mm; delta in mm)
 ///
@@ -14,25 +21,25 @@ namespace LevelApp.Core.Geometry.SurfacePlate;
 /// reference by adding a unit constraint row.  Gaussian elimination with partial pivoting
 /// solves the resulting N×N system.
 ///
-/// Degrees of freedom = M − (N − 1), where N = cols × rows, M = number of steps.
+/// Degrees of freedom = M − (N − 1), where N = columnsCount × rowsCount, M = number of steps.
 /// Per-step residuals drive outlier detection: flag steps where |r| > k·σ.
 /// </summary>
 public sealed class SurfacePlateCalculator : IGeometryCalculator
 {
-    private readonly int _cols;
-    private readonly int _rows;
-    private readonly double _stepLenX;       // mm between adjacent columns
-    private readonly double _stepLenY;       // mm between adjacent rows
-    private readonly double _sigmaThreshold; // k for outlier detection
+    private readonly int    _nodeCols;        // number of grid node columns = columnsCount
+    private readonly int    _nodeRows;        // number of grid node rows    = rowsCount
+    private readonly double _stepLenX;        // mm between adjacent column nodes
+    private readonly double _stepLenY;        // mm between adjacent row nodes
+    private readonly double _sigmaThreshold;  // k for outlier detection
 
     public SurfacePlateCalculator(ObjectDefinition definition, double sigmaThreshold = 2.5)
     {
-        _cols = Convert.ToInt32(definition.Parameters["columnsCount"]);
-        _rows = Convert.ToInt32(definition.Parameters["rowsCount"]);
+        _nodeCols = Convert.ToInt32(definition.Parameters["columnsCount"]);
+        _nodeRows = Convert.ToInt32(definition.Parameters["rowsCount"]);
         double widthMm  = Convert.ToDouble(definition.Parameters["widthMm"]);
         double heightMm = Convert.ToDouble(definition.Parameters["heightMm"]);
-        _stepLenX = widthMm  / (_cols - 1);
-        _stepLenY = heightMm / (_rows - 1);
+        _stepLenX = widthMm  / (_nodeCols - 1);
+        _stepLenY = heightMm / (_nodeRows - 1);
         _sigmaThreshold = sigmaThreshold;
     }
 
@@ -47,7 +54,7 @@ public sealed class SurfacePlateCalculator : IGeometryCalculator
             throw new InvalidOperationException(
                 "All steps must have a reading before the surface can be calculated.");
 
-        int n = _rows * _cols;
+        int n = _nodeRows * _nodeCols;  // total grid nodes
         int m = steps.Count;
 
         // ── Build normal equations AᵀA h = Aᵀb ──────────────────────────────
@@ -101,13 +108,14 @@ public sealed class SurfacePlateCalculator : IGeometryCalculator
             .Select(x => x.Index)
             .ToList();
 
-        // ── Height map  [row][col] ────────────────────────────────────────────
-        double[][] heightMap = new double[_rows][];
-        for (int row = 0; row < _rows; row++)
+        // ── Height map  [nodeRow][nodeCol] ───────────────────────────────────
+        // Dimensions: _nodeRows × _nodeCols  (one entry per grid node).
+        double[][] heightMap = new double[_nodeRows][];
+        for (int row = 0; row < _nodeRows; row++)
         {
-            heightMap[row] = new double[_cols];
-            for (int col = 0; col < _cols; col++)
-                heightMap[row][col] = h[row * _cols + col];
+            heightMap[row] = new double[_nodeCols];
+            for (int col = 0; col < _nodeCols; col++)
+                heightMap[row][col] = h[row * _nodeCols + col];
         }
 
         return new SurfaceResult
@@ -131,7 +139,7 @@ public sealed class SurfacePlateCalculator : IGeometryCalculator
     /// </summary>
     private (int from, int to, double stepLen) NodeIndices(MeasurementStep step)
     {
-        int fromIdx = step.GridRow * _cols + step.GridCol;
+        int fromIdx = step.GridRow * _nodeCols + step.GridCol;
 
         (int toRow, int toCol) = step.Orientation switch
         {
@@ -142,7 +150,7 @@ public sealed class SurfacePlateCalculator : IGeometryCalculator
             _ => throw new ArgumentException($"Unrecognised orientation: {step.Orientation}")
         };
 
-        int toIdx = toRow * _cols + toCol;
+        int toIdx = toRow * _nodeCols + toCol;
         double stepLen = step.Orientation is Orientation.East or Orientation.West
             ? _stepLenX : _stepLenY;
 

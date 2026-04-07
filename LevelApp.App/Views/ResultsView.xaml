@@ -8,7 +8,7 @@
 
         <!-- ── Header ─────────────────────────────────────────────────────── -->
         <Grid Grid.Row="0" Padding="24,16,24,12"
-              ColumnDefinitions="*,Auto,Auto">
+              ColumnDefinitions="*,Auto">
 
             <TextBlock Grid.Column="0"
                        Text="{x:Bind ViewModel.ProjectName, Mode=OneWay}"
@@ -16,14 +16,8 @@
                        VerticalAlignment="Center"/>
 
             <Button Grid.Column="1"
-                    Content="Save Project"
-                    Command="{x:Bind ViewModel.SaveProjectCommand}"
-                    Margin="0,0,8,0"
-                    VerticalAlignment="Center"/>
-
-            <Button Grid.Column="2"
                     Content="New Measurement"
-                    Command="{x:Bind ViewModel.NewMeasurementCommand}"
+                    Click="OnNewMeasurementClicked"
                     VerticalAlignment="Center"/>
         </Grid>
 

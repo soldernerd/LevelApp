@@ -1,18 +1,18 @@
-\# LevelApp — Project Architecture \& Design Reference
+# LevelApp — Project Architecture & Design Reference
 
 
 
 > Living document. Update as the project evolves.
 
-> Last updated: 2026-04-04
+> Last updated: 2026-04-07 *(revised to reflect post-WP01 bug fixes)*
 
 
 
-\---
+---
 
 
 
-\## 1. Purpose
+## 1. Purpose
 
 
 
@@ -20,829 +20,630 @@ A Windows desktop application for evaluating precision electronic level measurem
 
 
 
-The industry reference for this domain is \*\*Wyler AG, Winterthur\*\* (wylerag.com) and their wylerSOFT suite.
+The industry reference for this domain is **Wyler AG, Winterthur** (wylerag.com) and their wylerSOFT suite.
 
 
 
-\---
+---
 
 
 
-\## 2. Technology Stack
+## 2. Technology Stack
 
 
 
 | Concern | Choice | Rationale |
-
 |---|---|---|
-
-| Language | C# (.NET 8/9) | Best WinUI 3 ecosystem support |
-
-| UI Framework | WinUI 3 / Windows App SDK | Modern Windows-native, Fluent Design, access to WinRT APIs |
-
+| Language | C# (.NET 8) | Best WinUI 3 ecosystem support |
+| UI Framework | WinUI 3 / Windows App SDK 1.8 | Modern Windows-native, Fluent Design, access to WinRT APIs |
 | IDE | Visual Studio 2022 Community | Free, full WinUI 3 tooling, XAML designer |
-
+| Solution format | `.slnx` | New Visual Studio solution format |
 | UI Pattern | MVVM | Mandatory for WinUI 3; decouples UI from logic |
-
+| MVVM helpers | CommunityToolkit.Mvvm 8.3.2 | Source-generated `ObservableProperty`, `RelayCommand`, `ObservableObject` |
+| Dependency injection | Microsoft.Extensions.DependencyInjection 8.0.1 | ViewModels and services resolved from `App.Services` container |
 | Persistence | JSON via System.Text.Json | Human-readable, no dependencies, diffable |
-
 | Bluetooth (future) | Windows.Devices.Bluetooth (WinRT) | First-class Windows API, no third-party libs needed |
-
 | USB HID (future) | Windows.Devices.HumanInterfaceDevice (WinRT) | Same rationale |
 
 
 
-\---
+---
 
 
 
-\## 3. Solution Structure
+## 3. Solution Structure
 
 
 
 ```
-
 LevelApp/
-
-├── LevelApp.sln
-
-├── Core/                          ← No UI dependencies. Fully unit-testable.
-
-│   ├── Models/
-
-│   │   ├── Project.cs
-
-│   │   ├── ObjectDefinition.cs
-
-│   │   ├── MeasurementSession.cs
-
-│   │   ├── MeasurementRound.cs
-
-│   │   ├── MeasurementStep.cs
-
-│   │   ├── CorrectionRound.cs
-
-│   │   └── SurfaceResult.cs
-
+├── LevelApp.slnx
+├── LevelApp.Core/                 ← No UI dependencies. Fully unit-testable.
 │   ├── Interfaces/
-
+│   │   ├── IGeometryCalculator.cs
 │   │   ├── IGeometryModule.cs
-
 │   │   ├── IMeasurementStrategy.cs
-
 │   │   ├── IInstrumentProvider.cs
-
 │   │   └── IResultDisplay.cs
-
-│   └── Geometry/
-
-│       └── SurfacePlate/
-
-│           ├── SurfacePlateModule.cs
-
-│           ├── Strategies/
-
-│           │   ├── FullGridStrategy.cs
-
-│           │   └── UnionJackStrategy.cs
-
-│           └── SurfacePlateCalculator.cs
-
-├── Instruments/
-
-│   └── ManualEntry/
-
-│       └── ManualEntryProvider.cs     ← First instrument provider
-
-├── App/                               ← WinUI 3 application
-
+│   ├── Models/
+│   │   ├── Project.cs
+│   │   ├── ObjectDefinition.cs
+│   │   ├── MeasurementSession.cs
+│   │   ├── MeasurementRound.cs
+│   │   ├── MeasurementStep.cs
+│   │   ├── CorrectionRound.cs     ← also contains ReplacedStep
+│   │   └── SurfaceResult.cs
+│   ├── Geometry/
+│   │   └── SurfacePlate/
+│   │       ├── SurfacePlateCalculator.cs
+│   │       └── Strategies/
+│   │           └── FullGridStrategy.cs
+│   ├── Instruments/
+│   │   └── ManualEntry/
+│   │       └── ManualEntryProvider.cs
+│   └── Serialization/
+│       ├── ProjectSerializer.cs
+│       ├── ObjectValueConverter.cs
+│       └── OrientationConverter.cs   ← handles string and legacy-integer Orientation
+├── LevelApp.App/                  ← WinUI 3 application
+│   ├── App.xaml / App.xaml.cs     ← DI container setup
+│   ├── MainWindow.xaml / .cs      ← Attaches NavigationService; initial navigation
+│   ├── Navigation/
+│   │   ├── PageKey.cs             ← Enum: ProjectSetup, Measurement, Results, Correction
+│   │   ├── INavigationService.cs
+│   │   ├── NavigationService.cs
+│   │   ├── MeasurementArgs.cs     ← record(Project, Session)
+│   │   ├── ResultsArgs.cs         ← record(Project, Session)
+│   │   └── CorrectionArgs.cs      ← record(Project, Session)
+│   ├── Services/
+│   │   ├── ProjectFileService.cs  ← Win32 IFileOpenDialog/IFileSaveDialog + JSON I/O
+│   │   ├── ISettingsService.cs
+│   │   └── SettingsService.cs     ← persists settings to %LOCALAPPDATA%\LevelApp\settings.json
 │   ├── Views/
-
 │   │   ├── ProjectSetupView.xaml
-
 │   │   ├── MeasurementView.xaml
-
-│   │   └── ResultsView.xaml
-
+│   │   ├── ResultsView.xaml
+│   │   ├── CorrectionView.xaml
+│   │   └── Dialogs/
+│   │       ├── PreferencesDialog.xaml   ← default project folder setting
+│   │       └── NewMeasurementDialog.xaml
 │   ├── ViewModels/
-
+│   │   ├── ViewModelBase.cs       ← inherits ObservableObject
+│   │   ├── MainViewModel.cs       ← shell state: window title, dirty flag, unsaved-changes dialog
 │   │   ├── ProjectSetupViewModel.cs
-
 │   │   ├── MeasurementViewModel.cs
-
-│   │   └── ResultsViewModel.cs
-
+│   │   ├── ResultsViewModel.cs
+│   │   ├── CorrectionViewModel.cs
+│   │   └── FlaggedStepItem.cs     ← display DTO for flagged step list
 │   └── DisplayModules/
-
 │       └── SurfacePlot3D/
-
 │           └── SurfacePlot3DDisplay.cs
-
+├── LevelApp.Tests/
+│   ├── FullGridStrategyTests.cs
+│   └── SurfacePlateCalculatorTests.cs
 └── docs/
-
-&#x20;   └── architecture.md               ← This file
-
+    └── architecture.md               ← This file
 ```
 
 
 
-\---
+---
 
 
 
-\## 4. Core Interfaces
+## 4. Core Interfaces
 
 
 
-\### IGeometryModule
+### IGeometryCalculator
+
+Performs the least-squares fit and outlier detection for a specific geometry type. Produced by `IGeometryModule.CreateCalculator`; can also be instantiated directly (e.g. `new SurfacePlateCalculator(definition)`).
+
+```csharp
+public interface IGeometryCalculator
+{
+    SurfaceResult Calculate(MeasurementRound round);
+}
+```
+
+
+
+### IGeometryModule
 
 Represents a type of object to be measured (e.g. surface plate, lathe bed, machine column). Each module:
 
-\- Defines what parameters it needs from the user (plate dimensions, grid size, etc.)
-
-\- Exposes the list of available measurement strategies
-
-\- Owns the calculator for its geometry type
-
-
+- Defines what parameters it needs from the user (plate dimensions, grid size, etc.)
+- Exposes the list of available measurement strategies
+- Owns the calculator for its geometry type
 
 ```csharp
-
 public interface IGeometryModule
-
 {
-
-&#x20;   string ModuleId { get; }
-
-&#x20;   string DisplayName { get; }
-
-&#x20;   IEnumerable<IMeasurementStrategy> AvailableStrategies { get; }
-
-&#x20;   IGeometryCalculator CreateCalculator(ObjectDefinition definition);
-
+    string ModuleId { get; }
+    string DisplayName { get; }
+    IEnumerable<IMeasurementStrategy> AvailableStrategies { get; }
+    IGeometryCalculator CreateCalculator(ObjectDefinition definition);
 }
-
 ```
 
+> **Note:** `IGeometryModule` is defined but no concrete implementation (`SurfacePlateModule`) exists yet. `ProjectSetupViewModel` currently instantiates `FullGridStrategy` and `SurfacePlateCalculator` directly. The module plugin layer is reserved for when additional geometry types are introduced.
 
 
-\### IMeasurementStrategy
+
+### IMeasurementStrategy
 
 Generates the ordered sequence of guided steps for a given object definition. A strategy's only job is to produce the step list — it knows nothing about calculation.
 
-
-
 ```csharp
-
 public interface IMeasurementStrategy
-
 {
-
-&#x20;   string StrategyId { get; }
-
-&#x20;   string DisplayName { get; }
-
-&#x20;   IReadOnlyList<MeasurementStep> GenerateSteps(ObjectDefinition definition);
-
+    string StrategyId { get; }
+    string DisplayName { get; }
+    IReadOnlyList<MeasurementStep> GenerateSteps(ObjectDefinition definition);
 }
-
 ```
 
 
 
-\### IInstrumentProvider
+### IInstrumentProvider
 
-Abstracts all instrument/connectivity code. Today it returns a value the user typed. Tomorrow it streams from Bluetooth. Geometry modules never know which provider is active.
-
-
+Abstracts all instrument/connectivity code. Today it delegates to a caller-supplied async callback. Tomorrow it streams from Bluetooth. Geometry modules never know which provider is active.
 
 ```csharp
-
 public interface IInstrumentProvider
-
 {
-
-&#x20;   string ProviderId { get; }
-
-&#x20;   string DisplayName { get; }
-
-&#x20;   Task<double> GetReadingAsync(MeasurementStep step, CancellationToken ct);
-
+    string ProviderId { get; }
+    string DisplayName { get; }
+    Task<double> GetReadingAsync(MeasurementStep step, CancellationToken ct);
 }
-
 ```
 
 
 
-\### IResultDisplay
+### IResultDisplay
 
-Each display module receives a completed result and renders it. New visualisations can be added without touching anything else.
-
-
+Each display module receives a completed result and renders it. Returns `object` (not `UIElement`) so that `LevelApp.Core` has zero UI framework dependencies; WinUI 3 callers cast the return value to `UIElement`.
 
 ```csharp
-
 public interface IResultDisplay
-
 {
-
-&#x20;   string DisplayId { get; }
-
-&#x20;   string DisplayName { get; }
-
-&#x20;   UIElement Render(SurfaceResult result);
-
+    string DisplayId { get; }
+    string DisplayName { get; }
+    object Render(SurfaceResult result);
 }
-
 ```
 
 
 
-\---
+---
 
 
 
-\## 5. Data Model Hierarchy
+## 5. Data Model Hierarchy
 
 
 
 ```
-
 Project
-
-├── id, name, createdAt, modifiedAt, operator, notes
-
+├── Id, Name, CreatedAt, ModifiedAt, Operator, Notes
 ├── ObjectDefinition
-
-│   ├── geometryModuleId          (e.g. "SurfacePlate")
-
-│   └── parameters                (flexible key-value; module interprets)
-
+│   ├── GeometryModuleId          (e.g. "SurfacePlate")
+│   └── Parameters                (Dictionary<string, object>; module interprets)
 │       ├── widthMm
-
 │       ├── heightMm
-
 │       ├── columnsCount
-
 │       └── rowsCount
-
-└── Measurements\[ ]
-
-&#x20;   └── MeasurementSession
-
-&#x20;       ├── id, label, takenAt, operator, instrumentId, strategyId, notes
-
-&#x20;       ├── InitialRound
-
-&#x20;       │   ├── completedAt
-
-&#x20;       │   ├── Steps\[ ]
-
-&#x20;       │   │   └── MeasurementStep
-
-&#x20;       │   │       ├── index, gridCol, gridRow
-
-&#x20;       │   │       ├── orientation  (North | South | East | West)
-
-&#x20;       │   │       ├── instructionText
-
-&#x20;       │   │       └── reading (mm/m)
-
-&#x20;       │   └── Result
-
-&#x20;       │       ├── heightMapMm\[]\[]
-
-&#x20;       │       ├── flatnessValueMm
-
-&#x20;       │       ├── residuals\[]
-
-&#x20;       │       ├── flaggedStepIndices\[]
-
-&#x20;       │       └── sigmaThreshold
-
-&#x20;       └── Corrections\[ ]
-
-&#x20;           └── CorrectionRound
-
-&#x20;               ├── id, triggeredAt, operator, notes
-
-&#x20;               ├── ReplacedSteps\[ ]
-
-&#x20;               │   └── originalStepIndex + new reading
-
-&#x20;               └── Result  (same structure as above)
-
+└── Measurements[ ]
+    └── MeasurementSession
+        ├── Id, Label, TakenAt, Operator, InstrumentId, StrategyId, Notes
+        ├── InitialRound  (MeasurementRound)
+        │   ├── CompletedAt
+        │   ├── Steps[ ]
+        │   │   └── MeasurementStep
+        │   │       ├── Index, GridCol, GridRow
+        │   │       ├── Orientation  (North | South | East | West)
+        │   │       ├── InstructionText
+        │   │       └── Reading  (double?  — null until operator records a value, mm/m)
+        │   └── Result  (SurfaceResult?)
+        │       ├── HeightMapMm[][]   (jagged array, indexed [row][col])
+        │       ├── FlatnessValueMm
+        │       ├── Residuals[]       (one per step, in step order)
+        │       ├── FlaggedStepIndices[]
+        │       ├── SigmaThreshold
+        │       └── Sigma             (residual RMS with DOF correction, mm)
+        └── Corrections[ ]
+            └── CorrectionRound
+                ├── Id, TriggeredAt, Operator, Notes
+                ├── ReplacedSteps[ ]
+                │   └── ReplacedStep
+                │       ├── OriginalStepIndex
+                │       └── Reading  (double, mm/m)
+                └── Result  (SurfaceResult? — same structure as above)
 ```
 
-
-
-\*\*Key rule:\*\* Raw readings and all intermediate results are \*\*always preserved\*\*. Nothing is ever overwritten. Results reflect the latest correction round, but full history is queryable.
-
-
-
-\---
+**Key rule:** Raw readings and all intermediate results are **always preserved**. Nothing is ever overwritten. Results reflect the latest correction round, but full history is queryable.
 
 
 
-\## 6. Measurement Strategies
+---
 
 
 
-\### Full Grid
+## 6. Measurement Strategies
+
+
+
+### Full Grid
 
 The standard approach. Traverses all rows (boustrophedon — alternating direction to avoid instrument repositioning) then all columns. Every interior grid point is visited twice, once horizontally and once vertically.
 
+`GridCol`/`GridRow` on each step is the **from** endpoint; `Orientation` points toward the **to** endpoint.
 
+Total steps = `rows × (cols − 1) + cols × (rows − 1)`
 
 ```
-
 Row pass:
-
-&#x20; Row 0:  (0,0)→(1,0)→...→(N,0)   orientation: East
-
-&#x20; Row 1:  (N,1)→...→(1,1)→(0,1)   orientation: West
-
-&#x20; Row 2:  (0,2)→...→(N,2)          orientation: East
-
-&#x20; ...
-
-
+  Row 0:  (0,0)→(1,0)→...→(cols-2,0)   orientation: East
+  Row 1:  (cols-1,1)→...→(1,1)          orientation: West
+  Row 2:  (0,2)→...→(cols-2,2)          orientation: East
+  ...
 
 Column pass:
-
-&#x20; Col 0:  (0,0)→(0,1)→...→(0,M)   orientation: South
-
-&#x20; Col 1:  (1,M)→...→(1,1)→(1,0)   orientation: North
-
-&#x20; ...
-
+  Col 0:  (0,0)→(0,1)→...→(0,rows-2)   orientation: South
+  Col 1:  (1,rows-1)→...→(1,1)          orientation: North
+  ...
 ```
 
 
 
-\### Union Jack
+### Union Jack
 
-Adds diagonal traversals to the Full Grid (or uses diagonals + perimeter only as the classic Moody method). More steps, higher redundancy.
+Adds diagonal traversals to the Full Grid (or uses diagonals + perimeter only as the classic Moody method). More steps, higher redundancy. *(Not yet implemented.)*
 
 
 
-\### Adding new strategies
+### Adding new strategies
 
 Implement `IMeasurementStrategy`, register with the geometry module. No other changes required.
 
 
 
-\---
+---
 
 
 
-\## 7. Algorithm: Least-Squares Surface Fitting
+## 7. Algorithm: Least-Squares Surface Fitting
 
 
 
-\### Why least-squares?
+### Why least-squares?
 
-With a full grid, every interior point appears in two independent measurement lines (one row pass, one column pass). In theory the integrated heights must agree at every crossing point (closure). In practice they don't, due to instrument noise and drift. Simple sequential integration lets closure errors accumulate. Least-squares distributes them optimally.
+With a full grid, every interior point appears in two independent measurement lines (one row pass, one column pass). In theory the integrated heights must agree at every crossing point. In practice they don't, due to instrument noise and drift. Least-squares distributes the inconsistencies optimally across all steps simultaneously.
 
 
 
-\### Closure residuals
+### Linear model
 
-At each interior grid point:
-
-```
-
-residual(i,j) = height\_from\_rows(i,j) − height\_from\_cols(i,j)
+Each step contributes one equation:
 
 ```
+h[to] − h[from] = reading × stepLen / 1000
+```
+
+where `reading` is in mm/m and `stepLen` is the physical distance between adjacent grid nodes in mm. The full overdetermined system `A h = b` (one row per step, one column per grid node) is solved via normal equations `AᵀA h = Aᵀb`. The node `h[0]` is fixed to zero as the height reference. Gaussian elimination with partial pivoting is used internally.
+
+Degrees of freedom: `DOF = M − (N − 1)` where M = number of steps, N = number of grid nodes.
 
 
 
-\### Per-step residuals
+### Per-step residuals
 
-After the global least-squares fit, every individual step has a residual: the difference between its reading and the value implied by the fitted surface. Large residuals flag suspect steps.
+After solving, every step has a residual:
+
+```
+residual_i = (h[to] − h[from]) − delta_i
+```
 
 
 
-\### Outlier detection
+### Sigma (RMS)
+
+```
+σ = sqrt( Σ residual_i² / DOF )
+```
+
+Stored as `SurfaceResult.Sigma`.
+
+
+
+### Outlier detection
 
 Flag any step where:
 
 ```
-
-|residual\_i| > k × σ
-
+|residual_i| > k × σ
 ```
 
-where σ is the standard deviation of all residuals and k is configurable (default: 2.5).
+where σ is the RMS of all residuals and k is configurable (default: 2.5, stored as `SigmaThreshold`).
+
+The software presents flagged steps sorted by step index, with the original reading shown for comparison.
 
 
 
-The software presents flagged steps sorted by residual magnitude, with the original reading shown.
+### Correction workflow
+
+1. Solver flags suspect steps after initial round
+2. User reviews flagged list, optionally triggers a correction session
+3. Guided mini-session visits only the flagged steps (showing original reading for comparison)
+4. New readings are stored as a `CorrectionRound` — originals untouched
+5. Full recalculation runs on the merged dataset (original readings, with replacements applied)
+6. Process can repeat until no steps are flagged or user accepts the result
 
 
 
-\### Correction workflow
-
-1\. Solver flags suspect steps after initial round
-
-2\. User reviews flagged list, optionally triggers a correction session
-
-3\. Guided mini-session visits only the flagged steps (showing original reading for comparison)
-
-4\. New readings are stored as a `CorrectionRound` — originals untouched
-
-5\. Full recalculation runs on the merged dataset
-
-6\. Process can repeat until no steps are flagged or user accepts the result
+---
 
 
 
-\---
+## 8. Guided Measurement State Machine
 
 
 
-\## 8. Guided Measurement State Machine
-
-
+Navigation is managed by `INavigationService` / `NavigationService`, which maps a `PageKey` enum to concrete `Page` types. Each transition passes a typed navigation-args record (`MeasurementArgs`, `ResultsArgs`, or `CorrectionArgs`) carrying the `Project` and `MeasurementSession`.
 
 ```
-
-\[Project Setup]
-
-&#x20;     ↓
-
-\[Strategy Selection]
-
-&#x20;     ↓
-
-\[Ready — step overview shown]
-
-&#x20;     ↓
-
-\[Measuring: step N of M]  ←─────────────┐
-
-&#x20;     │                                  │
-
-&#x20;     │  UI shows:                       │
-
-&#x20;     │  • Grid map, current pos lit     │
-
-&#x20;     │  • Instrument orientation arrow  │
-
-&#x20;     │  • Instruction text              │
-
-&#x20;     │  • Progress (N of M)             │
-
-&#x20;     │  • Reading entry field           │
-
-&#x20;     ↓                                  │
-
-\[Reading accepted] ────────────────────→─┘
-
-&#x20;     ↓ (all steps done)
-
-\[Calculating...]
-
-&#x20;     ↓
-
-\[Results + flagged steps]
-
-&#x20;     ↓ (if flags exist)
-
-\[Correction session available]
-
+[ProjectSetup]
+      ↓ StartMeasurement → MeasurementArgs(project, session)
+[Measurement: step N of M]  ←─────────────────────────────┐
+      │                                                     │
+      │  UI shows:                                          │
+      │  • Grid canvas, current position highlighted        │
+      │  • Instrument orientation arrow (↑↓→←)             │
+      │  • Instruction text                                 │
+      │  • Progress (N of M, progress bar)                  │
+      │  • Reading entry field (NumberBox, mm/m)            │
+      │  • "Calculating…" overlay when solver is running    │
+      ↓                                                     │
+[Reading accepted] ──────────────────────────────────────→─┘
+      ↓ (all steps done — calculator runs on background thread)
+[Results] ← ResultsArgs(project, session)
+      │   Shows: flatness (µm), σ, flagged step list, 3D surface plot
+      │   Commands: Save Project, New Measurement, Start Correction Session
+      ↓ (if flagged steps exist)
+[Correction: flagged step N of M]  ←──────────────────────┐
+      │  Shows: original reading, orientation, instruction  │
+      ↓                                                     │
+[Reading accepted] ──────────────────────────────────────→─┘
+      ↓ (all flagged steps re-measured — recalculates, stores CorrectionRound)
+[Results] ← ResultsArgs(project, session)  [loop possible]
 ```
 
 
 
-\---
+---
 
 
 
-\## 9. Persistence — JSON File Format
+## 9. Persistence — JSON File Format
 
 
 
-File extension: `.levelproj` (internally JSON)
+File extension: `.levelproj` (internally JSON, indented, camelCase property names)
 
+Serialisation is handled by `LevelApp.Core/Serialization/ProjectSerializer` (using `System.Text.Json`), `ObjectValueConverter` (preserves concrete types in `Dictionary<string, object>`), and `OrientationConverter` (see below). File I/O is handled by `LevelApp.App/Services/ProjectFileService` using Win32 `IFileOpenDialog` / `IFileSaveDialog` directly via COM (the WinRT picker wrappers were bypassed because they create their underlying COM dialog object lazily, making `SetFolder` calls ineffective for controlling the initial directory).
 
+#### Orientation serialisation
+
+`Orientation` values are always written as strings (`"North"`, `"South"`, `"East"`, `"West"`). On read, `OrientationConverter` accepts both the current string format and the legacy integer format (`0`=North, `1`=South, `2`=East, `3`=West) that was written by earlier builds, ensuring backwards compatibility.
+
+#### Application settings
+
+User preferences (currently: default project folder) are persisted to `%LOCALAPPDATA%\LevelApp\settings.json` by `SettingsService`. This location is reliable for unpackaged Win32/WinUI 3 apps; `ApplicationData.Current.LocalFolder` was not used because it requires packaging infrastructure.
 
 ```json
-
 {
-
-&#x20; "schemaVersion": "1.0",
-
-&#x20; "project": {
-
-&#x20;   "id": "<uuid>",
-
-&#x20;   "name": "Granite plate workshop 3",
-
-&#x20;   "createdAt": "2026-04-04T09:00:00Z",
-
-&#x20;   "modifiedAt": "2026-04-04T14:23:00Z",
-
-&#x20;   "operator": "J. Müller",
-
-&#x20;   "notes": "After resurfacing",
-
-
-
-&#x20;   "objectDefinition": {
-
-&#x20;     "geometryModuleId": "SurfacePlate",
-
-&#x20;     "parameters": {
-
-&#x20;       "widthMm": 1200,
-
-&#x20;       "heightMm": 800,
-
-&#x20;       "columnsCount": 8,
-
-&#x20;       "rowsCount": 5
-
-&#x20;     }
-
-&#x20;   },
-
-
-
-&#x20;   "measurements": \[
-
-&#x20;     {
-
-&#x20;       "id": "<uuid>",
-
-&#x20;       "label": "Measurement 1",
-
-&#x20;       "takenAt": "2026-04-04T10:15:00Z",
-
-&#x20;       "operator": "J. Müller",
-
-&#x20;       "instrumentId": "manual-entry",
-
-&#x20;       "strategyId": "FullGrid",
-
-&#x20;       "notes": "",
-
-
-
-&#x20;       "initialRound": {
-
-&#x20;         "completedAt": "2026-04-04T10:45:00Z",
-
-&#x20;         "steps": \[
-
-&#x20;           {
-
-&#x20;             "index": 0,
-
-&#x20;             "gridCol": 0, "gridRow": 0,
-
-&#x20;             "orientation": "East",
-
-&#x20;             "reading": 0.012
-
-&#x20;           }
-
-&#x20;         ],
-
-&#x20;         "result": {
-
-&#x20;           "heightMapMm": \[\[0.0, 0.012], \[0.008, 0.019]],
-
-&#x20;           "flatnessValueMm": 0.041,
-
-&#x20;           "residuals": \[0.001, 0.002, 0.087],
-
-&#x20;           "flaggedStepIndices": \[14, 31],
-
-&#x20;           "sigmaThreshold": 2.5
-
-&#x20;         }
-
-&#x20;       },
-
-
-
-&#x20;       "corrections": \[
-
-&#x20;         {
-
-&#x20;           "id": "<uuid>",
-
-&#x20;           "triggeredAt": "2026-04-04T11:02:00Z",
-
-&#x20;           "operator": "J. Müller",
-
-&#x20;           "notes": "Step 14 — instrument had not settled",
-
-&#x20;           "replacedSteps": \[
-
-&#x20;             { "originalStepIndex": 14, "reading": 0.008 }
-
-&#x20;           ],
-
-&#x20;           "result": {
-
-&#x20;             "heightMapMm": \[\[...]],
-
-&#x20;             "flatnessValueMm": 0.038,
-
-&#x20;             "residuals": \[...],
-
-&#x20;             "flaggedStepIndices": \[],
-
-&#x20;             "sigmaThreshold": 2.5
-
-&#x20;           }
-
-&#x20;         }
-
-&#x20;       ]
-
-&#x20;     }
-
-&#x20;   ]
-
-&#x20; }
-
+  "schemaVersion": "1.0",
+  "project": {
+    "id": "<uuid>",
+    "name": "Granite plate workshop 3",
+    "createdAt": "2026-04-04T09:00:00Z",
+    "modifiedAt": "2026-04-04T14:23:00Z",
+    "operator": "J. Müller",
+    "notes": "After resurfacing",
+
+    "objectDefinition": {
+      "geometryModuleId": "SurfacePlate",
+      "parameters": {
+        "widthMm": 1200,
+        "heightMm": 800,
+        "columnsCount": 8,
+        "rowsCount": 5
+      }
+    },
+
+    "measurements": [
+      {
+        "id": "<uuid>",
+        "label": "Measurement 1",
+        "takenAt": "2026-04-04T10:15:00Z",
+        "operator": "J. Müller",
+        "instrumentId": "manual-entry",
+        "strategyId": "FullGrid",
+        "notes": "",
+
+        "initialRound": {
+          "completedAt": "2026-04-04T10:45:00Z",
+          "steps": [
+            {
+              "index": 0,
+              "gridCol": 0, "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "Row pass — row 1, instrument at column 1 → 2, facing East",
+              "reading": 0.012
+            }
+          ],
+          "result": {
+            "heightMapMm": [[0.0, 0.012], [0.008, 0.019]],
+            "flatnessValueMm": 0.041,
+            "residuals": [0.001, 0.002, 0.087],
+            "flaggedStepIndices": [14, 31],
+            "sigmaThreshold": 2.5,
+            "sigma": 0.00034
+          }
+        },
+
+        "corrections": [
+          {
+            "id": "<uuid>",
+            "triggeredAt": "2026-04-04T11:02:00Z",
+            "operator": "J. Müller",
+            "notes": "Step 14 — instrument had not settled",
+            "replacedSteps": [
+              { "originalStepIndex": 14, "reading": 0.008 }
+            ],
+            "result": {
+              "heightMapMm": [[...]],
+              "flatnessValueMm": 0.038,
+              "residuals": [...],
+              "flaggedStepIndices": [],
+              "sigmaThreshold": 2.5,
+              "sigma": 0.00021
+            }
+          }
+        ]
+      }
+    ]
+  }
 }
-
 ```
 
 
 
-\### Schema versioning
+### Schema versioning
 
-The `schemaVersion` field at the root allows the app to detect older files and apply migration logic before deserialising. Always increment when making breaking changes to the format.
-
-
-
-\---
+The `schemaVersion` field at the root allows the app to detect older files and apply migration logic before deserialising. `ProjectSerializer.Deserialize` throws `NotSupportedException` for unrecognised versions. Always increment when making breaking changes to the format.
 
 
 
-\## 10. Display Modules
+---
 
 
 
-Implements `IResultDisplay`. Each module receives a `SurfaceResult` and returns a renderable `UIElement`.
+## 10. Display Modules
 
 
+
+Implements `IResultDisplay`. Each module receives a `SurfaceResult` and returns a renderable object (cast to `UIElement` by the caller).
 
 | Module | Status | Notes |
-
 |---|---|---|
-
-| 3D Surface Plot | \*\*First to build\*\* | Primary result view |
-
+| 3D Surface Plot | **Built** | Pseudo-3D isometric canvas; nodes coloured blue→cyan→green→yellow→red by height |
 | Colour / Heat Map | Future | Intuitive flatness overview |
-
 | Numerical Table | Future | Raw height values per grid point |
-
 | Residuals Chart | Future | Useful for diagnosing bad readings |
-
-
 
 Adding a new display: implement `IResultDisplay`, register it. The results page discovers available modules automatically.
 
+#### 3D Surface Plot — z-scale
+
+The vertical exaggeration (`maxZPixels`) is computed per render as `max(10, (colIntervals + rowIntervals) × IsoH × 0.20)` rather than being a fixed constant. This ensures that even on a very flat surface the z-displacement of any node can never exceed one isometric grid step (IsoH = 15 px), which would otherwise cause correct edges to appear crossed.
 
 
-\---
+
+---
 
 
 
-\## 11. Key Design Decisions \& Rationale
+## 11. Key Design Decisions & Rationale
 
 
 
 | Decision | Rationale |
-
 |---|---|
-
 | Geometry modules as plugins | New object types (lathe bed, column, etc.) require no changes to core or UI |
-
 | Measurement strategies as plugins | Full Grid and Union Jack share the same guided workflow infrastructure |
-
 | Instrument providers as plugins | Manual entry and future Bluetooth/USB HID are interchangeable |
-
 | Display modules as plugins | 3D plot, heat map, table can be added independently over time |
-
-| ObjectDefinition.parameters as flexible key-value | Different object types need very different parameters; avoids a rigid schema |
-
-| Least-squares over simple integration | Distributes closure errors optimally; more robust for noisy readings |
-
+| ObjectDefinition.Parameters as flexible key-value | Different object types need very different parameters; avoids a rigid schema |
+| Least-squares over simple integration | Distributes inconsistencies optimally across all steps; more robust for noisy readings |
 | Corrections as separate rounds, originals preserved | Full audit trail; operator can review the history of a session |
-
 | JSON with schemaVersion | Human-readable, diffable, easily migrated as format evolves |
-
 | .levelproj file extension | Clearly identifies the file type; internally standard JSON |
-
-| MVVM pattern | Mandatory for testable WinUI 3 apps; Views are fully replaceable |
-
+| MVVM pattern with CommunityToolkit.Mvvm | Source-generated boilerplate; Views are fully replaceable |
+| INavigationService / PageKey | ViewModels trigger page transitions without compile-time dependency on View types |
+| Microsoft.Extensions.DependencyInjection | Standard DI; services and ViewModels resolved from `App.Services` |
 | Core project has zero UI dependencies | All models, interfaces, and algorithms are unit-testable without a UI |
+| IResultDisplay returns object (not UIElement) | Keeps Core free of WinUI 3 assembly references |
+| ManualEntryProvider accepts a delegate | Provider is UI-agnostic; WinUI passes a dialog callback, tests pass a stub |
+| Win32 COM file dialogs instead of WinRT pickers | WinRT pickers create the underlying COM dialog lazily; `SetFolder` on the wrapper targets a discarded object. Driving `IFileOpenDialog`/`IFileSaveDialog` directly via `CoCreateInstance` gives reliable control over the initial folder |
+| Settings in `%LOCALAPPDATA%\LevelApp\settings.json` | `ApplicationData.Current.LocalFolder` throws for unpackaged apps; `Environment.SpecialFolder.LocalApplicationData` works unconditionally |
+| `OrientationConverter` over `JsonStringEnumConverter` | Adds explicit integer→enum mapping for backwards compatibility with files written before string serialisation was enforced |
 
 
 
-\---
+---
 
 
 
-\## 12. Build Order / Roadmap
+## 12. Build Order / Roadmap
 
 
 
-\### Phase 1 — Core foundation (no UI)
+### Phase 1 — Core foundation (no UI) ✓ Complete
+1. Core models (`Project`, `ObjectDefinition`, `MeasurementSession`, `MeasurementStep`, etc.)
+2. Core interfaces (`IGeometryCalculator`, `IGeometryModule`, `IMeasurementStrategy`, `IInstrumentProvider`, `IResultDisplay`)
+3. `FullGridStrategy` — generates ordered step list with orientations
+4. `SurfacePlateCalculator` — least-squares solver + outlier detection
+5. `ManualEntryProvider` — delegate pass-through
+6. Unit tests for calculator and strategy (`LevelApp.Tests`)
 
-1\. Core models (`Project`, `ObjectDefinition`, `MeasurementSession`, `MeasurementStep`, etc.)
+### Phase 2 — WinUI 3 app shell ✓ Complete
+7. Solution setup, WinUI 3 project, DI container, navigation framework (`INavigationService`, `NavigationService`, `PageKey`)
+8. `ProjectSetupView` — parameter entry, step-count preview, open-project button
+9. `MeasurementView` — guided step-by-step workflow with grid canvas
+10. `ResultsView` with `SurfacePlot3DDisplay`
 
-2\. Core interfaces (`IGeometryModule`, `IMeasurementStrategy`, `IInstrumentProvider`, `IResultDisplay`)
+### Phase 3 — Persistence ✓ Complete
+11. JSON serialisation / deserialisation (`ProjectSerializer`, `ObjectValueConverter`)
+12. Save / load project file via `ProjectFileService` (native file-picker dialogs)
 
-3\. `FullGridStrategy` — generates ordered step list with orientations
+### Phase 4 — Corrections workflow ✓ Complete
+13. Flagged step review UI in `ResultsView`
+14. `CorrectionView` — guided correction session
+15. `CorrectionRound` storage and recalculation
 
-4\. `SurfacePlateCalculator` — least-squares solver + outlier detection
-
-5\. `ManualEntryProvider` — trivial pass-through
-
-6\. Unit tests for calculator and sequencer
-
-
-
-\### Phase 2 — WinUI 3 app shell
-
-7\. Solution setup, WinUI 3 project, navigation framework
-
-8\. `ProjectSetupView` — object type selection, parameter entry
-
-9\. `MeasurementView` — guided step-by-step workflow
-
-10\. `ResultsView` with 3D surface plot display module
-
-
-
-\### Phase 3 — Persistence
-
-11\. JSON serialisation / deserialisation
-
-12\. Save / load project file (`.levelproj`)
+### Future phases
+- `UnionJackStrategy`
+- `SurfacePlateModule` (concrete `IGeometryModule` implementation; enables strategy/module plugin registry)
+- Additional display modules (heat map, numerical table, residuals chart)
+- Bluetooth LE instrument provider
+- USB HID instrument provider
+- Additional geometry modules (straightness, squareness, etc.)
+- Reporting / PDF export
 
 
 
-\### Phase 4 — Corrections workflow
-
-13\. Flagged step review UI
-
-14\. Guided correction session
-
-15\. Correction round storage and recalculation
+---
 
 
 
-\### Future phases
-
-\- `UnionJackStrategy`
-
-\- Additional display modules (heat map, numerical table)
-
-\- Bluetooth LE instrument provider
-
-\- USB HID instrument provider
-
-\- Additional geometry modules (straightness, squareness, etc.)
-
-\- Reporting / PDF export
+## 13. Open Questions
 
 
 
-\---
+- Should multiple instrument providers be selectable per measurement session (e.g. two axes simultaneously)?
+- Reporting: what format? PDF export? Print directly?
+- Localisation: German / English from the start, or English only initially?
+- Licensing / distribution model for the application?
+- Should the 3D surface plot be interactive (rotate, zoom)?
 
 
 
-\## 13. Open Questions
+---
 
 
 
-\- Should multiple instrument providers be selectable per measurement session (e.g. two axes simultaneously)?
-
-\- Reporting: what format? PDF export? Print directly?
-
-\- Localisation: German / English from the start, or English only initially?
-
-\- Licensing / distribution model for the application?
-
-\- Should the 3D surface plot be interactive (rotate, zoom)?
-
-
-
-\---
-
-
-
-\## 14. Model Switching Notes
+## 14. Model Switching Notes
 
 
 
@@ -850,11 +651,10 @@ When starting a new session with an AI assistant, paste this document as context
 
 
 
-> "I'm building LevelApp — a C# WinUI 3 Windows app for precision level measurement evaluation. The architecture document is below. We are currently at build step \[N]. Please continue from where we left off."
+> "I'm building LevelApp — a C# WinUI 3 Windows app for precision level measurement evaluation. The architecture document is below. We are currently at build step [N]. Please continue from where we left off."
 
 
 
 Then paste this document.
-
 
 

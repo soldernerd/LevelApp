@@ -1,0 +1,48 @@
+<ContentDialog
+    x:Class="LevelApp.App.Views.Dialogs.NewMeasurementDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="New Measurement"
+    PrimaryButtonText="Start"
+    SecondaryButtonText="Cancel"
+    DefaultButton="Primary">
+
+    <StackPanel Spacing="16" MinWidth="400">
+
+        <!-- Read-only geometry summary -->
+        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                CornerRadius="8"
+                Padding="12">
+            <StackPanel Spacing="4">
+                <TextBlock Text="Object (read-only)"
+                           Style="{StaticResource CaptionTextBlockStyle}"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <TextBlock x:Name="GeometrySummaryText"
+                           Style="{StaticResource BodyStrongTextBlockStyle}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Operator -->
+        <TextBox x:Name="OperatorBox"
+                 Header="Operator"
+                 PlaceholderText="Your name"/>
+
+        <!-- Notes -->
+        <TextBox x:Name="NotesBox"
+                 Header="Notes"
+                 PlaceholderText="Optional"
+                 AcceptsReturn="True"
+                 Height="60"
+                 TextWrapping="Wrap"/>
+
+        <!-- Strategy -->
+        <ComboBox x:Name="StrategyCombo"
+                  Header="Strategy"
+                  SelectedIndex="0"
+                  HorizontalAlignment="Stretch">
+            <ComboBoxItem>Full Grid (boustrophedon)</ComboBoxItem>
+        </ComboBox>
+
+    </StackPanel>
+
+</ContentDialog>

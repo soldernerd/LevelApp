@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using LevelApp.Core.Models;
 
 namespace LevelApp.Core.Serialization;
@@ -15,7 +16,7 @@ public static class ProjectSerializer
     {
         WriteIndented        = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        Converters           = { new ObjectValueConverter() }
+        Converters           = { new ObjectValueConverter(), new JsonStringEnumConverter() }
     };
 
     /// <summary>Serialises <paramref name="project"/> to a JSON string.</summary>

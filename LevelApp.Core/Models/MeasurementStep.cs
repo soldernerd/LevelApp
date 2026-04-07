@@ -1,5 +1,9 @@
+using System.Text.Json.Serialization;
+using LevelApp.Core.Serialization;
+
 namespace LevelApp.Core.Models;
 
+[JsonConverter(typeof(OrientationConverter))]
 public enum Orientation { North, South, East, West }
 
 public class MeasurementStep

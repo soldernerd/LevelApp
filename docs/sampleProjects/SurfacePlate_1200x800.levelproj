@@ -1,0 +1,782 @@
+{
+  "schemaVersion": "1.0",
+  "project": {
+    "id": "d500c901-45a9-40ac-a69b-cd3ebba66a20",
+    "name": "Test Granite Plate 1200x800",
+    "createdAt": "2026-04-06T08:00:00Z",
+    "modifiedAt": "2026-04-06T08:00:00Z",
+    "operator": "Lukas Fässler",
+    "notes": "Synthetic test data. Saddle-shaped surface, ~10 µm flatness, 0.5 µrad noise per reading.",
+    "objectDefinition": {
+      "geometryModuleId": "SurfacePlate",
+      "parameters": {
+        "widthMm": 1200,
+        "heightMm": 800,
+        "columnsCount": 9,
+        "rowsCount": 6
+      }
+    },
+    "measurements": [
+      {
+        "id": "1c934f45-2bef-4ac7-99f9-ac5f25b0dd80",
+        "label": "Measurement 1",
+        "takenAt": "2026-04-06T08:00:00Z",
+        "operator": "Lukas Fässler",
+        "instrumentId": "manual-entry",
+        "strategyId": "FullGrid",
+        "notes": "Synthetic test data with realistic noise",
+        "initialRound": {
+          "completedAt": "2026-04-06T08:30:00Z",
+          "steps": [
+            {
+              "index": 0,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "Row pass — row 0, instrument at col 0 → 1, facing East",
+              "reading": -0.017989
+            },
+            {
+              "index": 1,
+              "gridCol": 1,
+              "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "Row pass — row 0, instrument at col 1 → 2, facing East",
+              "reading": -0.013836
+            },
+            {
+              "index": 2,
+              "gridCol": 2,
+              "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "Row pass — row 0, instrument at col 2 → 3, facing East",
+              "reading": -0.009639
+            },
+            {
+              "index": 3,
+              "gridCol": 3,
+              "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "Row pass — row 0, instrument at col 3 → 4, facing East",
+              "reading": -0.005066
+            },
+            {
+              "index": 4,
+              "gridCol": 4,
+              "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "Row pass — row 0, instrument at col 4 → 5, facing East",
+              "reading": -0.001314
+            },
+            {
+              "index": 5,
+              "gridCol": 5,
+              "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "Row pass — row 0, instrument at col 5 → 6, facing East",
+              "reading": 0.002168
+            },
+            {
+              "index": 6,
+              "gridCol": 6,
+              "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "Row pass — row 0, instrument at col 6 → 7, facing East",
+              "reading": 0.007249
+            },
+            {
+              "index": 7,
+              "gridCol": 7,
+              "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "Row pass — row 0, instrument at col 7 → 8, facing East",
+              "reading": 0.011116
+            },
+            {
+              "index": 8,
+              "gridCol": 8,
+              "gridRow": 1,
+              "orientation": "West",
+              "instructionText": "Row pass — row 1, instrument at col 8 → 7, facing West",
+              "reading": -0.012692
+            },
+            {
+              "index": 9,
+              "gridCol": 7,
+              "gridRow": 1,
+              "orientation": "West",
+              "instructionText": "Row pass — row 1, instrument at col 7 → 6, facing West",
+              "reading": -0.008359
+            },
+            {
+              "index": 10,
+              "gridCol": 6,
+              "gridRow": 1,
+              "orientation": "West",
+              "instructionText": "Row pass — row 1, instrument at col 6 → 5, facing West",
+              "reading": -0.004134
+            },
+            {
+              "index": 11,
+              "gridCol": 5,
+              "gridRow": 1,
+              "orientation": "West",
+              "instructionText": "Row pass — row 1, instrument at col 5 → 4, facing West",
+              "reading": 0.000498
+            },
+            {
+              "index": 12,
+              "gridCol": 4,
+              "gridRow": 1,
+              "orientation": "West",
+              "instructionText": "Row pass — row 1, instrument at col 4 → 3, facing West",
+              "reading": 0.004412
+            },
+            {
+              "index": 13,
+              "gridCol": 3,
+              "gridRow": 1,
+              "orientation": "West",
+              "instructionText": "Row pass — row 1, instrument at col 3 → 2, facing West",
+              "reading": 0.008305
+            },
+            {
+              "index": 14,
+              "gridCol": 2,
+              "gridRow": 1,
+              "orientation": "West",
+              "instructionText": "Row pass — row 1, instrument at col 2 → 1, facing West",
+              "reading": 0.012048
+            },
+            {
+              "index": 15,
+              "gridCol": 1,
+              "gridRow": 1,
+              "orientation": "West",
+              "instructionText": "Row pass — row 1, instrument at col 1 → 0, facing West",
+              "reading": 0.016076
+            },
+            {
+              "index": 16,
+              "gridCol": 0,
+              "gridRow": 2,
+              "orientation": "East",
+              "instructionText": "Row pass — row 2, instrument at col 0 → 1, facing East",
+              "reading": -0.015127
+            },
+            {
+              "index": 17,
+              "gridCol": 1,
+              "gridRow": 2,
+              "orientation": "East",
+              "instructionText": "Row pass — row 2, instrument at col 1 → 2, facing East",
+              "reading": -0.010428
+            },
+            {
+              "index": 18,
+              "gridCol": 2,
+              "gridRow": 2,
+              "orientation": "East",
+              "instructionText": "Row pass — row 2, instrument at col 2 → 3, facing East",
+              "reading": -0.006896
+            },
+            {
+              "index": 19,
+              "gridCol": 3,
+              "gridRow": 2,
+              "orientation": "East",
+              "instructionText": "Row pass — row 2, instrument at col 3 → 4, facing East",
+              "reading": -0.002803
+            },
+            {
+              "index": 20,
+              "gridCol": 4,
+              "gridRow": 2,
+              "orientation": "East",
+              "instructionText": "Row pass — row 2, instrument at col 4 → 5, facing East",
+              "reading": 0.001683
+            },
+            {
+              "index": 21,
+              "gridCol": 5,
+              "gridRow": 2,
+              "orientation": "East",
+              "instructionText": "Row pass — row 2, instrument at col 5 → 6, facing East",
+              "reading": 0.004857
+            },
+            {
+              "index": 22,
+              "gridCol": 6,
+              "gridRow": 2,
+              "orientation": "East",
+              "instructionText": "Row pass — row 2, instrument at col 6 → 7, facing East",
+              "reading": 0.009594
+            },
+            {
+              "index": 23,
+              "gridCol": 7,
+              "gridRow": 2,
+              "orientation": "East",
+              "instructionText": "Row pass — row 2, instrument at col 7 → 8, facing East",
+              "reading": 0.014162
+            },
+            {
+              "index": 24,
+              "gridCol": 8,
+              "gridRow": 3,
+              "orientation": "West",
+              "instructionText": "Row pass — row 3, instrument at col 8 → 7, facing West",
+              "reading": -0.014813
+            },
+            {
+              "index": 25,
+              "gridCol": 7,
+              "gridRow": 3,
+              "orientation": "West",
+              "instructionText": "Row pass — row 3, instrument at col 7 → 6, facing West",
+              "reading": -0.011204
+            },
+            {
+              "index": 26,
+              "gridCol": 6,
+              "gridRow": 3,
+              "orientation": "West",
+              "instructionText": "Row pass — row 3, instrument at col 6 → 5, facing West",
+              "reading": -0.006728
+            },
+            {
+              "index": 27,
+              "gridCol": 5,
+              "gridRow": 3,
+              "orientation": "West",
+              "instructionText": "Row pass — row 3, instrument at col 5 → 4, facing West",
+              "reading": -0.002626
+            },
+            {
+              "index": 28,
+              "gridCol": 4,
+              "gridRow": 3,
+              "orientation": "West",
+              "instructionText": "Row pass — row 3, instrument at col 4 → 3, facing West",
+              "reading": 0.001808
+            },
+            {
+              "index": 29,
+              "gridCol": 3,
+              "gridRow": 3,
+              "orientation": "West",
+              "instructionText": "Row pass — row 3, instrument at col 3 → 2, facing West",
+              "reading": 0.005027
+            },
+            {
+              "index": 30,
+              "gridCol": 2,
+              "gridRow": 3,
+              "orientation": "West",
+              "instructionText": "Row pass — row 3, instrument at col 2 → 1, facing West",
+              "reading": 0.010034
+            },
+            {
+              "index": 31,
+              "gridCol": 1,
+              "gridRow": 3,
+              "orientation": "West",
+              "instructionText": "Row pass — row 3, instrument at col 1 → 0, facing West",
+              "reading": 0.013159
+            },
+            {
+              "index": 32,
+              "gridCol": 0,
+              "gridRow": 4,
+              "orientation": "East",
+              "instructionText": "Row pass — row 4, instrument at col 0 → 1, facing East",
+              "reading": -0.013893
+            },
+            {
+              "index": 33,
+              "gridCol": 1,
+              "gridRow": 4,
+              "orientation": "East",
+              "instructionText": "Row pass — row 4, instrument at col 1 → 2, facing East",
+              "reading": -0.00872
+            },
+            {
+              "index": 34,
+              "gridCol": 2,
+              "gridRow": 4,
+              "orientation": "East",
+              "instructionText": "Row pass — row 4, instrument at col 2 → 3, facing East",
+              "reading": -0.004708
+            },
+            {
+              "index": 35,
+              "gridCol": 3,
+              "gridRow": 4,
+              "orientation": "East",
+              "instructionText": "Row pass — row 4, instrument at col 3 → 4, facing East",
+              "reading": 0.000355
+            },
+            {
+              "index": 36,
+              "gridCol": 4,
+              "gridRow": 4,
+              "orientation": "East",
+              "instructionText": "Row pass — row 4, instrument at col 4 → 5, facing East",
+              "reading": 0.004415
+            },
+            {
+              "index": 37,
+              "gridCol": 5,
+              "gridRow": 4,
+              "orientation": "East",
+              "instructionText": "Row pass — row 4, instrument at col 5 → 6, facing East",
+              "reading": 0.00764
+            },
+            {
+              "index": 38,
+              "gridCol": 6,
+              "gridRow": 4,
+              "orientation": "East",
+              "instructionText": "Row pass — row 4, instrument at col 6 → 7, facing East",
+              "reading": 0.01284
+            },
+            {
+              "index": 39,
+              "gridCol": 7,
+              "gridRow": 4,
+              "orientation": "East",
+              "instructionText": "Row pass — row 4, instrument at col 7 → 8, facing East",
+              "reading": 0.016082
+            },
+            {
+              "index": 40,
+              "gridCol": 8,
+              "gridRow": 5,
+              "orientation": "West",
+              "instructionText": "Row pass — row 5, instrument at col 8 → 7, facing West",
+              "reading": -0.01796
+            },
+            {
+              "index": 41,
+              "gridCol": 7,
+              "gridRow": 5,
+              "orientation": "West",
+              "instructionText": "Row pass — row 5, instrument at col 7 → 6, facing West",
+              "reading": -0.013897
+            },
+            {
+              "index": 42,
+              "gridCol": 6,
+              "gridRow": 5,
+              "orientation": "West",
+              "instructionText": "Row pass — row 5, instrument at col 6 → 5, facing West",
+              "reading": -0.009526
+            },
+            {
+              "index": 43,
+              "gridCol": 5,
+              "gridRow": 5,
+              "orientation": "West",
+              "instructionText": "Row pass — row 5, instrument at col 5 → 4, facing West",
+              "reading": -0.005007
+            },
+            {
+              "index": 44,
+              "gridCol": 4,
+              "gridRow": 5,
+              "orientation": "West",
+              "instructionText": "Row pass — row 5, instrument at col 4 → 3, facing West",
+              "reading": -0.000931
+            },
+            {
+              "index": 45,
+              "gridCol": 3,
+              "gridRow": 5,
+              "orientation": "West",
+              "instructionText": "Row pass — row 5, instrument at col 3 → 2, facing West",
+              "reading": 0.003092
+            },
+            {
+              "index": 46,
+              "gridCol": 2,
+              "gridRow": 5,
+              "orientation": "West",
+              "instructionText": "Row pass — row 5, instrument at col 2 → 1, facing West",
+              "reading": 0.007408
+            },
+            {
+              "index": 47,
+              "gridCol": 1,
+              "gridRow": 5,
+              "orientation": "West",
+              "instructionText": "Row pass — row 5, instrument at col 1 → 0, facing West",
+              "reading": 0.011489
+            },
+            {
+              "index": 48,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "South",
+              "instructionText": "Column pass — col 0, instrument at row 0 → 1, facing South",
+              "reading": 0.006687
+            },
+            {
+              "index": 49,
+              "gridCol": 0,
+              "gridRow": 1,
+              "orientation": "South",
+              "instructionText": "Column pass — col 0, instrument at row 1 → 2, facing South",
+              "reading": 0.000641
+            },
+            {
+              "index": 50,
+              "gridCol": 0,
+              "gridRow": 2,
+              "orientation": "South",
+              "instructionText": "Column pass — col 0, instrument at row 2 → 3, facing South",
+              "reading": -0.005235
+            },
+            {
+              "index": 51,
+              "gridCol": 0,
+              "gridRow": 3,
+              "orientation": "South",
+              "instructionText": "Column pass — col 0, instrument at row 3 → 4, facing South",
+              "reading": -0.01075
+            },
+            {
+              "index": 52,
+              "gridCol": 0,
+              "gridRow": 4,
+              "orientation": "South",
+              "instructionText": "Column pass — col 0, instrument at row 4 → 5, facing South",
+              "reading": -0.017125
+            },
+            {
+              "index": 53,
+              "gridCol": 1,
+              "gridRow": 5,
+              "orientation": "North",
+              "instructionText": "Column pass — col 1, instrument at row 5 → 4, facing North",
+              "reading": 0.016918
+            },
+            {
+              "index": 54,
+              "gridCol": 1,
+              "gridRow": 4,
+              "orientation": "North",
+              "instructionText": "Column pass — col 1, instrument at row 4 → 3, facing North",
+              "reading": 0.00934
+            },
+            {
+              "index": 55,
+              "gridCol": 1,
+              "gridRow": 3,
+              "orientation": "North",
+              "instructionText": "Column pass — col 1, instrument at row 3 → 2, facing North",
+              "reading": 0.003201
+            },
+            {
+              "index": 56,
+              "gridCol": 1,
+              "gridRow": 2,
+              "orientation": "North",
+              "instructionText": "Column pass — col 1, instrument at row 2 → 1, facing North",
+              "reading": -0.001866
+            },
+            {
+              "index": 57,
+              "gridCol": 1,
+              "gridRow": 1,
+              "orientation": "North",
+              "instructionText": "Column pass — col 1, instrument at row 1 → 0, facing North",
+              "reading": -0.007539
+            },
+            {
+              "index": 58,
+              "gridCol": 2,
+              "gridRow": 0,
+              "orientation": "South",
+              "instructionText": "Column pass — col 2, instrument at row 0 → 1, facing South",
+              "reading": 0.009753
+            },
+            {
+              "index": 59,
+              "gridCol": 2,
+              "gridRow": 1,
+              "orientation": "South",
+              "instructionText": "Column pass — col 2, instrument at row 1 → 2, facing South",
+              "reading": 0.003918
+            },
+            {
+              "index": 60,
+              "gridCol": 2,
+              "gridRow": 2,
+              "orientation": "South",
+              "instructionText": "Column pass — col 2, instrument at row 2 → 3, facing South",
+              "reading": -0.001787
+            },
+            {
+              "index": 61,
+              "gridCol": 2,
+              "gridRow": 3,
+              "orientation": "South",
+              "instructionText": "Column pass — col 2, instrument at row 3 → 4, facing South",
+              "reading": -0.008547
+            },
+            {
+              "index": 62,
+              "gridCol": 2,
+              "gridRow": 4,
+              "orientation": "South",
+              "instructionText": "Column pass — col 2, instrument at row 4 → 5, facing South",
+              "reading": -0.015211
+            },
+            {
+              "index": 63,
+              "gridCol": 3,
+              "gridRow": 5,
+              "orientation": "North",
+              "instructionText": "Column pass — col 3, instrument at row 5 → 4, facing North",
+              "reading": 0.012984
+            },
+            {
+              "index": 64,
+              "gridCol": 3,
+              "gridRow": 4,
+              "orientation": "North",
+              "instructionText": "Column pass — col 3, instrument at row 4 → 3, facing North",
+              "reading": 0.007726
+            },
+            {
+              "index": 65,
+              "gridCol": 3,
+              "gridRow": 3,
+              "orientation": "North",
+              "instructionText": "Column pass — col 3, instrument at row 3 → 2, facing North",
+              "reading": 0.000528
+            },
+            {
+              "index": 66,
+              "gridCol": 3,
+              "gridRow": 2,
+              "orientation": "North",
+              "instructionText": "Column pass — col 3, instrument at row 2 → 1, facing North",
+              "reading": -0.004733
+            },
+            {
+              "index": 67,
+              "gridCol": 3,
+              "gridRow": 1,
+              "orientation": "North",
+              "instructionText": "Column pass — col 3, instrument at row 1 → 0, facing North",
+              "reading": -0.010623
+            },
+            {
+              "index": 68,
+              "gridCol": 4,
+              "gridRow": 0,
+              "orientation": "South",
+              "instructionText": "Column pass — col 4, instrument at row 0 → 1, facing South",
+              "reading": 0.011842
+            },
+            {
+              "index": 69,
+              "gridCol": 4,
+              "gridRow": 1,
+              "orientation": "South",
+              "instructionText": "Column pass — col 4, instrument at row 1 → 2, facing South",
+              "reading": 0.006362
+            },
+            {
+              "index": 70,
+              "gridCol": 4,
+              "gridRow": 2,
+              "orientation": "South",
+              "instructionText": "Column pass — col 4, instrument at row 2 → 3, facing South",
+              "reading": 0.00029
+            },
+            {
+              "index": 71,
+              "gridCol": 4,
+              "gridRow": 3,
+              "orientation": "South",
+              "instructionText": "Column pass — col 4, instrument at row 3 → 4, facing South",
+              "reading": -0.004839
+            },
+            {
+              "index": 72,
+              "gridCol": 4,
+              "gridRow": 4,
+              "orientation": "South",
+              "instructionText": "Column pass — col 4, instrument at row 4 → 5, facing South",
+              "reading": -0.01169
+            },
+            {
+              "index": 73,
+              "gridCol": 5,
+              "gridRow": 5,
+              "orientation": "North",
+              "instructionText": "Column pass — col 5, instrument at row 5 → 4, facing North",
+              "reading": 0.010445
+            },
+            {
+              "index": 74,
+              "gridCol": 5,
+              "gridRow": 4,
+              "orientation": "North",
+              "instructionText": "Column pass — col 5, instrument at row 4 → 3, facing North",
+              "reading": 0.004469
+            },
+            {
+              "index": 75,
+              "gridCol": 5,
+              "gridRow": 3,
+              "orientation": "North",
+              "instructionText": "Column pass — col 5, instrument at row 3 → 2, facing North",
+              "reading": -0.001666
+            },
+            {
+              "index": 76,
+              "gridCol": 5,
+              "gridRow": 2,
+              "orientation": "North",
+              "instructionText": "Column pass — col 5, instrument at row 2 → 1, facing North",
+              "reading": -0.006774
+            },
+            {
+              "index": 77,
+              "gridCol": 5,
+              "gridRow": 1,
+              "orientation": "North",
+              "instructionText": "Column pass — col 5, instrument at row 1 → 0, facing North",
+              "reading": -0.013533
+            },
+            {
+              "index": 78,
+              "gridCol": 6,
+              "gridRow": 0,
+              "orientation": "South",
+              "instructionText": "Column pass — col 6, instrument at row 0 → 1, facing South",
+              "reading": 0.014465
+            },
+            {
+              "index": 79,
+              "gridCol": 6,
+              "gridRow": 1,
+              "orientation": "South",
+              "instructionText": "Column pass — col 6, instrument at row 1 → 2, facing South",
+              "reading": 0.008875
+            },
+            {
+              "index": 80,
+              "gridCol": 6,
+              "gridRow": 2,
+              "orientation": "South",
+              "instructionText": "Column pass — col 6, instrument at row 2 → 3, facing South",
+              "reading": 0.002138
+            },
+            {
+              "index": 81,
+              "gridCol": 6,
+              "gridRow": 3,
+              "orientation": "South",
+              "instructionText": "Column pass — col 6, instrument at row 3 → 4, facing South",
+              "reading": -0.003647
+            },
+            {
+              "index": 82,
+              "gridCol": 6,
+              "gridRow": 4,
+              "orientation": "South",
+              "instructionText": "Column pass — col 6, instrument at row 4 → 5, facing South",
+              "reading": -0.010421
+            },
+            {
+              "index": 83,
+              "gridCol": 7,
+              "gridRow": 5,
+              "orientation": "North",
+              "instructionText": "Column pass — col 7, instrument at row 5 → 4, facing North",
+              "reading": 0.007709
+            },
+            {
+              "index": 84,
+              "gridCol": 7,
+              "gridRow": 4,
+              "orientation": "North",
+              "instructionText": "Column pass — col 7, instrument at row 4 → 3, facing North",
+              "reading": 0.001966
+            },
+            {
+              "index": 85,
+              "gridCol": 7,
+              "gridRow": 3,
+              "orientation": "North",
+              "instructionText": "Column pass — col 7, instrument at row 3 → 2, facing North",
+              "reading": -0.003542
+            },
+            {
+              "index": 86,
+              "gridCol": 7,
+              "gridRow": 2,
+              "orientation": "North",
+              "instructionText": "Column pass — col 7, instrument at row 2 → 1, facing North",
+              "reading": -0.009153
+            },
+            {
+              "index": 87,
+              "gridCol": 7,
+              "gridRow": 1,
+              "orientation": "North",
+              "instructionText": "Column pass — col 7, instrument at row 1 → 0, facing North",
+              "reading": -0.015759
+            },
+            {
+              "index": 88,
+              "gridCol": 8,
+              "gridRow": 0,
+              "orientation": "South",
+              "instructionText": "Column pass — col 8, instrument at row 0 → 1, facing South",
+              "reading": 0.017131
+            },
+            {
+              "index": 89,
+              "gridCol": 8,
+              "gridRow": 1,
+              "orientation": "South",
+              "instructionText": "Column pass — col 8, instrument at row 1 → 2, facing South",
+              "reading": 0.011084
+            },
+            {
+              "index": 90,
+              "gridCol": 8,
+              "gridRow": 2,
+              "orientation": "South",
+              "instructionText": "Column pass — col 8, instrument at row 2 → 3, facing South",
+              "reading": 0.005542
+            },
+            {
+              "index": 91,
+              "gridCol": 8,
+              "gridRow": 3,
+              "orientation": "South",
+              "instructionText": "Column pass — col 8, instrument at row 3 → 4, facing South",
+              "reading": -0.000553
+            },
+            {
+              "index": 92,
+              "gridCol": 8,
+              "gridRow": 4,
+              "orientation": "South",
+              "instructionText": "Column pass — col 8, instrument at row 4 → 5, facing South",
+              "reading": -0.006863
+            }
+          ],
+          "result": null
+        },
+        "corrections": []
+      }
+    ]
+  }
+}

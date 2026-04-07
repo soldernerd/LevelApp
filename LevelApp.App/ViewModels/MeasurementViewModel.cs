@@ -10,15 +10,17 @@ namespace LevelApp.App.ViewModels;
 public sealed partial class MeasurementViewModel : ViewModelBase
 {
     private readonly INavigationService _navigation;
+    private readonly MainViewModel      _mainViewModel;
 
     private Project            _project    = null!;
     private MeasurementSession _session    = null!;
     private List<MeasurementStep> _steps   = [];
     private ObjectDefinition   _definition = null!;
 
-    public MeasurementViewModel(INavigationService navigation)
+    public MeasurementViewModel(INavigationService navigation, MainViewModel mainViewModel)
     {
-        _navigation = navigation;
+        _navigation    = navigation;
+        _mainViewModel = mainViewModel;
     }
 
     // ── Initialisation ────────────────────────────────────────────────────────
@@ -85,10 +87,10 @@ public sealed partial class MeasurementViewModel : ViewModelBase
 
     public string OrientationArrow => CurrentStep?.Orientation switch
     {
-        Orientation.North => "↑",
-        Orientation.South => "↓",
-        Orientation.East  => "→",
-        Orientation.West  => "←",
+        Orientation.North => "\u2191",
+        Orientation.South => "\u2193",
+        Orientation.East  => "\u2192",
+        Orientation.West  => "\u2190",
         _ => "?"
     };
 
@@ -97,9 +99,7 @@ public sealed partial class MeasurementViewModel : ViewModelBase
     public bool       IsInputEnabled       => !IsCalculating;
     public Visibility CalculatingVisibility => IsCalculating ? Visibility.Visible : Visibility.Collapsed;
 
-    /// <summary>
-    /// Read-only view of the step list for the canvas renderer.
-    /// </summary>
+    /// <summary>Read-only view of the step list for the canvas renderer.</summary>
     public IReadOnlyList<MeasurementStep> Steps => _steps;
 
     // ── Command ───────────────────────────────────────────────────────────────
@@ -114,6 +114,7 @@ public sealed partial class MeasurementViewModel : ViewModelBase
         if (CurrentStep is null) return;
 
         _steps[CurrentStepIndex].Reading = Reading;
+        _mainViewModel.MarkDirty();
         Reading = double.NaN;
 
         if (CurrentStepIndex < TotalSteps - 1)

@@ -21,69 +21,98 @@ public sealed class SurfacePlot3DDisplay : IResultDisplay
     // ── Layout constants ──────────────────────────────────────────────────────
     private const double IsoW       = 30.0;  // px per grid unit, horizontal axis
     private const double IsoH       = 15.0;  // px per grid unit, depth axis
-    private const double MaxZPixels = 60.0;  // total vertical pixel range for heights
     private const double NodeRadius = 5.0;
     private const double Margin     = 24.0;
+
+    // MaxZPixels is computed per render from the grid size — see Render().
+    // It must not exceed ~20% of the grid's total isometric depth so that
+    // z-displacement can never visually push a node past an adjacent one.
 
     // ── IResultDisplay ────────────────────────────────────────────────────────
 
     public object Render(SurfaceResult result)
     {
         double[][] h = result.HeightMapMm;
-        int rows = h.Length;
-        int cols  = rows > 0 ? h[0].Length : 0;
+
+        // HeightMapMm is indexed [nodeRow][nodeCol], matching gridRow/gridCol exactly.
+        int nodeRows = h.Length;
+        int nodeCols = nodeRows > 0 ? h[0].Length : 0;
 
         var canvas = new Canvas();
-        if (rows == 0 || cols == 0) return canvas;
+        if (nodeRows == 0 || nodeCols == 0) return canvas;
 
-        double hMin   = h.SelectMany(r => r).Min();
-        double hMax   = h.SelectMany(r => r).Max();
+        double hMin   = h.SelectMany(row => row).Min();
+        double hMax   = h.SelectMany(row => row).Max();
         double hRange = hMax > hMin ? hMax - hMin : 1.0;
 
-        // Origin: node (0,0) sits here on screen
-        double originX = (rows - 1) * IsoW + Margin;
-        double originY = MaxZPixels + Margin;
+        int colIntervals = nodeCols - 1;
+        int rowIntervals = nodeRows - 1;
 
-        // Isometric screen position for grid node (col, row)
-        (double sx, double sy) Pos(int col, int row)
+        // Z-scale: cap at 20% of the grid's total isometric depth so that
+        // z-displacement can never visually push a node past an adjacent one.
+        // Without this cap, large exaggeration scrambles the apparent connectivity
+        // even though the edges are topologically correct.
+        // Floor of 10px keeps something visible on very small grids.
+        double maxZPixels = Math.Max(10.0, (colIntervals + rowIntervals) * IsoH * 0.20);
+
+        // Origin: node (gridCol=0, gridRow=0) maps to this screen point.
+        // originX must account for the deepest row pushing nodes leftward by rowIntervals*IsoW.
+        double originX = rowIntervals * IsoW + Margin;
+        double originY = maxZPixels + Margin;
+
+        // Screen position for a node — derived purely from (gridCol, gridRow).
+        (double sx, double sy) Pos(int gridCol, int gridRow)
         {
-            double t   = (h[row][col] - hMin) / hRange;
-            double scx = originX + (col - row) * IsoW;
-            double scy = originY + (col + row) * IsoH - t * MaxZPixels;
+            double t   = (h[gridRow][gridCol] - hMin) / hRange;
+            double scx = originX + (gridCol - gridRow) * IsoW;
+            double scy = originY + (gridCol + gridRow) * IsoH - t * maxZPixels;
             return (scx, scy);
         }
 
         // ── Grid edges ────────────────────────────────────────────────────────
+        // Horizontal: (col, row) → (col+1, row)   count: colIntervals × nodeRows
+        // Vertical:   (col, row) → (col, row+1)   count: nodeCols × rowIntervals
+
+        int expectedEdgeCount = colIntervals * nodeRows + rowIntervals * nodeCols;
+        int edgeCount         = 0;
 
         var edgeBrush = new SolidColorBrush(Color.FromArgb(100, 160, 160, 160));
 
-        // Horizontal edges (East)
-        for (int r = 0; r < rows; r++)
-            for (int c = 0; c < cols - 1; c++)
-                canvas.Children.Add(MakeLine(Pos(c, r), Pos(c + 1, r), edgeBrush));
-
-        // Vertical edges (South)
-        for (int c = 0; c < cols; c++)
-            for (int r = 0; r < rows - 1; r++)
-                canvas.Children.Add(MakeLine(Pos(c, r), Pos(c, r + 1), edgeBrush));
-
-        // ── Nodes (painter order: ascending col + row) ────────────────────────
-        for (int sum = 0; sum < cols + rows - 1; sum++)
-        {
-            for (int r = Math.Max(0, sum - cols + 1); r <= Math.Min(rows - 1, sum); r++)
+        for (int col = 0; col < colIntervals; col++)
+            for (int row = 0; row < nodeRows; row++)
             {
-                int c = sum - r;
-                if (c < 0 || c >= cols) continue;
+                canvas.Children.Add(MakeLine(Pos(col, row), Pos(col + 1, row), edgeBrush));
+                edgeCount++;
+            }
 
-                double t       = (h[r][c] - hMin) / hRange;
-                var (sx, sy)   = Pos(c, r);
-                Color colour   = HeightColor(t);
+        for (int col = 0; col < nodeCols; col++)
+            for (int row = 0; row < rowIntervals; row++)
+            {
+                canvas.Children.Add(MakeLine(Pos(col, row), Pos(col, row + 1), edgeBrush));
+                edgeCount++;
+            }
+
+        System.Diagnostics.Debug.Assert(
+            edgeCount == expectedEdgeCount,
+            $"Surface plot edge count mismatch: drew {edgeCount}, expected {expectedEdgeCount} " +
+            $"({colIntervals}×{nodeRows} horizontal + {rowIntervals}×{nodeCols} vertical).");
+
+        // ── Nodes (painter order: back-to-front by gridCol+gridRow) ──────────
+        for (int sum = 0; sum < nodeCols + nodeRows - 1; sum++)
+        {
+            for (int row = Math.Max(0, sum - nodeCols + 1); row <= Math.Min(nodeRows - 1, sum); row++)
+            {
+                int col = sum - row;
+                if (col < 0 || col >= nodeCols) continue;
+
+                double t     = (h[row][col] - hMin) / hRange;
+                var (sx, sy) = Pos(col, row);
 
                 var ellipse = new Ellipse
                 {
                     Width  = NodeRadius * 2,
                     Height = NodeRadius * 2,
-                    Fill   = new SolidColorBrush(colour)
+                    Fill   = new SolidColorBrush(HeightColor(t))
                 };
                 Canvas.SetLeft(ellipse, sx - NodeRadius);
                 Canvas.SetTop(ellipse,  sy - NodeRadius);
@@ -92,8 +121,8 @@ public sealed class SurfacePlot3DDisplay : IResultDisplay
         }
 
         // ── Canvas dimensions ─────────────────────────────────────────────────
-        canvas.Width  = (cols - 1 + rows - 1) * IsoW + Margin * 2;
-        canvas.Height = (cols - 1 + rows - 1) * IsoH + MaxZPixels + Margin * 2;
+        canvas.Width  = (colIntervals + rowIntervals) * IsoW + Margin * 2;
+        canvas.Height = (colIntervals + rowIntervals) * IsoH + maxZPixels + Margin * 2;
 
         return canvas;
     }

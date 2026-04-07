@@ -1,7 +1,7 @@
 using CommunityToolkit.Mvvm.Input;
 using LevelApp.App.DisplayModules.SurfacePlot3D;
 using LevelApp.App.Navigation;
-using LevelApp.App.Services;
+using LevelApp.Core.Geometry.SurfacePlate.Strategies;
 using LevelApp.Core.Models;
 using Microsoft.UI.Xaml;
 
@@ -9,16 +9,16 @@ namespace LevelApp.App.ViewModels;
 
 public sealed partial class ResultsViewModel : ViewModelBase
 {
-    private readonly INavigationService  _navigation;
-    private readonly ProjectFileService  _fileService;
+    private readonly INavigationService _navigation;
+    private readonly MainViewModel      _mainViewModel;
 
     private Project            _project = null!;
     private MeasurementSession _session = null!;
 
-    public ResultsViewModel(INavigationService navigation, ProjectFileService fileService)
+    public ResultsViewModel(INavigationService navigation, MainViewModel mainViewModel)
     {
-        _navigation  = navigation;
-        _fileService = fileService;
+        _navigation    = navigation;
+        _mainViewModel = mainViewModel;
     }
 
     // ── Initialisation ────────────────────────────────────────────────────────
@@ -36,14 +36,14 @@ public sealed partial class ResultsViewModel : ViewModelBase
                   ?? throw new InvalidOperationException("Session has no result to display.");
 
         ProjectName      = _project.Name;
-        FlatnessText     = $"{result.FlatnessValueMm * 1000.0:F1} µm";
-        SigmaText        = $"σ = {result.Sigma * 1000.0:F2} µm";
+        FlatnessText     = $"{result.FlatnessValueMm * 1000.0:F1} \u00b5m";
+        SigmaText        = $"\u03c3 = {result.Sigma * 1000.0:F2} \u00b5m";
         FlaggedCountText = result.FlaggedStepIndices.Count == 0
             ? "No flagged steps"
             : $"{result.FlaggedStepIndices.Count} flagged step(s)";
 
-        HasFlaggedSteps          = result.FlaggedStepIndices.Count > 0;
-        CorrectButtonVisibility  = HasFlaggedSteps ? Visibility.Visible : Visibility.Collapsed;
+        HasFlaggedSteps         = result.FlaggedStepIndices.Count > 0;
+        CorrectButtonVisibility = HasFlaggedSteps ? Visibility.Visible : Visibility.Collapsed;
 
         // Build per-flagged-step display items
         var steps = _session.InitialRound.Steps;
@@ -86,16 +86,41 @@ public sealed partial class ResultsViewModel : ViewModelBase
 
     public object? PlotContent { get; private set; }
 
+    // ── Exposed for NewMeasurementDialog (used from ResultsView code-behind) ──
+
+    public ObjectDefinition? ActiveObjectDefinition => _project?.ObjectDefinition;
+    public string            ActiveOperator         => _project?.Operator ?? string.Empty;
+
     // ── Commands ──────────────────────────────────────────────────────────────
-
-    [RelayCommand]
-    private async Task SaveProjectAsync()
-        => await _fileService.SaveAsync(_project);
-
-    [RelayCommand]
-    private void NewMeasurement() => _navigation.NavigateTo(PageKey.ProjectSetup);
 
     [RelayCommand]
     private void StartCorrectionSession()
         => _navigation.NavigateTo(PageKey.Correction, new CorrectionArgs(_project, _session));
+
+    // ── New measurement (called from ResultsView code-behind after dialog) ────
+
+    /// <summary>
+    /// Creates a new <see cref="MeasurementSession"/> on the existing project
+    /// and navigates to <see cref="MeasurementView"/>.
+    /// Called by <c>ResultsView.OnNewMeasurementClicked</c> after the dialog confirms.
+    /// </summary>
+    public void StartNewMeasurement(string operatorName, string notes, string strategyId)
+    {
+        var steps = new FullGridStrategy().GenerateSteps(_project.ObjectDefinition).ToList();
+
+        var session = new MeasurementSession
+        {
+            Label        = $"Measurement {_project.Measurements.Count + 1}",
+            TakenAt      = DateTime.UtcNow,
+            Operator     = operatorName,
+            Notes        = notes,
+            InstrumentId = "manual-entry",
+            StrategyId   = strategyId,
+            InitialRound = new MeasurementRound { Steps = steps }
+        };
+
+        _project.Measurements.Add(session);
+        _mainViewModel.MarkDirty();
+        _navigation.NavigateTo(PageKey.Measurement, new MeasurementArgs(_project, session));
+    }
 }

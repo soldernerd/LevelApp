@@ -10,6 +10,7 @@ namespace LevelApp.App.ViewModels;
 public sealed partial class CorrectionViewModel : ViewModelBase
 {
     private readonly INavigationService _navigation;
+    private readonly MainViewModel      _mainViewModel;
 
     private Project            _project    = null!;
     private MeasurementSession _session    = null!;
@@ -21,9 +22,10 @@ public sealed partial class CorrectionViewModel : ViewModelBase
     /// <summary>New readings collected during this correction session (parallel to _flaggedSteps).</summary>
     private double[] _newReadings = [];
 
-    public CorrectionViewModel(INavigationService navigation)
+    public CorrectionViewModel(INavigationService navigation, MainViewModel mainViewModel)
     {
-        _navigation = navigation;
+        _navigation    = navigation;
+        _mainViewModel = mainViewModel;
     }
 
     // ── Initialisation ────────────────────────────────────────────────────────
@@ -46,11 +48,11 @@ public sealed partial class CorrectionViewModel : ViewModelBase
 
         _newReadings = new double[_flaggedSteps.Count];
 
-        GridColumns        = Convert.ToInt32(_definition.Parameters["columnsCount"]);
-        GridRows           = Convert.ToInt32(_definition.Parameters["rowsCount"]);
-        CurrentStepIndex   = 0;
-        Reading            = double.NaN;
-        IsCalculating      = false;
+        GridColumns      = Convert.ToInt32(_definition.Parameters["columnsCount"]);
+        GridRows         = Convert.ToInt32(_definition.Parameters["rowsCount"]);
+        CurrentStepIndex = 0;
+        Reading          = double.NaN;
+        IsCalculating    = false;
 
         OnPropertyChanged(string.Empty);
     }
@@ -92,10 +94,10 @@ public sealed partial class CorrectionViewModel : ViewModelBase
 
     public string OrientationArrow => CurrentStep?.Orientation switch
     {
-        Orientation.North => "↑",
-        Orientation.South => "↓",
-        Orientation.East  => "→",
-        Orientation.West  => "←",
+        Orientation.North => "\u2191",
+        Orientation.South => "\u2193",
+        Orientation.East  => "\u2192",
+        Orientation.West  => "\u2190",
         _ => "?"
     };
 
@@ -171,6 +173,7 @@ public sealed partial class CorrectionViewModel : ViewModelBase
             correctionRound.Result = result;
             _session.Corrections.Add(correctionRound);
             _project.ModifiedAt = DateTime.UtcNow;
+            _mainViewModel.MarkDirty();
 
             IsCalculating = false;
             _navigation.NavigateTo(PageKey.Results, new ResultsArgs(_project, _session));

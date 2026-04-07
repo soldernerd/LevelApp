@@ -10,24 +10,10 @@
                     HorizontalAlignment="Center"
                     Spacing="0">
 
-            <!-- ── Title + Open Project ──────────────────────────────────── -->
-            <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,32">
-                <TextBlock Grid.Column="0"
-                           Text="New Measurement Project"
-                           Style="{StaticResource TitleTextBlockStyle}"/>
-                <Button Grid.Column="1"
-                        Content="Open Project…"
-                        Command="{x:Bind ViewModel.OpenProjectCommand}"
-                        VerticalAlignment="Bottom"/>
-            </Grid>
-
-            <!-- ── Load error bar ─────────────────────────────────────────── -->
-            <InfoBar Title="Open project"
-                     Message="{x:Bind ViewModel.LoadErrorText, Mode=OneWay}"
-                     Severity="Warning"
-                     IsOpen="{x:Bind ViewModel.LoadErrorVisible, Mode=OneWay}"
-                     IsClosable="True"
-                     Margin="0,0,0,16"/>
+            <!-- ── Title ─────────────────────────────────────────────────── -->
+            <TextBlock Text="New Measurement Project"
+                       Style="{StaticResource TitleTextBlockStyle}"
+                       Margin="0,0,0,32"/>
 
             <!-- ── Project Information ───────────────────────────────────── -->
             <TextBlock Text="Project Information"

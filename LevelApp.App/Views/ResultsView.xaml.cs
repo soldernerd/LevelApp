@@ -1,5 +1,6 @@
 using LevelApp.App.Navigation;
 using LevelApp.App.ViewModels;
+using LevelApp.App.Views.Dialogs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -28,5 +29,23 @@ public sealed partial class ResultsView : Page
             if (ViewModel.PlotContent is UIElement plotElement)
                 PlotContainer.Content = plotElement;
         }
+    }
+
+    // ── New Measurement ───────────────────────────────────────────────────────
+
+    private async void OnNewMeasurementClicked(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.ActiveObjectDefinition is null) return;
+
+        var dialog = new NewMeasurementDialog(
+            ViewModel.ActiveObjectDefinition,
+            ViewModel.ActiveOperator)
+        {
+            XamlRoot = this.XamlRoot
+        };
+
+        var result = await dialog.ShowAsync();
+        if (result == ContentDialogResult.Primary)
+            ViewModel.StartNewMeasurement(dialog.OperatorName, dialog.Notes, dialog.StrategyId);
     }
 }

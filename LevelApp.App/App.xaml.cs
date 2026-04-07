@@ -15,11 +15,17 @@ public partial class App : Application
     {
         var services = new ServiceCollection();
 
+        // Settings
+        services.AddSingleton<ISettingsService, SettingsService>();
+
         // Navigation
         services.AddSingleton<INavigationService, NavigationService>();
 
         // Services
         services.AddSingleton<ProjectFileService>();
+
+        // Shell ViewModel — singleton so all page VMs share the same project state
+        services.AddSingleton<MainViewModel>();
 
         // ViewModels — Transient so each navigation gets a fresh instance
         services.AddTransient<ProjectSetupViewModel>();
@@ -33,6 +39,10 @@ public partial class App : Application
     public App()
     {
         Services = BuildServiceProvider();
+
+        // Load persisted settings before any UI is created
+        Services.GetRequiredService<ISettingsService>().Load();
+
         this.InitializeComponent();
     }
 
