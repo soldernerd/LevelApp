@@ -51,10 +51,11 @@ public sealed partial class MeasurementViewModel : ViewModelBase
 
     // ── Grid geometry (set during Initialise) ─────────────────────────────────
 
-    public int    GridColumns { get; private set; }
-    public int    GridRows    { get; private set; }
-    public double WidthMm     { get; private set; }
-    public double HeightMm    { get; private set; }
+    public int              GridColumns { get; private set; }
+    public int              GridRows    { get; private set; }
+    public double           WidthMm     { get; private set; }
+    public double           HeightMm    { get; private set; }
+    public ObjectDefinition Definition  => _definition;
 
     // ── Observable state ──────────────────────────────────────────────────────
 
