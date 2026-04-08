@@ -3,8 +3,8 @@ namespace LevelApp.Core;
 public static class AppVersion
 {
     public const int Major = 0;
-    public const int Minor = 2;
-    public const int Patch = 1;
+    public const int Minor = 4;
+    public const int Patch = 3;
 
     public static string Full    => $"{Major}.{Minor}.{Patch}";
     public static string Display => $"v{Full}";
