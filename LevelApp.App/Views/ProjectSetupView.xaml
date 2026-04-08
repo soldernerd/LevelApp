@@ -160,21 +160,18 @@
         </ScrollViewer>
 
         <!-- ── Right: live 2D preview ───────────────────────────────────────── -->
-        <Border Grid.Column="1"
-                Width="488"
-                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                CornerRadius="8"
-                Margin="0,32,32,32"
-                Padding="24">
-            <StackPanel Spacing="12">
-                <TextBlock Text="Pattern Preview"
-                           Style="{StaticResource BodyStrongTextBlockStyle}"/>
-                <ContentControl x:Name="PreviewContainer"
-                                Content="{x:Bind ViewModel.PreviewCanvas, Mode=OneWay}"
-                                HorizontalContentAlignment="Left"
-                                VerticalContentAlignment="Top"/>
-            </StackPanel>
-        </Border>
+        <StackPanel Grid.Column="1"
+                    Width="488"
+                    Margin="0,32,32,32"
+                    Padding="24"
+                    Spacing="12">
+            <TextBlock Text="Pattern Preview"
+                       Style="{StaticResource BodyStrongTextBlockStyle}"/>
+            <ContentControl x:Name="PreviewContainer"
+                            Content="{x:Bind ViewModel.PreviewCanvas, Mode=OneWay}"
+                            HorizontalContentAlignment="Left"
+                            VerticalContentAlignment="Top"/>
+        </StackPanel>
 
     </Grid>
 

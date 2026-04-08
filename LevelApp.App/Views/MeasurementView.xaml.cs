@@ -8,8 +8,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
 using Microsoft.UI.Xaml.Shapes;
+using Windows.Foundation;
 using Windows.UI;
 
 namespace LevelApp.App.Views;
@@ -22,6 +24,14 @@ public sealed partial class MeasurementView : Page
     private const double TargetMaxPx    = 360.0;
     private const double MinSpacingPx   = 24.0;
     private const double CanvasPad      = 10.0;
+    private const double ArrowLen       = 10.0;
+    private const double ArrowHalfW     =  4.5;
+
+    // Active step is orange so it stands out clearly from green (completed) and grey (pending)
+    private static readonly Color ActiveColor  = Color.FromArgb(255, 230, 110,   0);
+    private static readonly Color GreenColor   = Color.FromArgb(255,   0, 160,  80);
+    private static readonly Color GreyColor    = Color.FromArgb(255, 140, 140, 140);
+    private static readonly Color PendingColor = Color.FromArgb(180, 140, 140, 140);
 
     public MeasurementViewModel ViewModel { get; }
 
@@ -102,15 +112,6 @@ public sealed partial class MeasurementView : Page
             (c * xSpacing + CanvasPad + HighlightR,
              r * ySpacing + CanvasPad + HighlightR);
 
-        // Accent colour from the Fluent system palette
-        Color accentColor;
-        try   { accentColor = (Color)Application.Current.Resources["SystemAccentColor"]; }
-        catch { accentColor = Color.FromArgb(255, 0, 120, 212); }
-
-        var greenColor   = Color.FromArgb(255, 0, 160, 80);
-        var greyColor    = Color.FromArgb(255, 140, 140, 140);
-        var pendingColor = Color.FromArgb(180, 140, 140, 140);
-
         // Endpoints of the active step
         (int toCol, int toRow) = currentStep.Orientation switch
         {
@@ -135,30 +136,21 @@ public sealed partial class MeasurementView : Page
                 _                 => NodePos(s.GridCol, s.GridRow)
             };
 
-            Color  edgeColor;
-            double thickness;
             if (i == curIdx)
             {
-                edgeColor = accentColor;
-                thickness = 3.0;
-            }
-            else if (i < curIdx)
-            {
-                edgeColor = greenColor;
-                thickness = 2.5;
+                AddArrow(fx, fy, tx, ty, ActiveColor, 3.0);
             }
             else
             {
-                edgeColor = pendingColor;
-                thickness = 1.5;
+                Color  edgeColor  = i < curIdx ? GreenColor : PendingColor;
+                double thickness  = i < curIdx ? 2.5 : 1.5;
+                GridCanvas.Children.Add(new Line
+                {
+                    X1 = fx, Y1 = fy, X2 = tx, Y2 = ty,
+                    Stroke          = new SolidColorBrush(edgeColor),
+                    StrokeThickness = thickness
+                });
             }
-
-            GridCanvas.Children.Add(new Line
-            {
-                X1 = fx, Y1 = fy, X2 = tx, Y2 = ty,
-                Stroke          = new Microsoft.UI.Xaml.Media.SolidColorBrush(edgeColor),
-                StrokeThickness = thickness
-            });
         }
 
         // ── Draw nodes (on top of edges) ──────────────────────────────────────
@@ -169,7 +161,7 @@ public sealed partial class MeasurementView : Page
                 bool isEndpoint = (c == currentStep.GridCol && r == currentStep.GridRow)
                                || (c == toCol              && r == toRow);
 
-                Color  color  = isEndpoint ? accentColor : greyColor;
+                Color  color  = isEndpoint ? ActiveColor : GreyColor;
                 double radius = isEndpoint ? HighlightR  : NodeRadius;
 
                 var (cx, cy) = NodePos(c, r);
@@ -177,7 +169,7 @@ public sealed partial class MeasurementView : Page
                 {
                     Width  = radius * 2,
                     Height = radius * 2,
-                    Fill   = new Microsoft.UI.Xaml.Media.SolidColorBrush(color)
+                    Fill   = new SolidColorBrush(color)
                 };
                 Canvas.SetLeft(ellipse, cx - radius);
                 Canvas.SetTop(ellipse,  cy - radius);
@@ -214,15 +206,6 @@ public sealed partial class MeasurementView : Page
                     mmY * scale + CanvasPad + HighlightR);
         }
 
-        // Accent colour from the Fluent system palette
-        Color accentColor;
-        try   { accentColor = (Color)Application.Current.Resources["SystemAccentColor"]; }
-        catch { accentColor = Color.FromArgb(255, 0, 120, 212); }
-
-        var greenColor   = Color.FromArgb(255, 0, 160, 80);
-        var greyColor    = Color.FromArgb(255, 140, 140, 140);
-        var pendingColor = Color.FromArgb(180, 140, 140, 140);
-
         // ── Draw edges (painter order: drawn before nodes) ────────────────────
         for (int i = 0; i < steps.Count; i++)
         {
@@ -230,18 +213,21 @@ public sealed partial class MeasurementView : Page
             var (fx, fy) = NodePos(s.NodeId);
             var (tx, ty) = NodePos(s.ToNodeId);
 
-            Color  edgeColor;
-            double thickness;
-            if (i == curIdx)        { edgeColor = accentColor;  thickness = 3.0; }
-            else if (i < curIdx)    { edgeColor = greenColor;   thickness = 2.5; }
-            else                    { edgeColor = pendingColor;  thickness = 1.5; }
-
-            GridCanvas.Children.Add(new Line
+            if (i == curIdx)
             {
-                X1 = fx, Y1 = fy, X2 = tx, Y2 = ty,
-                Stroke          = new Microsoft.UI.Xaml.Media.SolidColorBrush(edgeColor),
-                StrokeThickness = thickness
-            });
+                AddArrow(fx, fy, tx, ty, ActiveColor, 3.0);
+            }
+            else
+            {
+                Color  edgeColor = i < curIdx ? GreenColor : PendingColor;
+                double thickness = i < curIdx ? 2.5 : 1.5;
+                GridCanvas.Children.Add(new Line
+                {
+                    X1 = fx, Y1 = fy, X2 = tx, Y2 = ty,
+                    Stroke          = new SolidColorBrush(edgeColor),
+                    StrokeThickness = thickness
+                });
+            }
         }
 
         // ── Draw nodes (on top of edges) ──────────────────────────────────────
@@ -253,7 +239,7 @@ public sealed partial class MeasurementView : Page
         foreach (var nodeId in nodeIds)
         {
             bool isEndpoint = nodeId == currentStep.NodeId || nodeId == currentStep.ToNodeId;
-            Color  color  = isEndpoint ? accentColor : greyColor;
+            Color  color  = isEndpoint ? ActiveColor : GreyColor;
             double radius = isEndpoint ? HighlightR  : NodeRadius;
 
             var (cx, cy) = NodePos(nodeId);
@@ -261,7 +247,7 @@ public sealed partial class MeasurementView : Page
             {
                 Width  = radius * 2,
                 Height = radius * 2,
-                Fill   = new Microsoft.UI.Xaml.Media.SolidColorBrush(color)
+                Fill   = new SolidColorBrush(color)
             };
             Canvas.SetLeft(ellipse, cx - radius);
             Canvas.SetTop(ellipse,  cy - radius);
@@ -271,5 +257,48 @@ public sealed partial class MeasurementView : Page
         // Canvas size: plate bounding box + padding
         GridCanvas.Width  = widthMm  * scale + (CanvasPad + HighlightR) * 2;
         GridCanvas.Height = heightMm * scale + (CanvasPad + HighlightR) * 2;
+    }
+
+    // ── Shared helpers ────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Draws a directed arrow on <see cref="GridCanvas"/>: line shaft + filled arrowhead.
+    /// </summary>
+    private void AddArrow(double x1, double y1, double x2, double y2, Color color, double thickness)
+    {
+        double dx  = x2 - x1;
+        double dy  = y2 - y1;
+        double len = Math.Sqrt(dx * dx + dy * dy);
+        if (len < 1e-6) return;
+
+        double nx = dx / len;
+        double ny = dy / len;
+        double px = -ny;
+        double py =  nx;
+
+        double al = Math.Min(ArrowLen,   len * 0.40);
+        double hw = Math.Min(ArrowHalfW, al  * 0.50);
+
+        double bx = x2 - nx * al;
+        double by = y2 - ny * al;
+
+        var brush = new SolidColorBrush(color);
+
+        GridCanvas.Children.Add(new Line
+        {
+            X1 = x1, Y1 = y1, X2 = bx, Y2 = by,
+            Stroke = brush, StrokeThickness = thickness
+        });
+
+        GridCanvas.Children.Add(new Polygon
+        {
+            Points = new PointCollection
+            {
+                new Point(x2,          y2),
+                new Point(bx + px * hw, by + py * hw),
+                new Point(bx - px * hw, by - py * hw)
+            },
+            Fill = brush
+        });
     }
 }
