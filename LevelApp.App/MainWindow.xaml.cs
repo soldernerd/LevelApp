@@ -25,6 +25,9 @@ public sealed partial class MainWindow : Window
 
         _hwnd = WindowNative.GetWindowHandle(this);
 
+        // Set the window and taskbar icon
+        AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "levelapp.ico"));
+
         // Initialise services that need the window handle
         App.Services.GetRequiredService<ProjectFileService>().Initialize(_hwnd);
         ViewModel.Hwnd = _hwnd;
