@@ -100,14 +100,16 @@
                             </StackPanel>
                         </StackPanel>
 
-                        <!-- Grid canvas -->
+                        <!-- Grid canvas (mouse-wheel zooms, scroll bars pan) -->
                         <ScrollViewer Grid.Row="1"
+                                      x:Name="MeasurementsScrollViewer"
                                       HorizontalScrollMode="Auto"
                                       VerticalScrollMode="Auto"
                                       HorizontalScrollBarVisibility="Auto"
                                       VerticalScrollBarVisibility="Auto"
                                       Padding="16,0,16,16">
-                            <Canvas x:Name="MeasurementsCanvas"/>
+                            <Canvas x:Name="MeasurementsCanvas"
+                                    PointerWheelChanged="OnMeasurementsCanvasWheel"/>
                         </ScrollViewer>
 
                     </Grid>

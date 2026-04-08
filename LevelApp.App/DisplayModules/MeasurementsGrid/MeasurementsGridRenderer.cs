@@ -14,7 +14,7 @@ namespace LevelApp.App.DisplayModules.MeasurementsGrid;
 /// <summary>
 /// Renders the 2D measurements grid onto a <see cref="Canvas"/>.
 ///
-/// Shows each measurement step as a labelled edge on a top-down orthographic
+/// Shows each measurement step as a directed arrow on a top-down orthographic
 /// grid.  Each rectangular cell carries a loop closure error (always in µm).
 /// Cell backgrounds are colour-coded green / amber / red by error magnitude
 /// relative to the standard deviation of all cell errors.
@@ -24,7 +24,7 @@ namespace LevelApp.App.DisplayModules.MeasurementsGrid;
 /// </summary>
 public static class MeasurementsGridRenderer
 {
-    // ── Layout constants ──────────────────────────────────────────────────────
+    // ── Layout constants (at zoom = 1.0) ──────────────────────────────────────
 
     private const double TargetMaxPx     = 420.0;  // max canvas dimension
     private const double MinSpacingPx    = 36.0;   // minimum cell size for legibility
@@ -34,6 +34,10 @@ public static class MeasurementsGridRenderer
     // Approximate half-dimensions of an 8pt label (e.g. "−1.234")
     private const double LabelHalfW     = 15.0;
     private const double LabelHalfH     =  7.0;
+
+    // Arrowhead geometry (canvas pixels at zoom = 1.0)
+    private const double ArrowLen       = 10.0;
+    private const double ArrowHalfW     =  4.5;
 
     // ── Entry point ───────────────────────────────────────────────────────────
 
@@ -49,13 +53,15 @@ public static class MeasurementsGridRenderer
     ///   <c>true</c>  — edge labels in µm (height difference).<br/>
     ///   <c>false</c> — edge labels in mm/m (inclination / raw reading).
     /// </param>
+    /// <param name="zoomFactor">Canvas scale multiplier (1.0 = default size).</param>
     public static void Render(
         Canvas                        canvas,
         IReadOnlyList<MeasurementStep> steps,
         SurfaceResult                 result,
         ObjectDefinition              definition,
         bool                          isRawMode,
-        bool                          isUmUnits)
+        bool                          isUmUnits,
+        double                        zoomFactor = 1.0)
     {
         canvas.Children.Clear();
 
@@ -68,7 +74,7 @@ public static class MeasurementsGridRenderer
             {
                 RenderUnionJack(canvas, steps, result, definition,
                     Convert.ToDouble(ujW), Convert.ToDouble(ujH),
-                    isRawMode, isUmUnits);
+                    isRawMode, isUmUnits, zoomFactor);
             }
             return;
         }
@@ -89,9 +95,15 @@ public static class MeasurementsGridRenderer
         double vDistM = heightMm / (rows - 1) / 1000.0;
 
         // Pixel spacing preserving physical aspect ratio
-        double scale    = TargetMaxPx / Math.Max(widthMm, heightMm);
-        double xSpacing = Math.Max(MinSpacingPx, widthMm  / (cols - 1) * scale);
-        double ySpacing = Math.Max(MinSpacingPx, heightMm / (rows - 1) * scale);
+        double effectiveMaxPx  = TargetMaxPx   * zoomFactor;
+        double effectiveMinPx  = MinSpacingPx  * zoomFactor;
+        double scale    = effectiveMaxPx / Math.Max(widthMm, heightMm);
+        double xSpacing = Math.Max(effectiveMinPx, widthMm  / (cols - 1) * scale);
+        double ySpacing = Math.Max(effectiveMinPx, heightMm / (rows - 1) * scale);
+
+        // Arrowhead size scaled with zoom
+        double arrowLen  = ArrowLen  * zoomFactor;
+        double arrowHalfW = ArrowHalfW * zoomFactor;
 
         (double x, double y) NodePos(int c, int r) =>
             (c * xSpacing + CanvasPad,
@@ -221,43 +233,43 @@ public static class MeasurementsGridRenderer
             }
         }
 
-        // ── Edge strokes ──────────────────────────────────────────────────────
+        // ── Edge arrows ───────────────────────────────────────────────────────
         var normalBrush  = new SolidColorBrush(Color.FromArgb(200, 100, 100, 100));
         var flaggedBrush = new SolidColorBrush(Color.FromArgb(255, 210,  80,  20));
 
-        // Horizontal edges
+        // Horizontal edges — arrow direction reflects actual step orientation
         for (int r = 0; r < rows; r++)
         {
             for (int c = 0; c < cols - 1; c++)
             {
-                bool isFlagged = hEdge.TryGetValue((c, r), out var he)
-                              && flaggedSet.Contains(he.idx);
-                var (x1, y1) = NodePos(c,     r);
-                var (x2, _)  = NodePos(c + 1, r);
-                canvas.Children.Add(new Line
-                {
-                    X1 = x1, Y1 = y1, X2 = x2, Y2 = y1,
-                    Stroke          = isFlagged ? flaggedBrush : normalBrush,
-                    StrokeThickness = isFlagged ? 2.0 : 1.5
-                });
+                bool hasStep   = hEdge.TryGetValue((c, r), out var he);
+                bool isFlagged = hasStep && flaggedSet.Contains(he.idx);
+                var  brush     = isFlagged ? flaggedBrush : normalBrush;
+                double thick   = isFlagged ? 2.0 : 1.5;
+
+                // isEast = true → from (c,r) to (c+1,r); false → from (c+1,r) to (c,r)
+                var (fx, fy) = hasStep && !he.isEast ? NodePos(c + 1, r) : NodePos(c, r);
+                var (tx, ty) = hasStep && !he.isEast ? NodePos(c,     r) : NodePos(c + 1, r);
+
+                AddArrow(canvas, fx, fy, tx, ty, brush, thick, arrowLen, arrowHalfW);
             }
         }
 
-        // Vertical edges
+        // Vertical edges — arrow direction reflects actual step orientation
         for (int c = 0; c < cols; c++)
         {
             for (int r = 0; r < rows - 1; r++)
             {
-                bool isFlagged = vEdge.TryGetValue((c, r), out var ve)
-                              && flaggedSet.Contains(ve.idx);
-                var (x1, y1) = NodePos(c, r);
-                var (_, y2)  = NodePos(c, r + 1);
-                canvas.Children.Add(new Line
-                {
-                    X1 = x1, Y1 = y1, X2 = x1, Y2 = y2,
-                    Stroke          = isFlagged ? flaggedBrush : normalBrush,
-                    StrokeThickness = isFlagged ? 2.0 : 1.5
-                });
+                bool hasStep   = vEdge.TryGetValue((c, r), out var ve);
+                bool isFlagged = hasStep && flaggedSet.Contains(ve.idx);
+                var  brush     = isFlagged ? flaggedBrush : normalBrush;
+                double thick   = isFlagged ? 2.0 : 1.5;
+
+                // isSouth = true → from (c,r) to (c,r+1); false → from (c,r+1) to (c,r)
+                var (fx, fy) = hasStep && !ve.isSouth ? NodePos(c, r + 1) : NodePos(c, r);
+                var (tx, ty) = hasStep && !ve.isSouth ? NodePos(c, r)     : NodePos(c, r + 1);
+
+                AddArrow(canvas, fx, fy, tx, ty, brush, thick, arrowLen, arrowHalfW);
             }
         }
 
@@ -383,8 +395,8 @@ public static class MeasurementsGridRenderer
     // ── Union Jack renderer ───────────────────────────────────────────────────
 
     /// <summary>
-    /// Renders a Union Jack step map: edges labelled with readings, flagged edges
-    /// highlighted.  Loop closure cells are omitted (loops are non-rectangular).
+    /// Renders a Union Jack step map: directed arrows labelled with readings,
+    /// flagged edges highlighted, loop closure polygons colour-coded by σ.
     /// </summary>
     private static void RenderUnionJack(
         Canvas                         canvas,
@@ -394,11 +406,15 @@ public static class MeasurementsGridRenderer
         double                         widthMm,
         double                         heightMm,
         bool                           isRawMode,
-        bool                           isUmUnits)
+        bool                           isUmUnits,
+        double                         zoomFactor)
     {
         if (steps.Count == 0) return;
 
-        double scale = TargetMaxPx / Math.Max(widthMm, heightMm);
+        double effectiveMaxPx = TargetMaxPx * zoomFactor;
+        double scale = effectiveMaxPx / Math.Max(widthMm, heightMm);
+        double arrowLen   = ArrowLen   * zoomFactor;
+        double arrowHalfW = ArrowHalfW * zoomFactor;
 
         // Convert physical mm position to canvas pixel position
         (double px, double py) ToCanvas(double mmX, double mmY) =>
@@ -416,22 +432,6 @@ public static class MeasurementsGridRenderer
         var flaggedBrush = new SolidColorBrush(Color.FromArgb(255, 210,  80,  20));
         var labelFg      = new SolidColorBrush(Color.FromArgb(220,  50,  50,  50));
 
-        // ── Edges ─────────────────────────────────────────────────────────────
-        for (int i = 0; i < steps.Count; i++)
-        {
-            var s        = steps[i];
-            var (fx, fy) = NodePx(s.NodeId);
-            var (tx, ty) = NodePx(s.ToNodeId);
-
-            bool isFlagged = flaggedSet.Contains(i);
-            canvas.Children.Add(new Line
-            {
-                X1 = fx, Y1 = fy, X2 = tx, Y2 = ty,
-                Stroke          = isFlagged ? flaggedBrush : normalBrush,
-                StrokeThickness = isFlagged ? 2.0 : 1.5
-            });
-        }
-
         // ── Loop closure polygons ─────────────────────────────────────────────
         if (result.PrimitiveLoops.Length > 0)
         {
@@ -443,13 +443,12 @@ public static class MeasurementsGridRenderer
             {
                 double absUm = Math.Abs(loop.ClosureErrorMm * 1000.0);
                 Color bg = absUm < loopSigmaUm
-                    ? Color.FromArgb( 50,   0, 180,  60)   // < 1σ — green
+                    ? Color.FromArgb( 50,   0, 180,  60)
                     : absUm < 2 * loopSigmaUm
-                        ? Color.FromArgb( 70, 220, 160,   0)  // 1σ–2σ — amber
-                        : Color.FromArgb( 90, 210,  40,  40); // > 2σ — red
+                        ? Color.FromArgb( 70, 220, 160,   0)
+                        : Color.FromArgb( 90, 210,  40,  40);
 
-                // Build canvas-space polygon points
-                var points = new Microsoft.UI.Xaml.Media.PointCollection();
+                var points = new PointCollection();
                 double cx = 0, cy = 0;
                 foreach (var nodeId in loop.NodeIds)
                 {
@@ -461,14 +460,8 @@ public static class MeasurementsGridRenderer
                 cx /= loop.NodeIds.Length;
                 cy /= loop.NodeIds.Length;
 
-                var poly = new Polygon
-                {
-                    Points = points,
-                    Fill   = new SolidColorBrush(bg)
-                };
-                canvas.Children.Add(poly);
+                canvas.Children.Add(new Polygon { Points = points, Fill = new SolidColorBrush(bg) });
 
-                // Error label at centroid
                 string errLabel = $"{loop.ClosureErrorMm * 1000.0:F2}µm";
                 var tb = new TextBlock
                 {
@@ -481,6 +474,20 @@ public static class MeasurementsGridRenderer
                 Canvas.SetTop(tb,  cy - LabelHalfH);
                 canvas.Children.Add(tb);
             }
+        }
+
+        // ── Directed edge arrows ──────────────────────────────────────────────
+        for (int i = 0; i < steps.Count; i++)
+        {
+            var s        = steps[i];
+            var (fx, fy) = NodePx(s.NodeId);
+            var (tx, ty) = NodePx(s.ToNodeId);
+
+            bool isFlagged = flaggedSet.Contains(i);
+            AddArrow(canvas, fx, fy, tx, ty,
+                isFlagged ? flaggedBrush : normalBrush,
+                isFlagged ? 2.0 : 1.5,
+                arrowLen, arrowHalfW);
         }
 
         // ── Edge value labels ─────────────────────────────────────────────────
@@ -496,7 +503,6 @@ public static class MeasurementsGridRenderer
             string label;
             if (isUmUnits)
             {
-                // Physical step length in metres
                 var (fmmX, fmmY) = UnionJackStrategy.NodePositionById(s.NodeId,   definition);
                 var (tmmX, tmmY) = UnionJackStrategy.NodePositionById(s.ToNodeId, definition);
                 double dx    = tmmX - fmmX;
@@ -549,5 +555,59 @@ public static class MeasurementsGridRenderer
         // ── Canvas size ───────────────────────────────────────────────────────
         canvas.Width  = widthMm * scale + CanvasPad * 2;
         canvas.Height = heightMm * scale + CanvasPad * 2;
+    }
+
+    // ── Shared helpers ────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Draws a directed arrow from (x1,y1) to (x2,y2): a line body ending in a
+    /// filled arrowhead triangle.  The line is shortened by <paramref name="arrowLen"/>
+    /// so the shaft does not overlap the head.
+    /// </summary>
+    private static void AddArrow(
+        Canvas          canvas,
+        double          x1, double y1,
+        double          x2, double y2,
+        SolidColorBrush brush,
+        double          thickness,
+        double          arrowLen,
+        double          arrowHalfW)
+    {
+        double dx  = x2 - x1;
+        double dy  = y2 - y1;
+        double len = Math.Sqrt(dx * dx + dy * dy);
+        if (len < 1e-6) return;
+
+        double nx = dx / len;   // unit direction
+        double ny = dy / len;
+        double px = -ny;        // unit perpendicular
+        double py =  nx;
+
+        // Cap arrowhead to 40 % of edge length so very short edges still look right
+        double al = Math.Min(arrowLen,  len * 0.40);
+        double hw = Math.Min(arrowHalfW, al * 0.50);
+
+        // Shorten the line shaft to end at the arrowhead base
+        double bx = x2 - nx * al;
+        double by = y2 - ny * al;
+
+        canvas.Children.Add(new Line
+        {
+            X1 = x1, Y1 = y1,
+            X2 = bx, Y2 = by,
+            Stroke          = brush,
+            StrokeThickness = thickness
+        });
+
+        canvas.Children.Add(new Polygon
+        {
+            Points = new PointCollection
+            {
+                new Point(x2,          y2),           // tip
+                new Point(bx + px * hw, by + py * hw), // base left
+                new Point(bx - px * hw, by - py * hw)  // base right
+            },
+            Fill = brush
+        });
     }
 }

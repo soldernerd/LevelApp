@@ -5,12 +5,15 @@ using LevelApp.App.Views.Dialogs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Navigation;
 
 namespace LevelApp.App.Views;
 
 public sealed partial class ResultsView : Page
 {
+    private double _zoomFactor = 1.0;
+
     public ResultsViewModel ViewModel { get; }
 
     public ResultsView()
@@ -74,7 +77,8 @@ public sealed partial class ResultsView : Page
             ViewModel.ActiveResult,
             ViewModel.ActiveDefinition,
             isRawMode,
-            isUmUnits);
+            isUmUnits,
+            _zoomFactor);
     }
 
     /// <summary>
@@ -82,6 +86,19 @@ public sealed partial class ResultsView : Page
     /// </summary>
     private void OnModeOrUnitsChanged(object sender, RoutedEventArgs e)
         => DrawMeasurementsGrid();
+
+    /// <summary>
+    /// Mouse-wheel zoom: each notch scales by ×1.2 or ÷1.2, clamped to 0.25 – 8×.
+    /// The event is marked handled so the parent ScrollViewer scrolls only via its bars.
+    /// </summary>
+    private void OnMeasurementsCanvasWheel(object sender, PointerRoutedEventArgs e)
+    {
+        var delta = e.GetCurrentPoint(MeasurementsCanvas).Properties.MouseWheelDelta;
+        double factor = delta > 0 ? 1.2 : 1.0 / 1.2;
+        _zoomFactor = Math.Clamp(_zoomFactor * factor, 0.25, 8.0);
+        DrawMeasurementsGrid();
+        e.Handled = true;
+    }
 
     /// <summary>
     /// Ensures the measurements grid is drawn when Tab 2 is first selected,
