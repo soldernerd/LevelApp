@@ -8,7 +8,7 @@
 
         <!-- ── Header ─────────────────────────────────────────────────────── -->
         <Grid Grid.Row="0" Padding="24,16,24,12"
-              ColumnDefinitions="*,Auto">
+              ColumnDefinitions="*,Auto,Auto">
 
             <TextBlock Grid.Column="0"
                        Text="{x:Bind ViewModel.ProjectName, Mode=OneWay}"
@@ -16,6 +16,12 @@
                        VerticalAlignment="Center"/>
 
             <Button Grid.Column="1"
+                    Content="Recalculate"
+                    Click="OnRecalculateClicked"
+                    VerticalAlignment="Center"
+                    Margin="0,0,8,0"/>
+
+            <Button Grid.Column="2"
                     Content="New Measurement"
                     Click="OnNewMeasurementClicked"
                     VerticalAlignment="Center"/>
@@ -42,64 +48,175 @@
                 </ScrollViewer>
             </Border>
 
-            <!-- Right: statistics + flagged steps + correction -->
-            <StackPanel Grid.Column="1" Spacing="16">
+            <!-- Right: info + statistics + flagged steps + correction -->
+            <ScrollViewer Grid.Column="1"
+                          VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="16">
 
-                <!-- Flatness card -->
-                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        CornerRadius="8"
-                        Padding="16">
-                    <StackPanel Spacing="4">
-                        <TextBlock Text="Flatness (peak-to-valley)"
-                                   Style="{StaticResource CaptionTextBlockStyle}"
-                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                        <TextBlock Text="{x:Bind ViewModel.FlatnessText, Mode=OneWay}"
-                                   Style="{StaticResource SubtitleTextBlockStyle}"/>
-                    </StackPanel>
-                </Border>
+                    <!-- Object info card -->
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            CornerRadius="8"
+                            Padding="16">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Measurement Info"
+                                       Style="{StaticResource BodyStrongTextBlockStyle}"
+                                       Margin="0,0,0,6"/>
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" RowSpacing="2">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Object"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Grid.Row="0" Grid.Column="1"
+                                           Text="{x:Bind ViewModel.ObjectTypeText, Mode=OneWay}"
+                                           Style="{StaticResource CaptionTextBlockStyle}"/>
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Dimensions"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1"
+                                           Text="{x:Bind ViewModel.DimensionsText, Mode=OneWay}"
+                                           Style="{StaticResource CaptionTextBlockStyle}"/>
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Strategy"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1"
+                                           Text="{x:Bind ViewModel.StrategyText, Mode=OneWay}"
+                                           Style="{StaticResource CaptionTextBlockStyle}"/>
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Grid / Segs"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Grid.Row="3" Grid.Column="1"
+                                           Text="{x:Bind ViewModel.StrategyParamsText, Mode=OneWay}"
+                                           Style="{StaticResource CaptionTextBlockStyle}"/>
+                                <TextBlock Grid.Row="4" Grid.Column="0" Text="Method"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Grid.Row="4" Grid.Column="1"
+                                           Text="{x:Bind ViewModel.CalcMethodText, Mode=OneWay}"
+                                           Style="{StaticResource CaptionTextBlockStyle}"/>
+                                <TextBlock Grid.Row="5" Grid.Column="0" Text="Threshold"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Grid.Row="5" Grid.Column="1"
+                                           Text="{x:Bind ViewModel.SigmaThresholdText, Mode=OneWay}"
+                                           Style="{StaticResource CaptionTextBlockStyle}"/>
+                                <TextBlock Grid.Row="6" Grid.Column="0" Text="Excluded"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Grid.Row="6" Grid.Column="1"
+                                           Text="{x:Bind ViewModel.ExcludedStepsText, Mode=OneWay}"
+                                           Style="{StaticResource CaptionTextBlockStyle}"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
 
-                <!-- Sigma card -->
-                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        CornerRadius="8"
-                        Padding="16">
-                    <StackPanel Spacing="4">
-                        <TextBlock Text="Residual RMS"
-                                   Style="{StaticResource CaptionTextBlockStyle}"
-                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                        <TextBlock Text="{x:Bind ViewModel.SigmaText, Mode=OneWay}"
-                                   Style="{StaticResource SubtitleTextBlockStyle}"/>
-                    </StackPanel>
-                </Border>
+                    <!-- Flatness card -->
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            CornerRadius="8"
+                            Padding="16">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Flatness (peak-to-valley)"
+                                       Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock Text="{x:Bind ViewModel.FlatnessText, Mode=OneWay}"
+                                       Style="{StaticResource SubtitleTextBlockStyle}"/>
+                        </StackPanel>
+                    </Border>
 
-                <!-- Flagged steps card -->
-                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        CornerRadius="8"
-                        Padding="16">
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="{x:Bind ViewModel.FlaggedCountText, Mode=OneWay}"
-                                   Style="{StaticResource BodyStrongTextBlockStyle}"/>
-                        <ItemsControl ItemsSource="{x:Bind ViewModel.FlaggedSteps, Mode=OneWay}"
-                                      Visibility="{x:Bind ViewModel.FlaggedListVisibility, Mode=OneWay}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding Label}"
-                                               Style="{StaticResource CaptionTextBlockStyle}"
-                                               TextWrapping="Wrap"
-                                               Margin="0,2,0,2"/>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-                </Border>
+                    <!-- Sigma card -->
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            CornerRadius="8"
+                            Padding="16">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Residual RMS"
+                                       Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock Text="{x:Bind ViewModel.SigmaText, Mode=OneWay}"
+                                       Style="{StaticResource SubtitleTextBlockStyle}"/>
+                        </StackPanel>
+                    </Border>
 
-                <!-- Start Correction Session button — visible only when steps are flagged -->
-                <Button Content="Start Correction Session"
-                        Command="{x:Bind ViewModel.StartCorrectionSessionCommand}"
-                        Visibility="{x:Bind ViewModel.CorrectButtonVisibility, Mode=OneWay}"
-                        Style="{StaticResource AccentButtonStyle}"
-                        HorizontalAlignment="Stretch"/>
+                    <!-- Closure errors card (visible only when loops exist) -->
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            CornerRadius="8"
+                            Padding="16"
+                            Visibility="{x:Bind ViewModel.ClosureStatsVisibility, Mode=OneWay}">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Closure errors"
+                                       Style="{StaticResource BodyStrongTextBlockStyle}"
+                                       Margin="0,0,0,4"/>
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" RowSpacing="2">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Mean"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Grid.Row="0" Grid.Column="1"
+                                           Text="{x:Bind ViewModel.ClosureErrorMeanText, Mode=OneWay}"
+                                           Style="{StaticResource CaptionTextBlockStyle}"/>
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Median"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1"
+                                           Text="{x:Bind ViewModel.ClosureErrorMedianText, Mode=OneWay}"
+                                           Style="{StaticResource CaptionTextBlockStyle}"/>
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Max"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1"
+                                           Text="{x:Bind ViewModel.ClosureErrorMaxText, Mode=OneWay}"
+                                           Style="{StaticResource CaptionTextBlockStyle}"/>
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="RMS"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Grid.Row="3" Grid.Column="1"
+                                           Text="{x:Bind ViewModel.ClosureErrorRmsText, Mode=OneWay}"
+                                           Style="{StaticResource CaptionTextBlockStyle}"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
 
-            </StackPanel>
+                    <!-- Flagged steps card -->
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            CornerRadius="8"
+                            Padding="16">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="{x:Bind ViewModel.FlaggedCountText, Mode=OneWay}"
+                                       Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                            <ItemsControl ItemsSource="{x:Bind ViewModel.FlaggedSteps, Mode=OneWay}"
+                                          Visibility="{x:Bind ViewModel.FlaggedListVisibility, Mode=OneWay}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Label}"
+                                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                                   TextWrapping="Wrap"
+                                                   Margin="0,2,0,2"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Start Correction Session button -->
+                    <Button Content="Start Correction Session"
+                            Command="{x:Bind ViewModel.StartCorrectionSessionCommand}"
+                            Visibility="{x:Bind ViewModel.CorrectButtonVisibility, Mode=OneWay}"
+                            Style="{StaticResource AccentButtonStyle}"
+                            HorizontalAlignment="Stretch"/>
+
+                </StackPanel>
+            </ScrollViewer>
         </Grid>
 
     </Grid>

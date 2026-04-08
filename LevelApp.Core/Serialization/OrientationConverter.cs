@@ -6,8 +6,8 @@ namespace LevelApp.Core.Serialization;
 
 /// <summary>
 /// Reads <see cref="Orientation"/> from either its string name
-/// ("North", "South", "East", "West") or its legacy integer representation
-/// (North = 0, South = 1, East = 2, West = 3 — matching the enum declaration order).
+/// ("North", "South", "East", "West", "NorthEast", …) or its legacy integer
+/// representation (North=0, South=1, East=2, West=3).
 /// Always writes the string name so that all future saves use the string format.
 /// </summary>
 public sealed class OrientationConverter : JsonConverter<Orientation>
@@ -20,16 +20,20 @@ public sealed class OrientationConverter : JsonConverter<Orientation>
         {
             return reader.GetString() switch
             {
-                "North" => Orientation.North,
-                "South" => Orientation.South,
-                "East"  => Orientation.East,
-                "West"  => Orientation.West,
-                var s   => throw new JsonException($"Unknown Orientation value '{s}'.")
+                "North"     => Orientation.North,
+                "South"     => Orientation.South,
+                "East"      => Orientation.East,
+                "West"      => Orientation.West,
+                "NorthEast" => Orientation.NorthEast,
+                "NorthWest" => Orientation.NorthWest,
+                "SouthEast" => Orientation.SouthEast,
+                "SouthWest" => Orientation.SouthWest,
+                var s       => throw new JsonException($"Unknown Orientation value '{s}'.")
             };
         }
 
         // ── Integer format (legacy) ───────────────────────────────────────────
-        // Matches the enum declaration: { North=0, South=1, East=2, West=3 }
+        // Matches the original enum declaration: { North=0, South=1, East=2, West=3 }
         if (reader.TokenType == JsonTokenType.Number)
         {
             return reader.GetInt32() switch

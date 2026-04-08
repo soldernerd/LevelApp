@@ -41,6 +41,7 @@
                   SelectedIndex="0"
                   HorizontalAlignment="Stretch">
             <ComboBoxItem>Full Grid (boustrophedon)</ComboBoxItem>
+            <ComboBoxItem>Union Jack</ComboBoxItem>
         </ComboBox>
 
     </StackPanel>

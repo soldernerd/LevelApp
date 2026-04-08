@@ -76,6 +76,9 @@ public sealed partial class MeasurementView : Page
         int cols = ViewModel.GridColumns;
         int rows = ViewModel.GridRows;
 
+        // Union Jack (and other non-grid strategies) don't use GridColumns/GridRows
+        if (cols <= 0 || rows <= 0) return;
+
         // Determine the "to" node
         (int toCol, int toRow) = step.Orientation switch
         {

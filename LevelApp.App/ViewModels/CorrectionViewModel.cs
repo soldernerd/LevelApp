@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LevelApp.App.Navigation;
 using LevelApp.Core.Geometry.SurfacePlate;
+using LevelApp.Core.Geometry.SurfacePlate.Strategies;
 using LevelApp.Core.Models;
 using Microsoft.UI.Xaml;
 
@@ -48,8 +49,8 @@ public sealed partial class CorrectionViewModel : ViewModelBase
 
         _newReadings = new double[_flaggedSteps.Count];
 
-        GridColumns      = Convert.ToInt32(_definition.Parameters["columnsCount"]);
-        GridRows         = Convert.ToInt32(_definition.Parameters["rowsCount"]);
+        GridColumns      = _definition.Parameters.TryGetValue("columnsCount", out var c) ? Convert.ToInt32(c) : 0;
+        GridRows         = _definition.Parameters.TryGetValue("rowsCount",    out var r) ? Convert.ToInt32(r) : 0;
         CurrentStepIndex = 0;
         Reading          = double.NaN;
         IsCalculating    = false;
@@ -160,15 +161,19 @@ public sealed partial class CorrectionViewModel : ViewModelBase
                     GridRow         = s.GridRow,
                     Orientation     = s.Orientation,
                     InstructionText = s.InstructionText,
+                    NodeId          = s.NodeId,
+                    ToNodeId        = s.ToNodeId,
+                    PassId          = s.PassId,
                     Reading         = replacedMap.TryGetValue(s.Index, out double nr) ? nr : s.Reading
                 })
                 .ToList();
 
             var mergedRound = new MeasurementRound { Steps = mergedSteps };
             var definition  = _definition;
+            var strategy    = ResultsViewModel.CreateStrategy(_session.StrategyId);
 
             var result = await Task.Run(() =>
-                new SurfacePlateCalculator(definition).Calculate(mergedRound));
+                new SurfacePlateCalculator(definition, strategy).Calculate(mergedRound));
 
             correctionRound.Result = result;
             _session.Corrections.Add(correctionRound);

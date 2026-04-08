@@ -31,6 +31,30 @@ public sealed partial class ResultsView : Page
         }
     }
 
+    // ── Recalculate ───────────────────────────────────────────────────────────
+
+    private async void OnRecalculateClicked(object sender, RoutedEventArgs e)
+    {
+        var dialog = new RecalculateDialog(
+            ViewModel.CurrentCalculationParameters,
+            null)
+        {
+            XamlRoot = this.XamlRoot
+        };
+
+        var result = await dialog.ShowAsync();
+
+        if (result == ContentDialogResult.None) return;   // Cancel
+
+        bool save = result == ContentDialogResult.Secondary; // "Recalculate & Save"
+        var parameters = dialog.BuildParameters();
+
+        await ViewModel.RecalculateAsync(parameters, save);
+
+        if (ViewModel.PlotContent is UIElement plotElement)
+            PlotContainer.Content = plotElement;
+    }
+
     // ── New Measurement ───────────────────────────────────────────────────────
 
     private async void OnNewMeasurementClicked(object sender, RoutedEventArgs e)

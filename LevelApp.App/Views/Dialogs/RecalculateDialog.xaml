@@ -1,0 +1,56 @@
+<ContentDialog
+    x:Class="LevelApp.App.Views.Dialogs.RecalculateDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Recalculate"
+    PrimaryButtonText="Recalculate"
+    SecondaryButtonText="Recalculate &amp; Save"
+    CloseButtonText="Cancel"
+    DefaultButton="Primary">
+
+    <StackPanel Spacing="16" MinWidth="420">
+
+        <!-- Calculation method -->
+        <ComboBox x:Name="MethodCombo"
+                  Header="Calculation method"
+                  SelectedIndex="0"
+                  HorizontalAlignment="Stretch">
+            <ComboBoxItem>Least Squares</ComboBoxItem>
+            <ComboBoxItem>Sequential Integration</ComboBoxItem>
+        </ComboBox>
+
+        <!-- Auto-exclude outliers -->
+        <ToggleSwitch x:Name="AutoExcludeToggle"
+                      Header="Auto-exclude outliers"
+                      IsOn="True"
+                      Toggled="OnAutoExcludeToggled"/>
+
+        <!-- Sigma threshold (conditional) -->
+        <NumberBox x:Name="SigmaBox"
+                   Header="Sigma threshold"
+                   Value="2.5"
+                   Minimum="1.0"
+                   Maximum="10.0"
+                   SmallChange="0.1"
+                   SpinButtonPlacementMode="Compact"
+                   HorizontalAlignment="Stretch"/>
+
+        <!-- Flagged steps (manual exclusion) -->
+        <StackPanel x:Name="FlaggedPanel" Spacing="8">
+            <TextBlock Text="Flagged steps (uncheck to exclude manually)"
+                       Style="{StaticResource CaptionTextBlockStyle}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <ItemsControl x:Name="FlaggedList">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <CheckBox Content="{Binding Label}"
+                                  IsChecked="{Binding IsIncluded, Mode=TwoWay}"
+                                  Margin="0,2,0,2"/>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+
+    </StackPanel>
+
+</ContentDialog>

@@ -65,6 +65,9 @@ public class SurfacePlateCalculatorTests
     private static double[][] ZeroHeights(int rows, int cols) =>
         Enumerable.Range(0, rows).Select(_ => new double[cols]).ToArray();
 
+    private static double NodeHeight(SurfaceResult result, int col, int row)
+        => result.NodeHeights[$"col{col}_row{row}"];
+
     // ── Tests ─────────────────────────────────────────────────────────────────
 
     [Fact]
@@ -76,8 +79,7 @@ public class SurfacePlateCalculatorTests
         var result = new SurfacePlateCalculator(def).Calculate(round);
 
         Assert.Equal(0.0, result.FlatnessValueMm, precision: 9);
-        Assert.All(result.HeightMapMm.SelectMany(row => row),
-            h => Assert.Equal(0.0, h, precision: 9));
+        Assert.All(result.NodeHeights.Values, h => Assert.Equal(0.0, h, precision: 9));
         Assert.Empty(result.FlaggedStepIndices);
     }
 
@@ -96,7 +98,7 @@ public class SurfacePlateCalculatorTests
 
         for (int r = 0; r < rows; r++)
             for (int c = 0; c < cols; c++)
-                Assert.Equal(trueH[r][c], result.HeightMapMm[r][c], precision: 9);
+                Assert.Equal(trueH[r][c], NodeHeight(result, c, r), precision: 9);
 
         Assert.Equal(0.2, result.FlatnessValueMm, precision: 9);
         Assert.Empty(result.FlaggedStepIndices);
@@ -117,7 +119,7 @@ public class SurfacePlateCalculatorTests
 
         for (int r = 0; r < rows; r++)
             for (int c = 0; c < cols; c++)
-                Assert.Equal(trueH[r][c], result.HeightMapMm[r][c], precision: 9);
+                Assert.Equal(trueH[r][c], NodeHeight(result, c, r), precision: 9);
 
         Assert.Equal(0.30, result.FlatnessValueMm, precision: 9);
     }
@@ -167,7 +169,7 @@ public class SurfacePlateCalculatorTests
     }
 
     [Fact]
-    public void FlatnessValue_EqualsHeightMapPeakToValley()
+    public void FlatnessValue_EqualsNodeHeightPeakToValley()
     {
         var def = Def(3, 3);
         double[][] trueH = Enumerable.Range(0, 3)
@@ -176,8 +178,7 @@ public class SurfacePlateCalculatorTests
 
         var result = new SurfacePlateCalculator(def).Calculate(BuildRound(def, trueH));
 
-        double expectedFlatness = result.HeightMapMm.SelectMany(r => r).Max()
-                                - result.HeightMapMm.SelectMany(r => r).Min();
+        double expectedFlatness = result.NodeHeights.Values.Max() - result.NodeHeights.Values.Min();
         Assert.Equal(expectedFlatness, result.FlatnessValueMm, precision: 9);
     }
 

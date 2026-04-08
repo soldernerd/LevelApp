@@ -64,6 +64,9 @@ public static class AppVersion
 
 - **Never** hardcode a version string anywhere else — not in XAML, not in code-behind, not in comments.
 - The `.csproj` `<Version>` / `<AssemblyVersion>` / `<FileVersion>` fields are kept in sync with this file manually.
+- Bump Minor with every work package that is implemented. Reset Patch to 0.
+- Bump Patch every time the code is changed
+- Bump Major only when explicitly instructed by the user
 - Bump `AppVersion.cs` **before** committing so the delivered commit already carries the correct version.
 
 ### Commit message format
@@ -104,7 +107,8 @@ Only perform the following steps when **explicitly instructed to do so by the us
 
 1. Update `docs/architecture.md` to reflect what was actually built (correct any deviations from the spec, update the solution structure, interfaces, and data models as needed — do not describe unbuilt features as complete)
 2. Update `README.md` if any user-facing functionality has changed
-3. Commit all changes and push to GitHub with a commit message following the convention above (e.g. `[v0.2.0] WP0.02: versioning, appVersion in project file, About dialog`)
+3. Update 'levelproj.md' if anything in the project file format has changed
+4. Commit all changes and push to GitHub with a commit message following the convention above (e.g. `[v0.2.0] WP0.02: versioning, appVersion in project file, About dialog`).
 
 ---
 
@@ -115,7 +119,8 @@ Sample project files for testing and debugging are located in `docs/sampleProjec
 ---
 
 ## Repository
-
+Git: Perform a local commit after every code change following the following convention: Commit all changes and push to GitHub with a commit message following the convention above (e.g. `[v0.2.0] WP0.02: versioning, appVersion in project file, About dialog`)
+Push to GitHub: Only push to GitHub when explicitly insttructed by the user, see "After Completing a Work Package" above
 GitHub: https://github.com/soldernerd/LevelApp  
 License: GPL v3  
 Author: Lukas Fässler

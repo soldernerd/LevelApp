@@ -14,6 +14,7 @@ public sealed partial class ProjectSetupView : Page
     {
         ViewModel = App.Services.GetRequiredService<ProjectSetupViewModel>();
         this.InitializeComponent();
+        this.Loaded += (_, _) => ViewModel.SchedulePreviewUpdate(DispatcherQueue);
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -22,9 +23,20 @@ public sealed partial class ProjectSetupView : Page
         if (e.Parameter is Project project)
         {
             ViewModel.Initialize(project);
-            // Force compiled x:Bind to re-read all properties — PropertyChanged alone
-            // is not reliably applied during OnNavigatedTo (especially for NumberBox).
             Bindings.Update();
         }
+        ViewModel.SchedulePreviewUpdate(DispatcherQueue);
     }
+
+    private void OnParameterChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+        => ViewModel.SchedulePreviewUpdate(DispatcherQueue);
+
+    private void OnStrategyChanged(object sender, SelectionChangedEventArgs e)
+    {
+        Bindings.Update();
+        ViewModel.SchedulePreviewUpdate(DispatcherQueue);
+    }
+
+    private void OnRingsOptionChanged(object sender, SelectionChangedEventArgs e)
+        => ViewModel.SchedulePreviewUpdate(DispatcherQueue);
 }

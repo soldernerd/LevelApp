@@ -1,47 +1,41 @@
+using LevelApp.Core.Geometry.SurfacePlate.Strategies;
 using LevelApp.Core.Interfaces;
 using LevelApp.Core.Models;
 
 namespace LevelApp.Core.Geometry.SurfacePlate;
 
 /// <summary>
-/// Least-squares surface fitting for a rectangular grid measured with a precision level.
+/// Least-squares surface fitting for any measurement strategy.
 ///
-/// Parameter convention
-/// ────────────────────
-/// columnsCount / rowsCount in ObjectDefinition.Parameters are the number of grid
-/// *nodes* in each axis, not the number of intervals.
-/// A plate with columnsCount=4, rowsCount=3 has 4×3 = 12 grid nodes,
-/// 3 column intervals, and 2 row intervals.
+/// Each step contributes one equation:  h[to] − h[from] = reading × stepDistM
+///   (reading in mm/m; stepDistM in metres; result in mm)
 ///
-/// Each step contributes one linear equation:  h[to] − h[from] = reading × stepLen / 1000
-///   (reading in mm/m; stepLen in mm; delta in mm)
+/// The overdetermined system A h = b is solved via normal equations AᵀA h = Aᵀb.
+/// h[node_0] is fixed to 0 as the height reference.
+/// Gaussian elimination with partial pivoting solves the N×N system.
 ///
-/// The overdetermined system A h = b is solved by normal equations AᵀA h = Aᵀb, assembled
-/// directly without materialising the full M×N matrix.  h[0] is fixed to 0 as the height
-/// reference by adding a unit constraint row.  Gaussian elimination with partial pivoting
-/// solves the resulting N×N system.
-///
-/// Degrees of freedom = M − (N − 1), where N = columnsCount × rowsCount, M = number of steps.
+/// Degrees of freedom = M − (N − 1), where N = unique node count, M = step count.
 /// Per-step residuals drive outlier detection: flag steps where |r| > k·σ.
 /// </summary>
 public sealed class SurfacePlateCalculator : IGeometryCalculator
 {
-    private readonly int    _nodeCols;        // number of grid node columns = columnsCount
-    private readonly int    _nodeRows;        // number of grid node rows    = rowsCount
-    private readonly double _stepLenX;        // mm between adjacent column nodes
-    private readonly double _stepLenY;        // mm between adjacent row nodes
-    private readonly double _sigmaThreshold;  // k for outlier detection
+    private readonly ObjectDefinition     _definition;
+    private readonly IMeasurementStrategy _strategy;
+    private readonly double               _sigmaThreshold;
 
-    public SurfacePlateCalculator(ObjectDefinition definition, double sigmaThreshold = 2.5)
+    public SurfacePlateCalculator(
+        ObjectDefinition definition,
+        IMeasurementStrategy strategy,
+        double sigmaThreshold = 2.5)
     {
-        _nodeCols = Convert.ToInt32(definition.Parameters["columnsCount"]);
-        _nodeRows = Convert.ToInt32(definition.Parameters["rowsCount"]);
-        double widthMm  = Convert.ToDouble(definition.Parameters["widthMm"]);
-        double heightMm = Convert.ToDouble(definition.Parameters["heightMm"]);
-        _stepLenX = widthMm  / (_nodeCols - 1);
-        _stepLenY = heightMm / (_nodeRows - 1);
+        _definition     = definition;
+        _strategy       = strategy;
         _sigmaThreshold = sigmaThreshold;
     }
+
+    /// <summary>Convenience overload — uses FullGridStrategy (preserves backward compatibility).</summary>
+    public SurfacePlateCalculator(ObjectDefinition definition, double sigmaThreshold = 2.5)
+        : this(definition, new FullGridStrategy(), sigmaThreshold) { }
 
     public SurfaceResult Calculate(MeasurementRound round)
     {
@@ -54,22 +48,47 @@ public sealed class SurfacePlateCalculator : IGeometryCalculator
             throw new InvalidOperationException(
                 "All steps must have a reading before the surface can be calculated.");
 
-        int n = _nodeRows * _nodeCols;  // total grid nodes
-        int m = steps.Count;
+        // ── Build ordered node list and index map ─────────────────────────────
+        // Collect all unique node ids in the order they first appear.
+        var nodeOrder = new List<string>();
+        var nodeIndex = new Dictionary<string, int>();
 
-        // ── Build normal equations AᵀA h = Aᵀb ──────────────────────────────
-        // Each step contributes: h[to] − h[from] = delta
-        //   AᵀA[to,to]     += 1    AᵀA[from,from] += 1
-        //   AᵀA[to,from]   -= 1    AᵀA[from,to]   -= 1
-        //   Aᵀb[to]  += delta      Aᵀb[from] -= delta
-
-        double[,] AtA = new double[n, n];
-        double[]  Atb = new double[n];
+        void RegisterNode(string id)
+        {
+            if (!nodeIndex.ContainsKey(id))
+            {
+                nodeIndex[id] = nodeOrder.Count;
+                nodeOrder.Add(id);
+            }
+        }
 
         foreach (var step in steps)
         {
-            var (from, to, stepLen) = NodeIndices(step);
-            double delta = step.Reading!.Value * stepLen / 1000.0;
+            RegisterNode(step.NodeId);
+            RegisterNode(step.ToNodeId);
+        }
+
+        int n = nodeOrder.Count;
+        int m = steps.Count;
+
+        // ── Pre-compute step lengths from physical positions ───────────────────
+        double[] stepLensMm = new double[m];
+        for (int i = 0; i < m; i++)
+        {
+            var (fx, fy) = _strategy.GetNodePosition(steps[i], _definition);
+            var (tx, ty) = _strategy.GetToNodePosition(steps[i], _definition);
+            stepLensMm[i] = Math.Sqrt((tx - fx) * (tx - fx) + (ty - fy) * (ty - fy));
+        }
+
+        // ── Build normal equations AᵀA h = Aᵀb ───────────────────────────────
+        double[,] AtA = new double[n, n];
+        double[]  Atb = new double[n];
+
+        for (int i = 0; i < m; i++)
+        {
+            int from  = nodeIndex[steps[i].NodeId];
+            int to    = nodeIndex[steps[i].ToNodeId];
+            double delta = steps[i].Reading!.Value * stepLensMm[i] / 1000.0;
 
             AtA[to,   to]   += 1.0;
             AtA[from, from] += 1.0;
@@ -80,7 +99,7 @@ public sealed class SurfacePlateCalculator : IGeometryCalculator
             Atb[from] -= delta;
         }
 
-        // Reference constraint: h[0] = 0  (adds the row [1 0 … 0]·h = 0 to the system)
+        // Reference constraint: h[node_0] = 0
         AtA[0, 0] += 1.0;
 
         // ── Solve ─────────────────────────────────────────────────────────────
@@ -90,8 +109,9 @@ public sealed class SurfacePlateCalculator : IGeometryCalculator
         double[] residuals = new double[m];
         for (int i = 0; i < m; i++)
         {
-            var (from, to, stepLen) = NodeIndices(steps[i]);
-            double delta = steps[i].Reading!.Value * stepLen / 1000.0;
+            int from  = nodeIndex[steps[i].NodeId];
+            int to    = nodeIndex[steps[i].ToNodeId];
+            double delta = steps[i].Reading!.Value * stepLensMm[i] / 1000.0;
             residuals[i] = (h[to] - h[from]) - delta;
         }
 
@@ -108,65 +128,88 @@ public sealed class SurfacePlateCalculator : IGeometryCalculator
             .Select(x => x.Index)
             .ToList();
 
-        // ── Height map  [nodeRow][nodeCol] ───────────────────────────────────
-        // Dimensions: _nodeRows × _nodeCols  (one entry per grid node).
-        double[][] heightMap = new double[_nodeRows][];
-        for (int row = 0; row < _nodeRows; row++)
+        // ── NodeHeights dictionary ────────────────────────────────────────────
+        var nodeHeights = new Dictionary<string, double>(n);
+        for (int i = 0; i < n; i++)
+            nodeHeights[nodeOrder[i]] = h[i];
+
+        // ── Primitive closure loops ───────────────────────────────────────────
+        // Build a lookup: (fromNodeId, toNodeId) → step index (list position)
+        var stepFwd = new Dictionary<(string, string), int>(m);
+        for (int i = 0; i < m; i++)
+            stepFwd[(steps[i].NodeId, steps[i].ToNodeId)] = i;
+
+        var loopDefs    = _strategy.GetPrimitiveLoopNodeIds(_definition);
+        var loopResults = new List<PrimitiveLoop>(loopDefs.Count);
+
+        foreach (var nodeIds in loopDefs)
         {
-            heightMap[row] = new double[_nodeCols];
-            for (int col = 0; col < _nodeCols; col++)
-                heightMap[row][col] = h[row * _nodeCols + col];
+            double closureErr = 0.0;
+            bool   valid      = true;
+
+            for (int j = 0; j < nodeIds.Count; j++)
+            {
+                string fromId = nodeIds[j];
+                string toId   = nodeIds[(j + 1) % nodeIds.Count];
+
+                if (stepFwd.TryGetValue((fromId, toId), out int si))
+                {
+                    closureErr += steps[si].Reading!.Value * stepLensMm[si] / 1000.0;
+                }
+                else if (stepFwd.TryGetValue((toId, fromId), out int siRev))
+                {
+                    closureErr -= steps[siRev].Reading!.Value * stepLensMm[siRev] / 1000.0;
+                }
+                else
+                {
+                    valid = false;
+                    break;
+                }
+            }
+
+            if (valid)
+                loopResults.Add(new PrimitiveLoop(nodeIds.ToArray(), closureErr));
+        }
+
+        // ── Closure error statistics ──────────────────────────────────────────
+        double closureMean = 0, closureMedian = 0, closureMax = 0, closureRms = 0;
+        if (loopResults.Count > 0)
+        {
+            double[] absErrors = loopResults.Select(l => Math.Abs(l.ClosureErrorMm)).ToArray();
+            double[] errors    = loopResults.Select(l => l.ClosureErrorMm).ToArray();
+
+            closureMean = errors.Average();
+            closureMax  = absErrors.Max();
+            closureRms  = Math.Sqrt(errors.Sum(e => e * e) / errors.Length);
+
+            Array.Sort(absErrors);
+            int mid = absErrors.Length / 2;
+            closureMedian = absErrors.Length % 2 == 0
+                ? (absErrors[mid - 1] + absErrors[mid]) / 2.0
+                : absErrors[mid];
         }
 
         return new SurfaceResult
         {
-            HeightMapMm        = heightMap,
+            NodeHeights        = nodeHeights,
             FlatnessValueMm    = h.Max() - h.Min(),
             Residuals          = residuals,
             FlaggedStepIndices = flagged,
             SigmaThreshold     = _sigmaThreshold,
-            Sigma              = sigma
+            Sigma              = sigma,
+            PrimitiveLoops     = [.. loopResults],
+            ClosureErrorMean   = closureMean,
+            ClosureErrorMedian = closureMedian,
+            ClosureErrorMax    = closureMax,
+            ClosureErrorRms    = closureRms
         };
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Returns the flat node indices for the "from" and "to" endpoints of a step,
-    /// and the physical step length in mm.
-    /// GridCol/GridRow on a step is always the "from" endpoint;
-    /// Orientation points toward the "to" endpoint.
-    /// </summary>
-    private (int from, int to, double stepLen) NodeIndices(MeasurementStep step)
-    {
-        int fromIdx = step.GridRow * _nodeCols + step.GridCol;
-
-        (int toRow, int toCol) = step.Orientation switch
-        {
-            Orientation.East  => (step.GridRow,     step.GridCol + 1),
-            Orientation.West  => (step.GridRow,     step.GridCol - 1),
-            Orientation.South => (step.GridRow + 1, step.GridCol),
-            Orientation.North => (step.GridRow - 1, step.GridCol),
-            _ => throw new ArgumentException($"Unrecognised orientation: {step.Orientation}")
-        };
-
-        int toIdx = toRow * _nodeCols + toCol;
-        double stepLen = step.Orientation is Orientation.East or Orientation.West
-            ? _stepLenX : _stepLenY;
-
-        return (fromIdx, toIdx, stepLen);
-    }
-
-    /// <summary>
-    /// Solves the N×N linear system A·x = b using Gaussian elimination with partial
-    /// pivoting.  Works on a copy of the inputs — originals are not modified.
-    /// Throws if the system is singular (disconnected grid or missing passes).
-    /// </summary>
     private static double[] SolveLinearSystem(double[,] A, double[] b)
     {
         int n = b.Length;
-
-        // Augmented matrix  [A | b]
         double[,] aug = new double[n, n + 1];
         for (int i = 0; i < n; i++)
         {
@@ -174,10 +217,8 @@ public sealed class SurfacePlateCalculator : IGeometryCalculator
             aug[i, n] = b[i];
         }
 
-        // Forward elimination with partial pivoting
         for (int col = 0; col < n; col++)
         {
-            // Find pivot row
             int pivot = col;
             for (int row = col + 1; row < n; row++)
                 if (Math.Abs(aug[row, col]) > Math.Abs(aug[pivot, col]))
@@ -190,7 +231,7 @@ public sealed class SurfacePlateCalculator : IGeometryCalculator
             if (Math.Abs(aug[col, col]) < 1e-14)
                 throw new InvalidOperationException(
                     "Singular matrix — the step set does not form a connected graph " +
-                    "covering all grid nodes. Ensure both row and column passes are present.");
+                    "covering all nodes. Ensure all required passes are present.");
 
             for (int row = col + 1; row < n; row++)
             {
@@ -200,16 +241,13 @@ public sealed class SurfacePlateCalculator : IGeometryCalculator
             }
         }
 
-        // Back substitution
         double[] x = new double[n];
         for (int i = n - 1; i >= 0; i--)
         {
             x[i] = aug[i, n];
-            for (int j = i + 1; j < n; j++)
-                x[i] -= aug[i, j] * x[j];
+            for (int j = i + 1; j < n; j++) x[i] -= aug[i, j] * x[j];
             x[i] /= aug[i, i];
         }
-
         return x;
     }
 }

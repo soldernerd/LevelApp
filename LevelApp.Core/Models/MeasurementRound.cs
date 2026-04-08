@@ -9,4 +9,5 @@ public class MeasurementRound
     public DateTime? CompletedAt { get; set; }
     public List<MeasurementStep> Steps { get; set; } = [];
     public SurfaceResult? Result { get; set; }
+    public CalculationParameters? CalculationParameters { get; set; }
 }

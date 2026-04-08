@@ -10,139 +10,155 @@ namespace LevelApp.App.DisplayModules.SurfacePlot3D;
 
 /// <summary>
 /// Renders a pseudo-3D isometric surface plot on a <see cref="Canvas"/>.
+///
+/// Graph-driven: nodes and edges come from the step list. Edges are drawn between
+/// consecutive steps within the same pass (identified by PassId). Physical x/y
+/// positions come from <see cref="IMeasurementStrategy.GetNodePosition"/>, so the
+/// display correctly reflects plate proportions for any strategy.
+///
 /// Nodes are coloured blue (low) → cyan → green → yellow → red (high).
-/// The z-axis is exaggerated so even sub-µm height differences are visible.
 /// </summary>
 public sealed class SurfacePlot3DDisplay : IResultDisplay
 {
     public string DisplayId   => "surface-plot-3d";
     public string DisplayName => "3D Surface Plot";
 
-    // ── Layout constants ──────────────────────────────────────────────────────
-    private const double IsoW       = 30.0;  // px per grid unit, horizontal axis
-    private const double IsoH       = 15.0;  // px per grid unit, depth axis
     private const double NodeRadius = 5.0;
     private const double Margin     = 24.0;
 
-    // MaxZPixels is computed per render from the grid size — see Render().
-    // It must not exceed ~20% of the grid's total isometric depth so that
-    // z-displacement can never visually push a node past an adjacent one.
-
-    // ── IResultDisplay ────────────────────────────────────────────────────────
-
-    public object Render(SurfaceResult result)
+    public object Render(SurfaceResult result, IMeasurementStrategy strategy,
+                         ObjectDefinition definition, IReadOnlyList<MeasurementStep> steps)
     {
-        double[][] h = result.HeightMapMm;
-
-        // HeightMapMm is indexed [nodeRow][nodeCol], matching gridRow/gridCol exactly.
-        int nodeRows = h.Length;
-        int nodeCols = nodeRows > 0 ? h[0].Length : 0;
-
         var canvas = new Canvas();
-        if (nodeRows == 0 || nodeCols == 0) return canvas;
+        if (result.NodeHeights.Count == 0 || steps.Count == 0) return canvas;
 
-        double hMin   = h.SelectMany(row => row).Min();
-        double hMax   = h.SelectMany(row => row).Max();
+        double hMin   = result.NodeHeights.Values.Min();
+        double hMax   = result.NodeHeights.Values.Max();
         double hRange = hMax > hMin ? hMax - hMin : 1.0;
 
-        int colIntervals = nodeCols - 1;
-        int rowIntervals = nodeRows - 1;
-
-        // Z-scale: cap at 20% of the grid's total isometric depth so that
-        // z-displacement can never visually push a node past an adjacent one.
-        // Without this cap, large exaggeration scrambles the apparent connectivity
-        // even though the edges are topologically correct.
-        // Floor of 10px keeps something visible on very small grids.
-        double maxZPixels = Math.Max(10.0, (colIntervals + rowIntervals) * IsoH * 0.20);
-
-        // Origin: node (gridCol=0, gridRow=0) maps to this screen point.
-        // originX must account for the deepest row pushing nodes leftward by rowIntervals*IsoW.
-        double originX = rowIntervals * IsoW + Margin;
-        double originY = maxZPixels + Margin;
-
-        // Screen position for a node — derived purely from (gridCol, gridRow).
-        (double sx, double sy) Pos(int gridCol, int gridRow)
+        // ── Physical coordinate ranges ─────────────────────────────────────────
+        // Collect all node physical positions to determine bounding box.
+        var nodePos = new Dictionary<string, (double X, double Y)>();
+        foreach (var step in steps)
         {
-            double t   = (h[gridRow][gridCol] - hMin) / hRange;
-            double scx = originX + (gridCol - gridRow) * IsoW;
-            double scy = originY + (gridCol + gridRow) * IsoH - t * maxZPixels;
-            return (scx, scy);
+            if (!nodePos.ContainsKey(step.NodeId))
+                nodePos[step.NodeId] = strategy.GetNodePosition(step, definition);
+            if (!nodePos.ContainsKey(step.ToNodeId))
+                nodePos[step.ToNodeId] = strategy.GetToNodePosition(step, definition);
         }
 
-        // ── Grid edges ────────────────────────────────────────────────────────
-        // Horizontal: (col, row) → (col+1, row)   count: colIntervals × nodeRows
-        // Vertical:   (col, row) → (col, row+1)   count: nodeCols × rowIntervals
+        double physMinX = nodePos.Values.Min(p => p.X);
+        double physMaxX = nodePos.Values.Max(p => p.X);
+        double physMinY = nodePos.Values.Min(p => p.Y);
+        double physMaxY = nodePos.Values.Max(p => p.Y);
+        double physW    = physMaxX - physMinX;
+        double physH    = physMaxY - physMinY;
+        if (physW < 1e-6) physW = 1.0;
+        if (physH < 1e-6) physH = 1.0;
 
-        int expectedEdgeCount = colIntervals * nodeRows + rowIntervals * nodeCols;
-        int edgeCount         = 0;
+        // ── Isometric projection constants ────────────────────────────────────
+        // Map physical (x, y) in mm to isometric pixel offsets.
+        // We choose IsoW and IsoH so that the total canvas width is ~500 px.
+        const double TargetWidth = 500.0;
+        double isoW = TargetWidth / (physW + physH) * (physW / (physW + physH) * 2);
+        double isoH = isoW * 0.5 * (physH / physW);
+        isoW = Math.Max(isoW, 10.0);
+        isoH = Math.Max(isoH, 5.0);
 
+        double maxZPixels = Math.Max(10.0, (physW / physH + 1) * isoH * 4 * 0.20);
+
+        // originX places (physMinX, physMinY) node at screen left accounting for y-depth offset
+        double originX = (physH / physH) * isoW * (physH / (physW + physH) * (physW + physH) / physW) + Margin;
+        // Simpler: use a scale factor
+        double scaleX = TargetWidth / (physW + physH);
+        double scaleY = scaleX * 0.5;
+        originX = scaleX * (physMaxY - physMinY) + Margin;
+        double originY = maxZPixels + Margin;
+
+        // Screen position for a physical node
+        (double sx, double sy) ScreenPos(string nodeId)
+        {
+            var (px, py) = nodePos[nodeId];
+            double normX = (px - physMinX) / physW;
+            double normY = (py - physMinY) / physH;
+            double t     = result.NodeHeights.TryGetValue(nodeId, out double hv)
+                ? (hv - hMin) / hRange : 0.0;
+
+            double sx = originX + (normX * physW - normY * physH) * scaleX;
+            double sy = originY + (normX * physW + normY * physH) * scaleY - t * maxZPixels;
+            return (sx, sy);
+        }
+
+        // ── Edges (graph-driven, between consecutive steps in same pass) ───────
         var edgeBrush = new SolidColorBrush(Color.FromArgb(100, 160, 160, 160));
 
-        for (int col = 0; col < colIntervals; col++)
-            for (int row = 0; row < nodeRows; row++)
-            {
-                canvas.Children.Add(MakeLine(Pos(col, row), Pos(col + 1, row), edgeBrush));
-                edgeCount++;
-            }
-
-        for (int col = 0; col < nodeCols; col++)
-            for (int row = 0; row < rowIntervals; row++)
-            {
-                canvas.Children.Add(MakeLine(Pos(col, row), Pos(col, row + 1), edgeBrush));
-                edgeCount++;
-            }
-
-        System.Diagnostics.Debug.Assert(
-            edgeCount == expectedEdgeCount,
-            $"Surface plot edge count mismatch: drew {edgeCount}, expected {expectedEdgeCount} " +
-            $"({colIntervals}×{nodeRows} horizontal + {rowIntervals}×{nodeCols} vertical).");
-
-        // ── Nodes (painter order: back-to-front by gridCol+gridRow) ──────────
-        for (int sum = 0; sum < nodeCols + nodeRows - 1; sum++)
+        // Group steps by PassId; within each group, draw node[i] → node[i+1]
+        var passBuckets = new Dictionary<int, List<MeasurementStep>>();
+        foreach (var step in steps)
         {
-            for (int row = Math.Max(0, sum - nodeCols + 1); row <= Math.Min(nodeRows - 1, sum); row++)
+            if (!passBuckets.TryGetValue(step.PassId, out var bucket))
+                passBuckets[step.PassId] = bucket = [];
+            bucket.Add(step);
+        }
+
+        foreach (var bucket in passBuckets.Values)
+        {
+            // Draw edge from each step's from-node to its to-node
+            foreach (var step in bucket)
             {
-                int col = sum - row;
-                if (col < 0 || col >= nodeCols) continue;
-
-                double t     = (h[row][col] - hMin) / hRange;
-                var (sx, sy) = Pos(col, row);
-
-                var ellipse = new Ellipse
-                {
-                    Width  = NodeRadius * 2,
-                    Height = NodeRadius * 2,
-                    Fill   = new SolidColorBrush(HeightColor(t))
-                };
-                Canvas.SetLeft(ellipse, sx - NodeRadius);
-                Canvas.SetTop(ellipse,  sy - NodeRadius);
-                canvas.Children.Add(ellipse);
+                if (!nodePos.ContainsKey(step.NodeId) || !nodePos.ContainsKey(step.ToNodeId))
+                    continue;
+                canvas.Children.Add(MakeLine(ScreenPos(step.NodeId), ScreenPos(step.ToNodeId), edgeBrush));
             }
+        }
+
+        // ── Nodes (painter order: sort by screen y descending = back-to-front) ─
+        var allNodes = nodePos.Keys
+            .Where(id => result.NodeHeights.ContainsKey(id))
+            .OrderBy(id => { var (_, sy) = ScreenPos(id); return -sy; })
+            .ToList();
+
+        foreach (var nodeId in allNodes)
+        {
+            double hv    = result.NodeHeights[nodeId];
+            double t     = (hv - hMin) / hRange;
+            var (sx, sy) = ScreenPos(nodeId);
+
+            var ellipse = new Ellipse
+            {
+                Width  = NodeRadius * 2,
+                Height = NodeRadius * 2,
+                Fill   = new SolidColorBrush(HeightColor(t))
+            };
+            Canvas.SetLeft(ellipse, sx - NodeRadius);
+            Canvas.SetTop(ellipse,  sy - NodeRadius);
+            canvas.Children.Add(ellipse);
         }
 
         // ── Canvas dimensions ─────────────────────────────────────────────────
-        canvas.Width  = (colIntervals + rowIntervals) * IsoW + Margin * 2;
-        canvas.Height = (colIntervals + rowIntervals) * IsoH + maxZPixels + Margin * 2;
+        double canvasW = (physW + physH) * scaleX + Margin * 2;
+        double canvasH = (physW + physH) * scaleY + maxZPixels + Margin * 2;
+        canvas.Width  = canvasW;
+        canvas.Height = canvasH;
 
         return canvas;
     }
 
+    /// <summary>
+    /// Legacy overload for <see cref="IResultDisplay.Render"/> — returns an empty canvas
+    /// since step list and strategy are required.
+    /// </summary>
+    public object Render(SurfaceResult result) => new Canvas();
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static Line MakeLine(
-        (double x, double y) p1,
-        (double x, double y) p2,
-        Brush stroke) => new()
-        {
-            X1 = p1.x, Y1 = p1.y,
-            X2 = p2.x, Y2 = p2.y,
-            Stroke = stroke,
-            StrokeThickness = 1.0
-        };
+        (double x, double y) p1, (double x, double y) p2, Brush stroke) => new()
+    {
+        X1 = p1.x, Y1 = p1.y, X2 = p2.x, Y2 = p2.y,
+        Stroke = stroke, StrokeThickness = 1.0
+    };
 
-    /// <summary>
-    /// Maps t ∈ [0,1] to the blue → cyan → green → yellow → red gradient.
-    /// </summary>
     private static Color HeightColor(double t)
     {
         t = Math.Clamp(t, 0.0, 1.0);
@@ -156,8 +172,7 @@ public sealed class SurfacePlot3DDisplay : IResultDisplay
     }
 
     private static Color Lerp(Color a, Color b, double t) =>
-        Color.FromArgb(
-            255,
+        Color.FromArgb(255,
             (byte)(a.R + (b.R - a.R) * t),
             (byte)(a.G + (b.G - a.G) * t),
             (byte)(a.B + (b.B - a.B) * t));

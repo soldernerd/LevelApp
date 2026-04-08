@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LevelApp.App.Navigation;
 using LevelApp.Core.Geometry.SurfacePlate;
+using LevelApp.Core.Geometry.SurfacePlate.Strategies;
 using LevelApp.Core.Models;
 using Microsoft.UI.Xaml;
 
@@ -36,8 +37,8 @@ public sealed partial class MeasurementViewModel : ViewModelBase
         _steps      = _session.InitialRound.Steps;
         _definition = _project.ObjectDefinition;
 
-        GridColumns = Convert.ToInt32(_definition.Parameters["columnsCount"]);
-        GridRows    = Convert.ToInt32(_definition.Parameters["rowsCount"]);
+        GridColumns = _definition.Parameters.TryGetValue("columnsCount", out var c) ? Convert.ToInt32(c) : 0;
+        GridRows    = _definition.Parameters.TryGetValue("rowsCount",    out var r) ? Convert.ToInt32(r) : 0;
 
         CurrentStepIndex = 0;
         Reading          = double.NaN;
@@ -129,8 +130,9 @@ public sealed partial class MeasurementViewModel : ViewModelBase
             var definition = _definition;
             var round      = _session.InitialRound;
 
+            var strategy = ResultsViewModel.CreateStrategy(_session.StrategyId);
             var result = await Task.Run(() =>
-                new SurfacePlateCalculator(definition).Calculate(round));
+                new SurfacePlateCalculator(definition, strategy).Calculate(round));
 
             round.Result      = result;
             round.CompletedAt = DateTime.UtcNow;

@@ -8,8 +8,11 @@ public sealed partial class NewMeasurementDialog : ContentDialog
     public string OperatorName => OperatorBox.Text;
     public string Notes        => NotesBox.Text;
 
-    /// <summary>Always "FullGrid" for now; extend when more strategies are available.</summary>
-    public string StrategyId => "FullGrid";
+    public string StrategyId => StrategyCombo.SelectedIndex switch
+    {
+        1    => "UnionJack",
+        _    => "FullGrid"
+    };
 
     public NewMeasurementDialog(ObjectDefinition definition, string defaultOperator)
     {

@@ -78,11 +78,15 @@ public sealed partial class CorrectionView : Page
         // To-node of current step
         (int toCol, int toRow) = step.Orientation switch
         {
-            Orientation.East  => (step.GridCol + 1, step.GridRow),
-            Orientation.West  => (step.GridCol - 1, step.GridRow),
-            Orientation.South => (step.GridCol,     step.GridRow + 1),
-            Orientation.North => (step.GridCol,     step.GridRow - 1),
-            _                 => (-1, -1)
+            Orientation.East      => (step.GridCol + 1, step.GridRow),
+            Orientation.West      => (step.GridCol - 1, step.GridRow),
+            Orientation.South     => (step.GridCol,     step.GridRow + 1),
+            Orientation.North     => (step.GridCol,     step.GridRow - 1),
+            Orientation.SouthEast => (step.GridCol + 1, step.GridRow + 1),
+            Orientation.SouthWest => (step.GridCol - 1, step.GridRow + 1),
+            Orientation.NorthEast => (step.GridCol + 1, step.GridRow - 1),
+            Orientation.NorthWest => (step.GridCol - 1, step.GridRow - 1),
+            _                     => (-1, -1)
         };
 
         // Sets for fast lookup

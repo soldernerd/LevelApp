@@ -1,0 +1,359 @@
+{
+  "schemaVersion": "1.0",
+  "appVersion": "0.4.0",
+  "project": {
+    "id": "4721350c-48c2-43ef-8650-ddd41ba2e51b",
+    "name": "Test Granite Plate 1200×800 — UnionJack seg3 Circumference",
+    "createdAt": "2026-04-08T09:00:00.0000000Z",
+    "modifiedAt": "2026-04-08T10:30:00.0000000Z",
+    "operator": "Lukas Fässler",
+    "notes": "Synthetic test data. Saddle-shaped surface, ~10 µm flatness, 0.5 µm noise per reading.",
+    "objectDefinition": {
+      "geometryModuleId": "SurfacePlate",
+      "parameters": {
+        "widthMm": 1200,
+        "heightMm": 800,
+        "segments": 3,
+        "rings": "Circumference"
+      }
+    },
+    "measurements": [
+      {
+        "id": "bc0b70db-62d8-4554-8424-d12174415c86",
+        "label": "Measurement 1",
+        "takenAt": "2026-04-08T09:00:00.0000000Z",
+        "operator": "Lukas Fässler",
+        "instrumentId": "manual-entry",
+        "strategyId": "UnionJack",
+        "notes": "Synthetic test data. Saddle-shaped surface ~10 µm flatness, 0.5 µm noise.",
+        "initialRound": {
+          "completedAt": "2026-04-08T09:40:00.0000000Z",
+          "steps": [
+            {
+              "index": 0,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "H arm — W side, seg 3→2, facing East",
+              "reading": -0.006502,
+              "nodeId": "armW_seg3",
+              "toNodeId": "armW_seg2"
+            },
+            {
+              "index": 1,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "H arm — W side, seg 2→1, facing East",
+              "reading": -0.004165,
+              "nodeId": "armW_seg2",
+              "toNodeId": "armW_seg1"
+            },
+            {
+              "index": 2,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "H arm — W side, seg 1→0, facing East",
+              "reading": -0.000247,
+              "nodeId": "armW_seg1",
+              "toNodeId": "center"
+            },
+            {
+              "index": 3,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "H arm — E side, seg 0→1, facing East",
+              "reading": 0.001529,
+              "nodeId": "center",
+              "toNodeId": "armE_seg1"
+            },
+            {
+              "index": 4,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "H arm — E side, seg 1→2, facing East",
+              "reading": 0.00485,
+              "nodeId": "armE_seg1",
+              "toNodeId": "armE_seg2"
+            },
+            {
+              "index": 5,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "H arm — E side, seg 2→3, facing East",
+              "reading": 0.006293,
+              "nodeId": "armE_seg2",
+              "toNodeId": "armE_seg3"
+            },
+            {
+              "index": 6,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "South",
+              "instructionText": "V arm — N side, seg 3→2, facing South",
+              "reading": 0.010356,
+              "nodeId": "armN_seg3",
+              "toNodeId": "armN_seg2"
+            },
+            {
+              "index": 7,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "South",
+              "instructionText": "V arm — N side, seg 2→1, facing South",
+              "reading": 0.006412,
+              "nodeId": "armN_seg2",
+              "toNodeId": "armN_seg1"
+            },
+            {
+              "index": 8,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "South",
+              "instructionText": "V arm — N side, seg 1→0, facing South",
+              "reading": 0.002956,
+              "nodeId": "armN_seg1",
+              "toNodeId": "center"
+            },
+            {
+              "index": 9,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "South",
+              "instructionText": "V arm — S side, seg 0→1, facing South",
+              "reading": -0.002924,
+              "nodeId": "center",
+              "toNodeId": "armS_seg1"
+            },
+            {
+              "index": 10,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "South",
+              "instructionText": "V arm — S side, seg 1→2, facing South",
+              "reading": -0.005755,
+              "nodeId": "armS_seg1",
+              "toNodeId": "armS_seg2"
+            },
+            {
+              "index": 11,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "South",
+              "instructionText": "V arm — S side, seg 2→3, facing South",
+              "reading": -0.010121,
+              "nodeId": "armS_seg2",
+              "toNodeId": "armS_seg3"
+            },
+            {
+              "index": 12,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "SouthEast",
+              "instructionText": "SE diag — NW side, seg 3→2, facing SouthEast",
+              "reading": 0.000767,
+              "nodeId": "armNW_seg3",
+              "toNodeId": "armNW_seg2"
+            },
+            {
+              "index": 13,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "SouthEast",
+              "instructionText": "SE diag — NW side, seg 2→1, facing SouthEast",
+              "reading": 0.000356,
+              "nodeId": "armNW_seg2",
+              "toNodeId": "armNW_seg1"
+            },
+            {
+              "index": 14,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "SouthEast",
+              "instructionText": "SE diag — NW side, seg 1→0, facing SouthEast",
+              "reading": 2.6e-05,
+              "nodeId": "armNW_seg1",
+              "toNodeId": "center"
+            },
+            {
+              "index": 15,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "SouthEast",
+              "instructionText": "SE diag — SE side, seg 0→1, facing SouthEast",
+              "reading": -0.000261,
+              "nodeId": "center",
+              "toNodeId": "armSE_seg1"
+            },
+            {
+              "index": 16,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "SouthEast",
+              "instructionText": "SE diag — SE side, seg 1→2, facing SouthEast",
+              "reading": -0.000624,
+              "nodeId": "armSE_seg1",
+              "toNodeId": "armSE_seg2"
+            },
+            {
+              "index": 17,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "SouthEast",
+              "instructionText": "SE diag — SE side, seg 2→3, facing SouthEast",
+              "reading": 9.8e-05,
+              "nodeId": "armSE_seg2",
+              "toNodeId": "armSE_seg3"
+            },
+            {
+              "index": 18,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "SouthWest",
+              "instructionText": "NE diag — NE side, seg 3→2, facing SouthWest",
+              "reading": -9.6e-05,
+              "nodeId": "armNE_seg3",
+              "toNodeId": "armNE_seg2"
+            },
+            {
+              "index": 19,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "SouthWest",
+              "instructionText": "NE diag — NE side, seg 2→1, facing SouthWest",
+              "reading": 0.00101,
+              "nodeId": "armNE_seg2",
+              "toNodeId": "armNE_seg1"
+            },
+            {
+              "index": 20,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "SouthWest",
+              "instructionText": "NE diag — NE side, seg 1→0, facing SouthWest",
+              "reading": -0.000306,
+              "nodeId": "armNE_seg1",
+              "toNodeId": "center"
+            },
+            {
+              "index": 21,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "SouthWest",
+              "instructionText": "NE diag — SW side, seg 0→1, facing SouthWest",
+              "reading": 0.00016,
+              "nodeId": "center",
+              "toNodeId": "armSW_seg1"
+            },
+            {
+              "index": 22,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "SouthWest",
+              "instructionText": "NE diag — SW side, seg 1→2, facing SouthWest",
+              "reading": -0.000785,
+              "nodeId": "armSW_seg1",
+              "toNodeId": "armSW_seg2"
+            },
+            {
+              "index": 23,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "SouthWest",
+              "instructionText": "NE diag — SW side, seg 2→3, facing SouthWest",
+              "reading": -0.000198,
+              "nodeId": "armSW_seg2",
+              "toNodeId": "armSW_seg3"
+            },
+            {
+              "index": 24,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "Ring 3 — SW→S (East)",
+              "reading": -0.004036,
+              "nodeId": "armSW_seg3",
+              "toNodeId": "armS_seg3"
+            },
+            {
+              "index": 25,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "Ring 3 — S→SE (East)",
+              "reading": 0.004579,
+              "nodeId": "armS_seg3",
+              "toNodeId": "armSE_seg3"
+            },
+            {
+              "index": 26,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "North",
+              "instructionText": "Ring 3 — SE→E (North)",
+              "reading": 0.006974,
+              "nodeId": "armSE_seg3",
+              "toNodeId": "armE_seg3"
+            },
+            {
+              "index": 27,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "North",
+              "instructionText": "Ring 3 — E→NE (North)",
+              "reading": -0.006272,
+              "nodeId": "armE_seg3",
+              "toNodeId": "armNE_seg3"
+            },
+            {
+              "index": 28,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "West",
+              "instructionText": "Ring 3 — NE→N (West)",
+              "reading": -0.004725,
+              "nodeId": "armNE_seg3",
+              "toNodeId": "armN_seg3"
+            },
+            {
+              "index": 29,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "West",
+              "instructionText": "Ring 3 — N→NW (West)",
+              "reading": 0.004396,
+              "nodeId": "armN_seg3",
+              "toNodeId": "armNW_seg3"
+            },
+            {
+              "index": 30,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "South",
+              "instructionText": "Ring 3 — NW→W (South)",
+              "reading": 0.006508,
+              "nodeId": "armNW_seg3",
+              "toNodeId": "armW_seg3"
+            },
+            {
+              "index": 31,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "South",
+              "instructionText": "Ring 3 — W→SW (South)",
+              "reading": -0.006004,
+              "nodeId": "armW_seg3",
+              "toNodeId": "armSW_seg3"
+            }
+          ],
+          "result": null
+        },
+        "corrections": []
+      }
+    ]
+  }
+}

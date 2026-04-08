@@ -4,121 +4,178 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
-    <ScrollViewer Padding="0,0,16,0">
-        <StackPanel Padding="40,32,40,40"
-                    MaxWidth="520"
-                    HorizontalAlignment="Center"
-                    Spacing="0">
+    <Grid ColumnDefinitions="*,Auto">
 
-            <!-- ── Title ─────────────────────────────────────────────────── -->
-            <TextBlock Text="New Measurement Project"
-                       Style="{StaticResource TitleTextBlockStyle}"
-                       Margin="0,0,0,32"/>
+        <!-- ── Left: setup form ─────────────────────────────────────────────── -->
+        <ScrollViewer Grid.Column="0" Padding="0,0,16,0">
+            <StackPanel Padding="40,32,40,40"
+                        MaxWidth="480"
+                        HorizontalAlignment="Center"
+                        Spacing="0">
 
-            <!-- ── Project Information ───────────────────────────────────── -->
-            <TextBlock Text="Project Information"
-                       Style="{StaticResource SubtitleTextBlockStyle}"
-                       Margin="0,0,0,12"/>
+                <!-- ── Title ─────────────────────────────────────────────── -->
+                <TextBlock Text="New Measurement Project"
+                           Style="{StaticResource TitleTextBlockStyle}"
+                           Margin="0,0,0,32"/>
 
-            <TextBox Header="Project name"
-                     PlaceholderText="e.g. Granite plate workshop 3"
-                     Text="{x:Bind ViewModel.ProjectName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                     Margin="0,0,0,8"/>
+                <!-- ── Project Information ───────────────────────────────── -->
+                <TextBlock Text="Project Information"
+                           Style="{StaticResource SubtitleTextBlockStyle}"
+                           Margin="0,0,0,12"/>
 
-            <TextBox Header="Operator"
-                     PlaceholderText="Your name"
-                     Text="{x:Bind ViewModel.OperatorName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                     Margin="0,0,0,8"/>
+                <TextBox Header="Project name"
+                         PlaceholderText="e.g. Granite plate workshop 3"
+                         Text="{x:Bind ViewModel.ProjectName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         Margin="0,0,0,8"/>
 
-            <TextBox Header="Notes"
-                     PlaceholderText="Optional"
-                     Text="{x:Bind ViewModel.Notes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                     AcceptsReturn="True"
-                     Height="72"
-                     TextWrapping="Wrap"
-                     Margin="0,0,0,32"/>
+                <TextBox Header="Operator"
+                         PlaceholderText="Your name"
+                         Text="{x:Bind ViewModel.OperatorName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         Margin="0,0,0,8"/>
 
-            <!-- ── Object ─────────────────────────────────────────────────── -->
-            <TextBlock Text="Object"
-                       Style="{StaticResource SubtitleTextBlockStyle}"
-                       Margin="0,0,0,12"/>
+                <TextBox Header="Notes"
+                         PlaceholderText="Optional"
+                         Text="{x:Bind ViewModel.Notes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         AcceptsReturn="True"
+                         Height="72"
+                         TextWrapping="Wrap"
+                         Margin="0,0,0,32"/>
 
-            <ComboBox Header="Geometry type"
-                      SelectedIndex="0"
-                      HorizontalAlignment="Stretch"
-                      Margin="0,0,0,8">
-                <ComboBoxItem>Surface Plate</ComboBoxItem>
-            </ComboBox>
+                <!-- ── Object ─────────────────────────────────────────────── -->
+                <TextBlock Text="Object"
+                           Style="{StaticResource SubtitleTextBlockStyle}"
+                           Margin="0,0,0,12"/>
 
-            <Grid ColumnSpacing="12" Margin="0,0,0,8">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <NumberBox Grid.Column="0"
-                           Header="Width (mm)"
-                           Value="{x:Bind ViewModel.WidthMm, Mode=TwoWay}"
-                           Minimum="10" SmallChange="10" LargeChange="100"
-                           SpinButtonPlacementMode="Compact"/>
-                <NumberBox Grid.Column="1"
-                           Header="Height (mm)"
-                           Value="{x:Bind ViewModel.HeightMm, Mode=TwoWay}"
-                           Minimum="10" SmallChange="10" LargeChange="100"
-                           SpinButtonPlacementMode="Compact"/>
-            </Grid>
+                <ComboBox Header="Geometry type"
+                          SelectedIndex="0"
+                          HorizontalAlignment="Stretch"
+                          Margin="0,0,0,8">
+                    <ComboBoxItem>Surface Plate</ComboBoxItem>
+                </ComboBox>
 
-            <Grid ColumnSpacing="12" Margin="0,0,0,32">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <NumberBox Grid.Column="0"
-                           Header="Columns"
-                           Value="{x:Bind ViewModel.ColumnsCount, Mode=TwoWay}"
-                           Minimum="2" Maximum="50"
-                           SmallChange="1" LargeChange="5"
-                           SpinButtonPlacementMode="Compact"/>
-                <NumberBox Grid.Column="1"
-                           Header="Rows"
-                           Value="{x:Bind ViewModel.RowsCount, Mode=TwoWay}"
-                           Minimum="2" Maximum="50"
-                           SmallChange="1" LargeChange="5"
-                           SpinButtonPlacementMode="Compact"/>
-            </Grid>
+                <Grid ColumnSpacing="12" Margin="0,0,0,32">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <NumberBox Grid.Column="0"
+                               Header="Width (mm)"
+                               Value="{x:Bind ViewModel.WidthMm, Mode=TwoWay}"
+                               Minimum="10" SmallChange="10" LargeChange="100"
+                               SpinButtonPlacementMode="Compact"
+                               ValueChanged="OnParameterChanged"/>
+                    <NumberBox Grid.Column="1"
+                               Header="Height (mm)"
+                               Value="{x:Bind ViewModel.HeightMm, Mode=TwoWay}"
+                               Minimum="10" SmallChange="10" LargeChange="100"
+                               SpinButtonPlacementMode="Compact"
+                               ValueChanged="OnParameterChanged"/>
+                </Grid>
 
-            <!-- ── Strategy ──────────────────────────────────────────────── -->
-            <TextBlock Text="Measurement Strategy"
-                       Style="{StaticResource SubtitleTextBlockStyle}"
-                       Margin="0,0,0,12"/>
+                <!-- ── Strategy ──────────────────────────────────────────── -->
+                <TextBlock Text="Measurement Strategy"
+                           Style="{StaticResource SubtitleTextBlockStyle}"
+                           Margin="0,0,0,12"/>
 
-            <ComboBox Header="Strategy"
-                      SelectedIndex="0"
-                      HorizontalAlignment="Stretch"
-                      Margin="0,0,0,16">
-                <ComboBoxItem>Full Grid (boustrophedon)</ComboBoxItem>
-            </ComboBox>
+                <ComboBox Header="Strategy"
+                          SelectedIndex="{x:Bind ViewModel.SelectedStrategyIndex, Mode=TwoWay}"
+                          HorizontalAlignment="Stretch"
+                          Margin="0,0,0,12"
+                          SelectionChanged="OnStrategyChanged">
+                    <ComboBoxItem>Full Grid (boustrophedon)</ComboBoxItem>
+                    <ComboBoxItem>Union Jack</ComboBoxItem>
+                </ComboBox>
 
-            <!-- Step-count preview -->
-            <StackPanel Orientation="Horizontal"
-                        Spacing="8"
-                        Margin="0,0,0,32">
-                <FontIcon Glyph="&#xE895;"
-                          FontSize="14"
-                          VerticalAlignment="Center"
-                          Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
-                <TextBlock Text="{x:Bind ViewModel.StepCountText, Mode=OneWay}"
-                           VerticalAlignment="Center"
-                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <!-- Full Grid parameters -->
+                <Grid ColumnSpacing="12"
+                      Margin="0,0,0,12"
+                      Visibility="{x:Bind ViewModel.IsFullGrid, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <NumberBox Grid.Column="0"
+                               Header="Columns"
+                               Value="{x:Bind ViewModel.ColumnsCount, Mode=TwoWay}"
+                               Minimum="2" Maximum="50"
+                               SmallChange="1" LargeChange="5"
+                               SpinButtonPlacementMode="Compact"
+                               ValueChanged="OnParameterChanged"/>
+                    <NumberBox Grid.Column="1"
+                               Header="Rows"
+                               Value="{x:Bind ViewModel.RowsCount, Mode=TwoWay}"
+                               Minimum="2" Maximum="50"
+                               SmallChange="1" LargeChange="5"
+                               SpinButtonPlacementMode="Compact"
+                               ValueChanged="OnParameterChanged"/>
+                </Grid>
+
+                <!-- Union Jack parameters -->
+                <Grid ColumnSpacing="12"
+                      Margin="0,0,0,12"
+                      Visibility="{x:Bind ViewModel.IsUnionJack, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <NumberBox Grid.Column="0"
+                               Header="Segments"
+                               Value="{x:Bind ViewModel.Segments, Mode=TwoWay}"
+                               Minimum="1" Maximum="20"
+                               SmallChange="1" LargeChange="2"
+                               SpinButtonPlacementMode="Compact"
+                               ValueChanged="OnParameterChanged"/>
+                    <ComboBox Grid.Column="1"
+                              Header="Rings"
+                              SelectedIndex="{x:Bind ViewModel.UnionJackRingsIndex, Mode=TwoWay}"
+                              HorizontalAlignment="Stretch"
+                              SelectionChanged="OnRingsOptionChanged">
+                        <ComboBoxItem>None</ComboBoxItem>
+                        <ComboBoxItem>Circumference</ComboBoxItem>
+                        <ComboBoxItem>Full</ComboBoxItem>
+                    </ComboBox>
+                </Grid>
+
+                <!-- Step-count preview -->
+                <StackPanel Orientation="Horizontal"
+                            Spacing="8"
+                            Margin="0,0,0,32">
+                    <FontIcon Glyph="&#xE895;"
+                              FontSize="14"
+                              VerticalAlignment="Center"
+                              Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                    <TextBlock Text="{x:Bind ViewModel.StepCountText, Mode=OneWay}"
+                               VerticalAlignment="Center"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                </StackPanel>
+
+                <!-- ── Action ─────────────────────────────────────────────── -->
+                <Button Content="Start Measurement"
+                        Command="{x:Bind ViewModel.StartMeasurementCommand}"
+                        Style="{StaticResource AccentButtonStyle}"
+                        HorizontalAlignment="Right"
+                        Padding="24,8"/>
+
             </StackPanel>
+        </ScrollViewer>
 
-            <!-- ── Action ─────────────────────────────────────────────────── -->
-            <Button Content="Start Measurement"
-                    Command="{x:Bind ViewModel.StartMeasurementCommand}"
-                    Style="{StaticResource AccentButtonStyle}"
-                    HorizontalAlignment="Right"
-                    Padding="24,8"/>
+        <!-- ── Right: live 2D preview ───────────────────────────────────────── -->
+        <Border Grid.Column="1"
+                Width="488"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                CornerRadius="8"
+                Margin="0,32,32,32"
+                Padding="24">
+            <StackPanel Spacing="12">
+                <TextBlock Text="Pattern Preview"
+                           Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                <ContentControl x:Name="PreviewContainer"
+                                Content="{x:Bind ViewModel.PreviewCanvas, Mode=OneWay}"
+                                HorizontalContentAlignment="Left"
+                                VerticalContentAlignment="Top"/>
+            </StackPanel>
+        </Border>
 
-        </StackPanel>
-    </ScrollViewer>
+    </Grid>
 
 </Page>

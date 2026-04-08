@@ -1,12 +1,15 @@
 namespace LevelApp.Core.Models;
 
+/// <summary>One primitive closure loop and its signed closure error in mm.</summary>
+public record PrimitiveLoop(string[] NodeIds, double ClosureErrorMm);
+
 public class SurfaceResult
 {
     /// <summary>
-    /// Best-fit surface heights in mm. Indexed [row][col].
-    /// Jagged array for straightforward JSON serialisation.
+    /// Best-fit surface heights in mm, keyed by node id.
+    /// Full Grid: "col{c}_row{r}". Union Jack: "arm{Dir}_seg{k}" or "center".
     /// </summary>
-    public double[][] HeightMapMm { get; set; } = [];
+    public Dictionary<string, double> NodeHeights { get; set; } = [];
 
     /// <summary>Peak-to-valley flatness deviation in mm.</summary>
     public double FlatnessValueMm { get; set; }
@@ -22,4 +25,12 @@ public class SurfaceResult
 
     /// <summary>Residual RMS (sqrt of sum-of-squares / DOF) in mm.</summary>
     public double Sigma { get; set; }
+
+    // ── Primitive closure loop statistics ────────────────────────────────────
+
+    public PrimitiveLoop[] PrimitiveLoops   { get; set; } = [];
+    public double          ClosureErrorMean   { get; set; }
+    public double          ClosureErrorMedian { get; set; }
+    public double          ClosureErrorMax    { get; set; }  // absolute value
+    public double          ClosureErrorRms    { get; set; }
 }

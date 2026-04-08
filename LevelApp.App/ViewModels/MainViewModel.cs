@@ -131,7 +131,8 @@ public sealed partial class MainViewModel : ObservableObject
         catch { /* proceed without calculated results; user can start a new measurement */ }
 
         var completedSession = result.project.Measurements
-            .LastOrDefault(m => m.InitialRound.Result is not null);
+            .LastOrDefault(m => m.InitialRound.Result is not null
+                             || m.Corrections.Any(c => c.Result is not null));
 
         if (completedSession is not null)
             _navigation.NavigateTo(PageKey.Results, new ResultsArgs(result.project, completedSession));
@@ -216,53 +217,60 @@ public sealed partial class MainViewModel : ObservableObject
 
     /// <summary>
     /// Runs the calculator for any round whose steps are fully populated but
-    /// whose result is missing — e.g. files produced by external tools or
-    /// created before result serialisation was added.
+    /// whose result is missing — supports files saved before result serialisation
+    /// was enforced and externally produced files.
+    /// Each session is processed independently; a failure on one session does
+    /// not prevent recalculation of the remaining sessions.
     /// </summary>
     private static async Task RecalculateMissingResultsAsync(Project project)
     {
-        var def = project.ObjectDefinition;
-
         foreach (var session in project.Measurements)
         {
-            var initialRound = session.InitialRound;
+            try { await RecalculateSessionAsync(session, project.ObjectDefinition); }
+            catch { /* a bad session must not block the rest */ }
+        }
+    }
 
-            // Initial round: all steps must have a reading.
-            if (initialRound.Result is null &&
-                initialRound.Steps.Count > 0 &&
-                initialRound.Steps.All(s => s.Reading.HasValue))
-            {
-                initialRound.Result = await Task.Run(() =>
-                    new SurfacePlateCalculator(def).Calculate(initialRound));
-            }
+    private static async Task RecalculateSessionAsync(MeasurementSession session, ObjectDefinition def)
+    {
+        var initialRound = session.InitialRound;
+        var strategy     = ResultsViewModel.CreateStrategy(session.StrategyId);
 
-            // Correction rounds: merge initial readings with replacements and recalculate.
-            foreach (var correction in session.Corrections)
-            {
-                if (correction.Result is not null) continue;
-                if (correction.ReplacedSteps.Count == 0) continue;
-                if (!initialRound.Steps.All(s => s.Reading.HasValue)) continue;
+        // Initial round: only if all steps have readings and result is absent.
+        if (initialRound.Result is null &&
+            initialRound.Steps.Count > 0 &&
+            initialRound.Steps.All(s => s.Reading.HasValue))
+        {
+            initialRound.Result = await Task.Run(() =>
+                new SurfacePlateCalculator(def, strategy).Calculate(initialRound));
+        }
 
-                var replacedMap = correction.ReplacedSteps
-                    .ToDictionary(r => r.OriginalStepIndex, r => r.Reading);
+        // Correction rounds: skip if initial readings are incomplete.
+        if (!initialRound.Steps.All(s => s.Reading.HasValue)) return;
 
-                var mergedSteps = initialRound.Steps
-                    .Select(s => new MeasurementStep
-                    {
-                        Index           = s.Index,
-                        GridCol         = s.GridCol,
-                        GridRow         = s.GridRow,
-                        Orientation     = s.Orientation,
-                        InstructionText = s.InstructionText,
-                        Reading         = replacedMap.TryGetValue(s.Index, out double nr)
-                                              ? nr : s.Reading
-                    })
-                    .ToList();
+        foreach (var correction in session.Corrections)
+        {
+            if (correction.Result is not null) continue;
+            if (correction.ReplacedSteps.Count == 0) continue;
 
-                var mergedRound = new MeasurementRound { Steps = mergedSteps };
-                correction.Result = await Task.Run(() =>
-                    new SurfacePlateCalculator(def).Calculate(mergedRound));
-            }
+            var replacedMap = correction.ReplacedSteps
+                .ToDictionary(r => r.OriginalStepIndex, r => r.Reading);
+
+            var mergedSteps = initialRound.Steps
+                .Select(s => new MeasurementStep
+                {
+                    Index           = s.Index,
+                    GridCol         = s.GridCol,
+                    GridRow         = s.GridRow,
+                    Orientation     = s.Orientation,
+                    InstructionText = s.InstructionText,
+                    Reading         = replacedMap.TryGetValue(s.Index, out double nr) ? nr : s.Reading
+                })
+                .ToList();
+
+            var mergedRound = new MeasurementRound { Steps = mergedSteps };
+            correction.Result = await Task.Run(() =>
+                new SurfacePlateCalculator(def, strategy).Calculate(mergedRound));
         }
     }
 
