@@ -110,7 +110,8 @@ LevelApp/
 │   └── DisplayModules/          # SurfacePlot3DDisplay
 ├── LevelApp.Tests/              # xUnit unit tests (Core only)
 └── docs/
-    └── architecture.md          # Full architecture and design reference
+    ├── architecture.md          # Full architecture and design reference
+    └── levelproj.md             # .levelproj JSON format reference
 ```
 
 ---

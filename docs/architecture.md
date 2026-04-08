@@ -4,7 +4,7 @@
 
 > Living document. Update as the project evolves.
 
-> Last updated: 2026-04-07 *(revised to reflect WP0.02: versioning & About dialog)*
+> Last updated: 2026-04-08 *(revised to reflect WP0.02: versioning & About dialog)*
 
 
 
@@ -124,7 +124,8 @@ LevelApp/
 │   ├── FullGridStrategyTests.cs
 │   └── SurfacePlateCalculatorTests.cs
 └── docs/
-    └── architecture.md               ← This file
+    ├── architecture.md               ← This file
+    └── levelproj.md                  ← .levelproj JSON format reference
 ```
 
 
@@ -430,7 +431,7 @@ Navigation is managed by `INavigationService` / `NavigationService`, which maps 
 
 
 
-File extension: `.levelproj` (internally JSON, indented, camelCase property names)
+File extension: `.levelproj` (internally JSON, indented, camelCase property names). The complete field-by-field format reference is in [`docs/levelproj.md`](levelproj.md).
 
 Serialisation is handled by `LevelApp.Core/Serialization/ProjectSerializer` (using `System.Text.Json`), `ObjectValueConverter` (preserves concrete types in `Dictionary<string, object>`), and `OrientationConverter` (see below). File I/O is handled by `LevelApp.App/Services/ProjectFileService` using Win32 `IFileOpenDialog` / `IFileSaveDialog` directly via COM (the WinRT picker wrappers were bypassed because they create their underlying COM dialog object lazily, making `SetFolder` calls ineffective for controlling the initial directory).
 
