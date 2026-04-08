@@ -101,9 +101,12 @@ public static class MeasurementsGridRenderer
         double xSpacing = Math.Max(effectiveMinPx, widthMm  / (cols - 1) * scale);
         double ySpacing = Math.Max(effectiveMinPx, heightMm / (rows - 1) * scale);
 
-        // Arrowhead size scaled with zoom
-        double arrowLen  = ArrowLen  * zoomFactor;
-        double arrowHalfW = ArrowHalfW * zoomFactor;
+        // Arrowhead and text sizes scaled with zoom
+        double arrowLen        = ArrowLen   * zoomFactor;
+        double arrowHalfW      = ArrowHalfW * zoomFactor;
+        double fontSize        = Math.Clamp(8.0  * zoomFactor, 7.0, 28.0);
+        double errorFontSize   = Math.Clamp(9.0  * zoomFactor, 7.0, 30.0);
+        double scaledLabelHalfW = LabelHalfW * zoomFactor;
 
         (double x, double y) NodePos(int c, int r) =>
             (c * xSpacing + CanvasPad,
@@ -288,7 +291,7 @@ public static class MeasurementsGridRenderer
 
         var labelFg = new SolidColorBrush(Color.FromArgb(220, 50, 50, 50));
 
-        // Horizontal edge labels — placed above the edge midpoint
+        // Horizontal edge labels — centred on edge midpoint, just above the line
         for (int r = 0; r < rows; r++)
         {
             for (int c = 0; c < cols - 1; c++)
@@ -302,16 +305,16 @@ public static class MeasurementsGridRenderer
                 var tb = new TextBlock
                 {
                     Text       = FormatEdgeValue(he.idx, true),
-                    FontSize   = 8,
+                    FontSize   = fontSize,
                     Foreground = labelFg
                 };
-                Canvas.SetLeft(tb, midX  - LabelHalfW);
-                Canvas.SetTop(tb,  y1    - LabelHalfH * 2 - 2);
+                Canvas.SetLeft(tb, midX - scaledLabelHalfW);
+                Canvas.SetTop(tb,  y1   - fontSize - 2);
                 canvas.Children.Add(tb);
             }
         }
 
-        // Vertical edge labels — placed left of the edge midpoint, rotated −90°
+        // Vertical edge labels — centred on edge midpoint, just left of the line, rotated −90°
         for (int c = 0; c < cols; c++)
         {
             for (int r = 0; r < rows - 1; r++)
@@ -322,18 +325,16 @@ public static class MeasurementsGridRenderer
                 var (_, y2)  = NodePos(c, r + 1);
                 double midY  = (y1 + y2) / 2;
 
-                // After −90° rotation around the element centre the text appears
-                // vertical.  Position is approximate (8pt text ≈ 30 × 14 px).
                 var tb = new TextBlock
                 {
                     Text       = FormatEdgeValue(ve.idx, false),
-                    FontSize   = 8,
+                    FontSize   = fontSize,
                     Foreground = labelFg,
                     RenderTransformOrigin = new Point(0.5, 0.5),
                     RenderTransform       = new RotateTransform { Angle = -90 }
                 };
-                Canvas.SetLeft(tb, x1 - LabelHalfW - LabelHalfH - 4);
-                Canvas.SetTop(tb,  midY - LabelHalfH);
+                Canvas.SetLeft(tb, x1 - scaledLabelHalfW - fontSize * 0.7 - 2);
+                Canvas.SetTop(tb,  midY - fontSize * 0.6);
                 canvas.Children.Add(tb);
             }
         }
@@ -356,13 +357,12 @@ public static class MeasurementsGridRenderer
                 var tb = new TextBlock
                 {
                     Text       = label,
-                    FontSize   = 9,
+                    FontSize   = errorFontSize,
                     FontWeight = FontWeights.SemiBold,
                     Foreground = errorFg
                 };
-                // Centre approximately on the cell midpoint
-                Canvas.SetLeft(tb, midX - label.Length * 2.8);
-                Canvas.SetTop(tb,  midY - LabelHalfH);
+                Canvas.SetLeft(tb, midX - label.Length * errorFontSize * 0.35);
+                Canvas.SetTop(tb,  midY - errorFontSize * 0.6);
                 canvas.Children.Add(tb);
             }
         }
@@ -411,10 +411,13 @@ public static class MeasurementsGridRenderer
     {
         if (steps.Count == 0) return;
 
-        double effectiveMaxPx = TargetMaxPx * zoomFactor;
-        double scale = effectiveMaxPx / Math.Max(widthMm, heightMm);
-        double arrowLen   = ArrowLen   * zoomFactor;
-        double arrowHalfW = ArrowHalfW * zoomFactor;
+        double effectiveMaxPx  = TargetMaxPx * zoomFactor;
+        double scale           = effectiveMaxPx / Math.Max(widthMm, heightMm);
+        double arrowLen        = ArrowLen   * zoomFactor;
+        double arrowHalfW      = ArrowHalfW * zoomFactor;
+        double fontSize        = Math.Clamp(8.0 * zoomFactor, 7.0, 28.0);
+        double errorFontSize   = Math.Clamp(9.0 * zoomFactor, 7.0, 30.0);
+        double scaledLabelHalfW = LabelHalfW * zoomFactor;
 
         // Convert physical mm position to canvas pixel position
         (double px, double py) ToCanvas(double mmX, double mmY) =>
@@ -466,12 +469,12 @@ public static class MeasurementsGridRenderer
                 var tb = new TextBlock
                 {
                     Text       = errLabel,
-                    FontSize   = 8,
+                    FontSize   = errorFontSize,
                     FontWeight = FontWeights.SemiBold,
                     Foreground = errorFg
                 };
-                Canvas.SetLeft(tb, cx - errLabel.Length * 2.8);
-                Canvas.SetTop(tb,  cy - LabelHalfH);
+                Canvas.SetLeft(tb, cx - errLabel.Length * errorFontSize * 0.35);
+                Canvas.SetTop(tb,  cy - errorFontSize * 0.6);
                 canvas.Children.Add(tb);
             }
         }
@@ -523,11 +526,11 @@ public static class MeasurementsGridRenderer
             var tb = new TextBlock
             {
                 Text       = label,
-                FontSize   = 8,
+                FontSize   = fontSize,
                 Foreground = labelFg
             };
-            Canvas.SetLeft(tb, midX - LabelHalfW);
-            Canvas.SetTop(tb,  midY - LabelHalfH * 2 - 2);
+            Canvas.SetLeft(tb, midX - scaledLabelHalfW);
+            Canvas.SetTop(tb,  midY - fontSize - 2);
             canvas.Children.Add(tb);
         }
 

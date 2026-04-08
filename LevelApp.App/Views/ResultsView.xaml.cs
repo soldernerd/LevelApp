@@ -69,7 +69,6 @@ public sealed partial class ResultsView : Page
         if (ViewModel.ActiveDefinition is null) return;
 
         bool isRawMode = RawModeRadio.IsChecked == true;
-        bool isUmUnits = MicronRadio.IsChecked  == true;
 
         MeasurementsGridRenderer.Render(
             MeasurementsCanvas,
@@ -77,7 +76,7 @@ public sealed partial class ResultsView : Page
             ViewModel.ActiveResult,
             ViewModel.ActiveDefinition,
             isRawMode,
-            isUmUnits,
+            isUmUnits: true,
             _zoomFactor);
     }
 

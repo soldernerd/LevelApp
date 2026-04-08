@@ -81,23 +81,10 @@
                                              Checked="OnModeOrUnitsChanged"/>
                             </StackPanel>
 
-                            <!-- Units: mm/m / µm -->
-                            <StackPanel Orientation="Horizontal"
-                                        Spacing="8"
-                                        VerticalAlignment="Center">
-                                <TextBlock Text="Units:"
-                                           VerticalAlignment="Center"
-                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                <RadioButton x:Name="MmPerMRadio"
-                                             Content="mm/m"
-                                             IsChecked="True"
-                                             GroupName="MeasUnits"
-                                             Checked="OnModeOrUnitsChanged"/>
-                                <RadioButton x:Name="MicronRadio"
-                                             Content="µm"
-                                             GroupName="MeasUnits"
-                                             Checked="OnModeOrUnitsChanged"/>
-                            </StackPanel>
+                            <!-- Units are always µm -->
+                            <TextBlock Text="Units: µm"
+                                       VerticalAlignment="Center"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                         </StackPanel>
 
                         <!-- Grid canvas (mouse-wheel zooms, scroll bars pan) -->
