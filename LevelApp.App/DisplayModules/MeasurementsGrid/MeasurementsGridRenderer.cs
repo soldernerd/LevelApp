@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
 using Windows.Foundation;
 using Windows.UI;
+using Orientation = LevelApp.Core.Models.Orientation;
 
 namespace LevelApp.App.DisplayModules.MeasurementsGrid;
 
