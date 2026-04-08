@@ -432,6 +432,57 @@ public static class MeasurementsGridRenderer
             });
         }
 
+        // ── Loop closure polygons ─────────────────────────────────────────────
+        if (result.PrimitiveLoops.Length > 0)
+        {
+            double loopSigmaUm = result.ClosureErrorRms * 1000.0;
+            if (loopSigmaUm < 1e-9) loopSigmaUm = 1.0;
+            var errorFg = new SolidColorBrush(Color.FromArgb(230, 20, 20, 20));
+
+            foreach (var loop in result.PrimitiveLoops)
+            {
+                double absUm = Math.Abs(loop.ClosureErrorMm * 1000.0);
+                Color bg = absUm < loopSigmaUm
+                    ? Color.FromArgb( 50,   0, 180,  60)   // < 1σ — green
+                    : absUm < 2 * loopSigmaUm
+                        ? Color.FromArgb( 70, 220, 160,   0)  // 1σ–2σ — amber
+                        : Color.FromArgb( 90, 210,  40,  40); // > 2σ — red
+
+                // Build canvas-space polygon points
+                var points = new Microsoft.UI.Xaml.Media.PointCollection();
+                double cx = 0, cy = 0;
+                foreach (var nodeId in loop.NodeIds)
+                {
+                    var (px, py) = NodePx(nodeId);
+                    points.Add(new Point(px, py));
+                    cx += px;
+                    cy += py;
+                }
+                cx /= loop.NodeIds.Length;
+                cy /= loop.NodeIds.Length;
+
+                var poly = new Polygon
+                {
+                    Points = points,
+                    Fill   = new SolidColorBrush(bg)
+                };
+                canvas.Children.Add(poly);
+
+                // Error label at centroid
+                string errLabel = $"{loop.ClosureErrorMm * 1000.0:F2}µm";
+                var tb = new TextBlock
+                {
+                    Text       = errLabel,
+                    FontSize   = 8,
+                    FontWeight = FontWeights.SemiBold,
+                    Foreground = errorFg
+                };
+                Canvas.SetLeft(tb, cx - errLabel.Length * 2.8);
+                Canvas.SetTop(tb,  cy - LabelHalfH);
+                canvas.Children.Add(tb);
+            }
+        }
+
         // ── Edge value labels ─────────────────────────────────────────────────
         for (int i = 0; i < steps.Count; i++)
         {
