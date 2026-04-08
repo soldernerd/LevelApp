@@ -38,6 +38,8 @@ public sealed partial class MeasurementViewModel : ViewModelBase
 
         GridColumns = Convert.ToInt32(_definition.Parameters["columnsCount"]);
         GridRows    = Convert.ToInt32(_definition.Parameters["rowsCount"]);
+        WidthMm     = Convert.ToDouble(_definition.Parameters["widthMm"]);
+        HeightMm    = Convert.ToDouble(_definition.Parameters["heightMm"]);
 
         CurrentStepIndex = 0;
         Reading          = double.NaN;
@@ -48,8 +50,10 @@ public sealed partial class MeasurementViewModel : ViewModelBase
 
     // ── Grid geometry (set during Initialise) ─────────────────────────────────
 
-    public int GridColumns { get; private set; }
-    public int GridRows    { get; private set; }
+    public int    GridColumns { get; private set; }
+    public int    GridRows    { get; private set; }
+    public double WidthMm     { get; private set; }
+    public double HeightMm    { get; private set; }
 
     // ── Observable state ──────────────────────────────────────────────────────
 

@@ -5,6 +5,7 @@ using LevelApp.Core.Models;
 using Orientation = LevelApp.Core.Models.Orientation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using Microsoft.UI.Xaml.Shapes;
@@ -15,8 +16,11 @@ namespace LevelApp.App.Views;
 public sealed partial class MeasurementView : Page
 {
     // ── Constants for canvas rendering ────────────────────────────────────────
-    private const double NodeRadius   = 6.0;
-    private const double NodeSpacing  = 30.0;
+    private const double NodeRadius     = 5.0;
+    private const double HighlightR     = 7.0;
+    private const double TargetMaxPx    = 360.0;
+    private const double MinSpacingPx   = 24.0;
+    private const double CanvasPad      = 10.0;
 
     public MeasurementViewModel ViewModel { get; }
 
@@ -60,82 +64,121 @@ public sealed partial class MeasurementView : Page
     }
 
     /// <summary>
-    /// Redraws the grid map canvas.
-    /// • Orange  — "from" node of the current step
-    /// • Blue    — "to" node of the current step
-    /// • Green   — nodes already measured (from-node of completed steps)
-    /// • Grey    — untouched nodes
+    /// Redraws the grid map canvas with nodes and edges.
+    /// Edge colour states: pending = grey | current step = accent blue | completed = green.
+    /// Node colour: grey for all nodes, except the two endpoints of the current step
+    /// which are drawn in accent blue.  Nodes never permanently turn green — only edges do.
+    /// Pixel spacing is proportional to the plate's physical aspect ratio.
     /// </summary>
     private void DrawGridMap()
     {
         GridCanvas.Children.Clear();
 
-        var step = ViewModel.CurrentStep;
-        if (step is null) return;
+        var currentStep = ViewModel.CurrentStep;
+        if (currentStep is null) return;
 
-        int cols = ViewModel.GridColumns;
-        int rows = ViewModel.GridRows;
+        int    cols      = ViewModel.GridColumns;
+        int    rows      = ViewModel.GridRows;
+        int    curIdx    = ViewModel.CurrentStepIndex;
+        var    steps     = ViewModel.Steps;
+        double widthMm   = ViewModel.WidthMm;
+        double heightMm  = ViewModel.HeightMm;
 
-        // Determine the "to" node
-        (int toCol, int toRow) = step.Orientation switch
+        // Pixel spacing proportional to physical dimensions, capped to TargetMaxPx
+        double scale    = TargetMaxPx / Math.Max(widthMm, heightMm);
+        double xSpacing = Math.Max(MinSpacingPx, widthMm  / (cols - 1) * scale);
+        double ySpacing = Math.Max(MinSpacingPx, heightMm / (rows - 1) * scale);
+
+        // Node centres include padding so the outermost highlighted nodes are not clipped
+        (double x, double y) NodePos(int c, int r) =>
+            (c * xSpacing + CanvasPad + HighlightR,
+             r * ySpacing + CanvasPad + HighlightR);
+
+        // Accent colour from the Fluent system palette
+        Color accentColor;
+        try   { accentColor = (Color)Application.Current.Resources["SystemAccentColor"]; }
+        catch { accentColor = Color.FromArgb(255, 0, 120, 212); }
+
+        var greenColor   = Color.FromArgb(255, 0, 160, 80);
+        var greyColor    = Color.FromArgb(255, 140, 140, 140);
+        var pendingColor = Color.FromArgb(180, 140, 140, 140);
+
+        // Endpoints of the active step
+        (int toCol, int toRow) = currentStep.Orientation switch
         {
-            Orientation.East  => (step.GridCol + 1, step.GridRow),
-            Orientation.West  => (step.GridCol - 1, step.GridRow),
-            Orientation.South => (step.GridCol,     step.GridRow + 1),
-            Orientation.North => (step.GridCol,     step.GridRow - 1),
+            Orientation.East  => (currentStep.GridCol + 1, currentStep.GridRow),
+            Orientation.West  => (currentStep.GridCol - 1, currentStep.GridRow),
+            Orientation.South => (currentStep.GridCol,     currentStep.GridRow + 1),
+            Orientation.North => (currentStep.GridCol,     currentStep.GridRow - 1),
             _                 => (-1, -1)
         };
 
-        // Collect from-positions of completed steps for the "measured" colour
-        var measuredFroms = ViewModel.Steps
-            .Take(ViewModel.CurrentStepIndex)
-            .Where(s => s.Reading.HasValue)
-            .Select(s => (s.GridCol, s.GridRow))
-            .ToHashSet();
+        // ── Draw edges (painter order: drawn before nodes) ────────────────────
+        for (int i = 0; i < steps.Count; i++)
+        {
+            var s = steps[i];
+            var (fx, fy) = NodePos(s.GridCol, s.GridRow);
+            var (tx, ty) = s.Orientation switch
+            {
+                Orientation.East  => NodePos(s.GridCol + 1, s.GridRow),
+                Orientation.West  => NodePos(s.GridCol - 1, s.GridRow),
+                Orientation.South => NodePos(s.GridCol,     s.GridRow + 1),
+                Orientation.North => NodePos(s.GridCol,     s.GridRow - 1),
+                _                 => NodePos(s.GridCol, s.GridRow)
+            };
 
+            Color  edgeColor;
+            double thickness;
+            if (i == curIdx)
+            {
+                edgeColor = accentColor;
+                thickness = 3.0;
+            }
+            else if (i < curIdx)
+            {
+                edgeColor = greenColor;
+                thickness = 2.5;
+            }
+            else
+            {
+                edgeColor = pendingColor;
+                thickness = 1.5;
+            }
+
+            GridCanvas.Children.Add(new Line
+            {
+                X1 = fx, Y1 = fy, X2 = tx, Y2 = ty,
+                Stroke          = new Microsoft.UI.Xaml.Media.SolidColorBrush(edgeColor),
+                StrokeThickness = thickness
+            });
+        }
+
+        // ── Draw nodes (on top of edges) ──────────────────────────────────────
         for (int r = 0; r < rows; r++)
         {
             for (int c = 0; c < cols; c++)
             {
-                double cx = c * NodeSpacing;
-                double cy = r * NodeSpacing;
+                bool isEndpoint = (c == currentStep.GridCol && r == currentStep.GridRow)
+                               || (c == toCol              && r == toRow);
 
-                Color colour;
-                double radius = NodeRadius;
+                Color  color  = isEndpoint ? accentColor : greyColor;
+                double radius = isEndpoint ? HighlightR  : NodeRadius;
 
-                if (c == step.GridCol && r == step.GridRow)
-                {
-                    colour = Colors.Orange;           // current from-node
-                    radius = NodeRadius + 3;
-                }
-                else if (c == toCol && r == toRow)
-                {
-                    colour = Colors.CornflowerBlue;   // current to-node
-                    radius = NodeRadius + 3;
-                }
-                else if (measuredFroms.Contains((c, r)))
-                {
-                    colour = Color.FromArgb(255, 80, 170, 80); // measured
-                }
-                else
-                {
-                    colour = Color.FromArgb(255, 150, 150, 150); // unvisited
-                }
-
+                var (cx, cy) = NodePos(c, r);
                 var ellipse = new Ellipse
                 {
                     Width  = radius * 2,
                     Height = radius * 2,
-                    Fill   = new Microsoft.UI.Xaml.Media.SolidColorBrush(colour)
+                    Fill   = new Microsoft.UI.Xaml.Media.SolidColorBrush(color)
                 };
-
                 Canvas.SetLeft(ellipse, cx - radius);
                 Canvas.SetTop(ellipse,  cy - radius);
                 GridCanvas.Children.Add(ellipse);
             }
         }
 
-        GridCanvas.Width  = (cols - 1) * NodeSpacing + NodeRadius * 2;
-        GridCanvas.Height = (rows - 1) * NodeSpacing + NodeRadius * 2;
+        // Canvas size: last node centre + padding to avoid clipping
+        GridCanvas.Width  = (cols - 1) * xSpacing + (CanvasPad + HighlightR) * 2;
+        GridCanvas.Height = (rows - 1) * ySpacing + (CanvasPad + HighlightR) * 2;
     }
 }
