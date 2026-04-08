@@ -58,10 +58,18 @@ public static class MeasurementsGridRenderer
     {
         canvas.Children.Clear();
 
-        int    cols     = Convert.ToInt32( definition.Parameters["columnsCount"]);
-        int    rows     = Convert.ToInt32( definition.Parameters["rowsCount"]);
-        double widthMm  = Convert.ToDouble(definition.Parameters["widthMm"]);
-        double heightMm = Convert.ToDouble(definition.Parameters["heightMm"]);
+        // This renderer only supports rectangular Full Grid layouts.
+        // Union Jack and other non-grid strategies don't have columnsCount/rowsCount.
+        if (!definition.Parameters.TryGetValue("columnsCount", out var cObj) ||
+            !definition.Parameters.TryGetValue("rowsCount",    out var rObj) ||
+            !definition.Parameters.TryGetValue("widthMm",      out var wObj) ||
+            !definition.Parameters.TryGetValue("heightMm",     out var hObj))
+            return;
+
+        int    cols     = Convert.ToInt32( cObj);
+        int    rows     = Convert.ToInt32( rObj);
+        double widthMm  = Convert.ToDouble(wObj);
+        double heightMm = Convert.ToDouble(hObj);
 
         if (cols < 2 || rows < 2 || steps.Count == 0) return;
 
