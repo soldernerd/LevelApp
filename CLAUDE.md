@@ -71,7 +71,7 @@ public static class AppVersion
 
 ## Git Workflow
 
-### Local commits — automatic, after every code change
+### Local commits — automatic, after every code change, before handing back to the user
 
 After every code change (i.e. every time the version is bumped), stage all relevant modified files and commit to the **master** branch locally. Do this without waiting for instructions from the user.
 
