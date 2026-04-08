@@ -1,3 +1,4 @@
+using LevelApp.Core.Geometry.SurfacePlate.Strategies;
 using LevelApp.Core.Models;
 using Microsoft.UI;
 using Microsoft.UI.Text;
@@ -58,12 +59,22 @@ public static class MeasurementsGridRenderer
     {
         canvas.Children.Clear();
 
-        // This renderer only supports rectangular Full Grid layouts.
-        // Union Jack and other non-grid strategies don't have columnsCount/rowsCount.
+        // Route Union Jack (and future non-grid strategies) to a separate renderer.
         if (!definition.Parameters.TryGetValue("columnsCount", out var cObj) ||
-            !definition.Parameters.TryGetValue("rowsCount",    out var rObj) ||
-            !definition.Parameters.TryGetValue("widthMm",      out var wObj) ||
-            !definition.Parameters.TryGetValue("heightMm",     out var hObj))
+            !definition.Parameters.TryGetValue("rowsCount",    out var rObj))
+        {
+            if (definition.Parameters.TryGetValue("widthMm",  out var ujW) &&
+                definition.Parameters.TryGetValue("heightMm", out var ujH))
+            {
+                RenderUnionJack(canvas, steps, result, definition,
+                    Convert.ToDouble(ujW), Convert.ToDouble(ujH),
+                    isRawMode, isUmUnits);
+            }
+            return;
+        }
+
+        if (!definition.Parameters.TryGetValue("widthMm",  out var wObj) ||
+            !definition.Parameters.TryGetValue("heightMm", out var hObj))
             return;
 
         int    cols     = Convert.ToInt32( cObj);
@@ -367,5 +378,125 @@ public static class MeasurementsGridRenderer
         // ── Canvas size ───────────────────────────────────────────────────────
         canvas.Width  = (cols - 1) * xSpacing + CanvasPad * 2;
         canvas.Height = (rows - 1) * ySpacing + CanvasPad * 2;
+    }
+
+    // ── Union Jack renderer ───────────────────────────────────────────────────
+
+    /// <summary>
+    /// Renders a Union Jack step map: edges labelled with readings, flagged edges
+    /// highlighted.  Loop closure cells are omitted (loops are non-rectangular).
+    /// </summary>
+    private static void RenderUnionJack(
+        Canvas                         canvas,
+        IReadOnlyList<MeasurementStep> steps,
+        SurfaceResult                  result,
+        ObjectDefinition               definition,
+        double                         widthMm,
+        double                         heightMm,
+        bool                           isRawMode,
+        bool                           isUmUnits)
+    {
+        if (steps.Count == 0) return;
+
+        double scale = TargetMaxPx / Math.Max(widthMm, heightMm);
+
+        // Convert physical mm position to canvas pixel position
+        (double px, double py) ToCanvas(double mmX, double mmY) =>
+            (mmX * scale + CanvasPad,
+             mmY * scale + CanvasPad);
+
+        (double px, double py) NodePx(string nodeId)
+        {
+            var (mmX, mmY) = UnionJackStrategy.NodePositionById(nodeId, definition);
+            return ToCanvas(mmX, mmY);
+        }
+
+        var flaggedSet   = result.FlaggedStepIndices.ToHashSet();
+        var normalBrush  = new SolidColorBrush(Color.FromArgb(200, 100, 100, 100));
+        var flaggedBrush = new SolidColorBrush(Color.FromArgb(255, 210,  80,  20));
+        var labelFg      = new SolidColorBrush(Color.FromArgb(220,  50,  50,  50));
+
+        // ── Edges ─────────────────────────────────────────────────────────────
+        for (int i = 0; i < steps.Count; i++)
+        {
+            var s        = steps[i];
+            var (fx, fy) = NodePx(s.NodeId);
+            var (tx, ty) = NodePx(s.ToNodeId);
+
+            bool isFlagged = flaggedSet.Contains(i);
+            canvas.Children.Add(new Line
+            {
+                X1 = fx, Y1 = fy, X2 = tx, Y2 = ty,
+                Stroke          = isFlagged ? flaggedBrush : normalBrush,
+                StrokeThickness = isFlagged ? 2.0 : 1.5
+            });
+        }
+
+        // ── Edge value labels ─────────────────────────────────────────────────
+        for (int i = 0; i < steps.Count; i++)
+        {
+            var s = steps[i];
+            if (s.Reading is null) continue;
+
+            double raw = s.Reading.Value;
+            if (!isRawMode && i < result.Residuals.Length)
+                raw -= result.Residuals[i];
+
+            string label;
+            if (isUmUnits)
+            {
+                // Physical step length in metres
+                var (fmmX, fmmY) = UnionJackStrategy.NodePositionById(s.NodeId,   definition);
+                var (tmmX, tmmY) = UnionJackStrategy.NodePositionById(s.ToNodeId, definition);
+                double dx    = tmmX - fmmX;
+                double dy    = tmmY - fmmY;
+                double distM = Math.Sqrt(dx * dx + dy * dy) / 1000.0;
+                label = $"{raw * distM * 1000.0:F2}";
+            }
+            else
+            {
+                label = $"{raw:F3}";
+            }
+
+            var (fx, fy) = NodePx(s.NodeId);
+            var (tx, ty) = NodePx(s.ToNodeId);
+            double midX  = (fx + tx) / 2;
+            double midY  = (fy + ty) / 2;
+
+            var tb = new TextBlock
+            {
+                Text       = label,
+                FontSize   = 8,
+                Foreground = labelFg
+            };
+            Canvas.SetLeft(tb, midX - LabelHalfW);
+            Canvas.SetTop(tb,  midY - LabelHalfH * 2 - 2);
+            canvas.Children.Add(tb);
+        }
+
+        // ── Node dots ─────────────────────────────────────────────────────────
+        var nodeBrush = new SolidColorBrush(Color.FromArgb(220, 110, 110, 110));
+        var nodeIds   = steps
+            .SelectMany(s => new[] { s.NodeId, s.ToNodeId })
+            .Where(id => !string.IsNullOrEmpty(id))
+            .Distinct();
+
+        foreach (var nodeId in nodeIds)
+        {
+            var (cx, cy) = NodePx(nodeId);
+            var e = new Ellipse
+            {
+                Width  = NodeRadius * 2,
+                Height = NodeRadius * 2,
+                Fill   = nodeBrush
+            };
+            Canvas.SetLeft(e, cx - NodeRadius);
+            Canvas.SetTop(e,  cy - NodeRadius);
+            canvas.Children.Add(e);
+        }
+
+        // ── Canvas size ───────────────────────────────────────────────────────
+        canvas.Width  = widthMm * scale + CanvasPad * 2;
+        canvas.Height = heightMm * scale + CanvasPad * 2;
     }
 }
