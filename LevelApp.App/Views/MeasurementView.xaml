@@ -80,11 +80,11 @@
                 </Border>
 
                 <!-- Reading entry -->
-                <NumberBox Header="Reading (mm/m)"
+                <NumberBox Header="Reading (µm/m)"
                            PlaceholderText="Enter instrument reading"
                            Value="{x:Bind ViewModel.Reading, Mode=TwoWay}"
-                           SmallChange="0.001"
-                           LargeChange="0.01"
+                           SmallChange="1"
+                           LargeChange="10"
                            SpinButtonPlacementMode="Compact"
                            IsEnabled="{x:Bind ViewModel.IsInputEnabled, Mode=OneWay}"/>
 

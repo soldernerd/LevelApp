@@ -68,8 +68,10 @@ public sealed partial class MeasurementViewModel : ViewModelBase
     private int _currentStepIndex;
 
     /// <summary>
-    /// The operator's reading in mm/m.  <see cref="double.NaN"/> means "not yet entered"
+    /// The operator's reading in µm/m (as entered by the user).
+    /// <see cref="double.NaN"/> means "not yet entered"
     /// — NumberBox renders NaN as an empty/placeholder field.
+    /// Converted to mm/m (÷ 1000) before being stored on the step.
     /// </summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(AcceptReadingCommand))]
@@ -119,7 +121,8 @@ public sealed partial class MeasurementViewModel : ViewModelBase
     {
         if (CurrentStep is null) return;
 
-        _steps[CurrentStepIndex].Reading = Reading;
+        // Reading is entered by the user in µm/m; convert to mm/m for storage
+        _steps[CurrentStepIndex].Reading = Reading / 1000.0;
         _mainViewModel.MarkDirty();
         Reading = double.NaN;
 

@@ -10,13 +10,11 @@ namespace LevelApp.App.DisplayModules.StrategyPreview;
 /// <summary>
 /// Renders a 2-D top-down preview of a measurement strategy on a <see cref="Canvas"/>.
 /// Nodes are drawn as small filled circles; edges connect consecutive steps within
-/// each pass.  The plate boundary is drawn as a rounded rectangle.
-/// Physical plate proportions are preserved.
+/// each pass.  Physical plate proportions are preserved.
 /// </summary>
 public static class StrategyPreviewRenderer
 {
     private const double NodeRadius  = 4.0;
-    private const double BorderWidth = 1.5;
     private const double Margin      = 16.0;
 
     public static Canvas Render(
@@ -58,21 +56,6 @@ public static class StrategyPreviewRenderer
         (double sx, double sy) ToScreen(double px, double py) =>
             (Margin + (px - physMinX) * scaleX,
              Margin + (py - physMinY) * scaleY);
-
-        // ── Plate boundary ────────────────────────────────────────────────────
-        var border = new Rectangle
-        {
-            Width           = innerW + NodeRadius * 2,
-            Height          = innerH + NodeRadius * 2,
-            Stroke          = new SolidColorBrush(Colors.Gray),
-            StrokeThickness = BorderWidth,
-            RadiusX         = 4,
-            RadiusY         = 4,
-            Fill            = new SolidColorBrush(Windows.UI.Color.FromArgb(20, 180, 180, 180))
-        };
-        Canvas.SetLeft(border, Margin - NodeRadius);
-        Canvas.SetTop(border,  Margin - NodeRadius);
-        canvas.Children.Add(border);
 
         // ── Edges (per pass, consecutive steps) ───────────────────────────────
         var passBuckets = new Dictionary<int, List<MeasurementStep>>();
