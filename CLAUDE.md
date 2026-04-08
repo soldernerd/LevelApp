@@ -42,9 +42,9 @@ The app uses **semantic versioning** in the form `Major.Minor.Patch` (e.g. `0.2.
 
 ### Rules
 
-- **Minor** increments by 1 with every completed work package. Patch resets to 0.
-- **Patch** increments by 1 with every round of debugging / bug-fix within a work package.
-- **Major** only increments on an explicit decision by the project owner; resets both minor and patch to 0.
+- **Patch** increments by 1 automatically after every code change. No instruction from the user is needed. Applies to every file except `.levelproj` project data files.
+- **Minor** increments by 1 automatically when a work package is fully implemented. Patch resets to 0. No instruction from the user is needed. Applies to every file except `.levelproj` project data files.
+- **Major** increments only when explicitly instructed by the user. Resets both Minor and Patch to 0. Applies to every file except `.levelproj` project data files.
 
 ### Single source of truth
 
@@ -63,11 +63,25 @@ public static class AppVersion
 ```
 
 - **Never** hardcode a version string anywhere else — not in XAML, not in code-behind, not in comments.
-- The `.csproj` `<Version>` / `<AssemblyVersion>` / `<FileVersion>` fields are kept in sync with this file manually.
-- Bump Minor with every work package that is implemented. Reset Patch to 0.
-- Bump Patch every time the code is changed
-- Bump Major only when explicitly instructed by the user
-- Bump `AppVersion.cs` **before** committing so the delivered commit already carries the correct version.
+- The `.csproj` `<Version>` / `<AssemblyVersion>` / `<FileVersion>` fields are kept in sync with `AppVersion.cs` at all times.
+- Bump `AppVersion.cs` and the `.csproj` fields **before** committing so every commit already carries the correct version.
+- Version bumps apply to all source files. **Never** bump the version inside `.levelproj` data files — those carry their own `schemaVersion` field which is unrelated.
+
+---
+
+## Git Workflow
+
+### Local commits — automatic, after every code change
+
+After every code change (i.e. every time the version is bumped), stage all relevant modified files and commit to the **master** branch locally. Do this without waiting for instructions from the user.
+
+```
+git add <changed files>
+git commit -m "[vX.Y.Z] Short imperative description"
+```
+
+- Always commit on **master**. Never create or switch to any other branch — there is only one developer.
+- The commit message **must** start with `[vX.Y.Z]` where `X.Y.Z` matches the version in `AppVersion.cs` at the time of the commit.
 
 ### Commit message format
 
@@ -77,10 +91,28 @@ public static class AppVersion
 
 Examples:
 ```
-[v0.2.0] WP0.02: versioning, appVersion in project file, About dialog
+[v0.2.0] WP0.02: versioning, AppVersion in project file, About dialog
 [v0.2.1] Fix About dialog hyperlinks not opening on first click
-[v0.3.0] WP0.03: ...
+[v0.3.0] WP0.03: implement measurement view
 ```
+
+### Pushing to remote — only when explicitly instructed
+
+**Never push to the remote (GitHub) automatically.** Only push when the user explicitly says to do so (e.g. "push" or "push to GitHub"). Before pushing, verify that:
+
+1. `docs/architecture.md` is up to date with what was actually built.
+2. `README.md` reflects any user-facing changes.
+3. `docs/levelproj.md` reflects any changes to the project file format.
+4. `AppVersion.cs` and all `.csproj` version fields carry the correct version.
+5. All changes are committed locally on master.
+
+Then push:
+
+```
+git push origin master
+```
+
+Remote URL: https://github.com/soldernerd/LevelApp
 
 ---
 
@@ -103,24 +135,27 @@ Follow good industry practice for C# and WinUI 3 development:
 
 ## After Completing a Work Package
 
-Only perform the following steps when **explicitly instructed to do so by the user**. Never do them automatically or when work is still in progress:
+When the user confirms they are satisfied with a completed work package, and only then, perform the following steps **in order**:
 
-1. Update `docs/architecture.md` to reflect what was actually built (correct any deviations from the spec, update the solution structure, interfaces, and data models as needed — do not describe unbuilt features as complete)
-2. Update `README.md` if any user-facing functionality has changed
-3. Update 'levelproj.md' if anything in the project file format has changed
-4. Commit all changes and push to GitHub with a commit message following the convention above (e.g. `[v0.2.0] WP0.02: versioning, appVersion in project file, About dialog`).
+1. Update `docs/architecture.md` to reflect what was actually built (correct any deviations from the spec, update the solution structure, interfaces, and data models — do not describe unbuilt features as complete).
+2. Update `README.md` if any user-facing functionality has changed.
+3. Update `docs/levelproj.md` if anything in the project file format has changed.
+4. Bump Minor, reset Patch to 0, update `AppVersion.cs` and all `.csproj` version fields.
+5. Commit all changes locally on master with a message following the convention above.
+
+Do **not** push to GitHub unless the user explicitly asks.
 
 ---
 
-## Sample project files
+## Sample Project Files
 
 Sample project files for testing and debugging are located in `docs/sampleProjects/`.
 
 ---
 
 ## Repository
-Git: Perform a local commit after every code change following the following convention: Commit all changes and push to GitHub with a commit message following the convention above (e.g. `[v0.2.0] WP0.02: versioning, appVersion in project file, About dialog`)
-Push to GitHub: Only push to GitHub when explicitly insttructed by the user, see "After Completing a Work Package" above
-GitHub: https://github.com/soldernerd/LevelApp  
-License: GPL v3  
-Author: Lukas Fässler
+
+- **Remote:** https://github.com/soldernerd/LevelApp
+- **Branch:** master (only — never create other branches)
+- **License:** GPL v3
+- **Author:** Lukas Fässler
