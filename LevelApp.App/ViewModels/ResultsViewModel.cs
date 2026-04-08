@@ -113,6 +113,10 @@ public sealed partial class ResultsViewModel : ViewModelBase
         {
             ClosureStatsVisibility = Visibility.Collapsed;
         }
+
+        ActiveResult     = result;
+        ActiveSteps      = _session.InitialRound.Steps;
+        ActiveDefinition = _project.ObjectDefinition;
     }
 
     // ── Info panel properties ─────────────────────────────────────────────────
@@ -148,7 +152,13 @@ public sealed partial class ResultsViewModel : ViewModelBase
 
     public object? PlotContent { get; private set; }
 
-    // ── Exposed for dialogs ───────────────────────────────────────────────────
+    // ── Data exposed to the Measurements canvas renderer ─────────────────────
+
+    public SurfaceResult?                 ActiveResult     { get; private set; }
+    public IReadOnlyList<MeasurementStep> ActiveSteps      { get; private set; } = [];
+    public ObjectDefinition?              ActiveDefinition { get; private set; }
+
+    // ── Exposed for NewMeasurementDialog (used from ResultsView code-behind) ──
 
     public ObjectDefinition? ActiveObjectDefinition => _project?.ObjectDefinition;
     public string            ActiveOperator         => _project?.Operator ?? string.Empty;

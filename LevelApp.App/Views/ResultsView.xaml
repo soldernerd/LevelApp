@@ -33,20 +33,88 @@
               Padding="24,0,24,24"
               ColumnSpacing="24">
 
-            <!-- Left: 3D surface plot -->
-            <Border Grid.Column="0"
-                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    CornerRadius="8"
-                    Padding="20">
-                <ScrollViewer HorizontalScrollMode="Auto"
-                              VerticalScrollMode="Auto"
-                              HorizontalScrollBarVisibility="Auto"
-                              VerticalScrollBarVisibility="Auto">
-                    <ContentControl x:Name="PlotContainer"
-                                    HorizontalContentAlignment="Left"
-                                    VerticalContentAlignment="Top"/>
-                </ScrollViewer>
-            </Border>
+            <!-- Left: tabbed display (Tab 1 = 3D plot, Tab 2 = Measurements) -->
+            <TabView Grid.Column="0"
+                     IsAddTabButtonVisible="False"
+                     TabWidthMode="Equal"
+                     SelectionChanged="OnResultsTabSelectionChanged">
+                <TabView.TabItems>
+
+                <!-- ── Tab 1: 3D Surface Plot ─────────────────────────── -->
+                <TabViewItem Header="3D Surface Plot" IsClosable="False">
+                    <ScrollViewer HorizontalScrollMode="Auto"
+                                  VerticalScrollMode="Auto"
+                                  HorizontalScrollBarVisibility="Auto"
+                                  VerticalScrollBarVisibility="Auto"
+                                  Padding="20">
+                        <ContentControl x:Name="PlotContainer"
+                                        HorizontalContentAlignment="Left"
+                                        VerticalContentAlignment="Top"/>
+                    </ScrollViewer>
+                </TabViewItem>
+
+                <!-- ── Tab 2: Measurements ───────────────────────────── -->
+                <TabViewItem Header="Measurements" IsClosable="False">
+                    <Grid RowDefinitions="Auto,*">
+
+                        <!-- Controls row -->
+                        <StackPanel Grid.Row="0"
+                                    Orientation="Horizontal"
+                                    Spacing="24"
+                                    Padding="16,10,16,6">
+
+                            <!-- Mode: Raw / Adjusted -->
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="8"
+                                        VerticalAlignment="Center">
+                                <TextBlock Text="Mode:"
+                                           VerticalAlignment="Center"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <RadioButton x:Name="RawModeRadio"
+                                             Content="Raw"
+                                             IsChecked="True"
+                                             GroupName="MeasMode"
+                                             Checked="OnModeOrUnitsChanged"/>
+                                <RadioButton x:Name="AdjustedModeRadio"
+                                             Content="Adjusted"
+                                             GroupName="MeasMode"
+                                             Checked="OnModeOrUnitsChanged"/>
+                            </StackPanel>
+
+                            <!-- Units: mm/m / µm -->
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="8"
+                                        VerticalAlignment="Center">
+                                <TextBlock Text="Units:"
+                                           VerticalAlignment="Center"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <RadioButton x:Name="MmPerMRadio"
+                                             Content="mm/m"
+                                             IsChecked="True"
+                                             GroupName="MeasUnits"
+                                             Checked="OnModeOrUnitsChanged"/>
+                                <RadioButton x:Name="MicronRadio"
+                                             Content="µm"
+                                             GroupName="MeasUnits"
+                                             Checked="OnModeOrUnitsChanged"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Grid canvas -->
+                        <ScrollViewer Grid.Row="1"
+                                      HorizontalScrollMode="Auto"
+                                      VerticalScrollMode="Auto"
+                                      HorizontalScrollBarVisibility="Auto"
+                                      VerticalScrollBarVisibility="Auto"
+                                      Padding="16,0,16,16">
+                            <Canvas x:Name="MeasurementsCanvas"/>
+                        </ScrollViewer>
+
+                    </Grid>
+                </TabViewItem>
+
+                </TabView.TabItems>
+            </TabView>
 
             <!-- Right: info + statistics + flagged steps + correction -->
             <ScrollViewer Grid.Column="1"
