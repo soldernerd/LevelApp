@@ -4,7 +4,7 @@
 
 > Living document. Update as the project evolves.
 
-> Last updated: 2026-04-08 *(revised to reflect WP0.02: versioning & About dialog)*
+> Last updated: 2026-04-08 *(revised to reflect WP0.06: code quality cleanup)*
 
 
 
@@ -61,31 +61,32 @@ LevelApp/
 ├── LevelApp.Core/                 ← No UI dependencies. Fully unit-testable.
 │   ├── AppVersion.cs              ← Single source of truth for Major.Minor.Patch
 │   ├── Interfaces/
-│   │   ├── IGeometryCalculator.cs
-│   │   ├── IGeometryModule.cs
 │   │   ├── IMeasurementStrategy.cs
-│   │   ├── IInstrumentProvider.cs
-│   │   └── IResultDisplay.cs
+│   │   └── ISurfaceCalculator.cs  ← single calculator interface (MethodId, Calculate)
 │   ├── Models/
 │   │   ├── Project.cs
 │   │   ├── ObjectDefinition.cs
 │   │   ├── MeasurementSession.cs
-│   │   ├── MeasurementRound.cs
+│   │   ├── MeasurementRound.cs    ← also contains MergeWithReplacements static helper
 │   │   ├── MeasurementStep.cs
 │   │   ├── CorrectionRound.cs     ← also contains ReplacedStep
 │   │   └── SurfaceResult.cs
 │   ├── Geometry/
+│   │   ├── StrategyFactory.cs     ← Create(strategyId) → IMeasurementStrategy
+│   │   ├── CalculatorFactory.cs   ← Create(methodId, strategy) → ISurfaceCalculator
+│   │   ├── Calculators/
+│   │   │   ├── LeastSquaresCalculator.cs        ← least-squares solver + outlier detection
+│   │   │   ├── SequentialIntegrationCalculator.cs ← proportional closure distribution
+│   │   │   └── ClosureErrorCalculator.cs        ← shared closure-loop helper
 │   │   └── SurfacePlate/
-│   │       ├── SurfacePlateCalculator.cs
 │   │       └── Strategies/
-│   │           └── FullGridStrategy.cs
-│   ├── Instruments/
-│   │   └── ManualEntry/
-│   │       └── ManualEntryProvider.cs
+│   │           ├── FullGridStrategy.cs
+│   │           ├── UnionJackStrategy.cs
+│   │           └── UnionJackRings.cs
 │   └── Serialization/
 │       ├── ProjectSerializer.cs
 │       ├── ObjectValueConverter.cs
-│       └── OrientationConverter.cs   ← handles string and legacy-integer Orientation
+│       └── OrientationConverter.cs   ← reads/writes Orientation as string enum
 ├── LevelApp.App/                  ← WinUI 3 application
 │   ├── App.xaml / App.xaml.cs     ← DI container setup
 │   ├── MainWindow.xaml / .cs      ← Attaches NavigationService; initial navigation
@@ -97,6 +98,7 @@ LevelApp/
 │   │   ├── ResultsArgs.cs         ← record(Project, Session)
 │   │   └── CorrectionArgs.cs      ← record(Project, Session)
 │   ├── Services/
+│   │   ├── IProjectFileService.cs ← interface for file I/O (testable)
 │   │   ├── ProjectFileService.cs  ← Win32 IFileOpenDialog/IFileSaveDialog + JSON I/O
 │   │   ├── ISettingsService.cs
 │   │   └── SettingsService.cs     ← persists settings to %LOCALAPPDATA%\LevelApp\settings.json
@@ -122,7 +124,8 @@ LevelApp/
 │           └── SurfacePlot3DDisplay.cs
 ├── LevelApp.Tests/
 │   ├── FullGridStrategyTests.cs
-│   └── SurfacePlateCalculatorTests.cs
+│   ├── UnionJackStrategyTests.cs
+│   └── LeastSquaresCalculatorTests.cs
 └── docs/
     ├── architecture.md               ← This file
     └── levelproj.md                  ← .levelproj JSON format reference
@@ -138,44 +141,27 @@ LevelApp/
 
 
 
-### IGeometryCalculator
+### ISurfaceCalculator
 
-Performs the least-squares fit and outlier detection for a specific geometry type. Produced by `IGeometryModule.CreateCalculator`; can also be instantiated directly (e.g. `new SurfacePlateCalculator(definition)`).
-
-```csharp
-public interface IGeometryCalculator
-{
-    SurfaceResult Calculate(MeasurementRound round);
-}
-```
-
-
-
-### IGeometryModule
-
-Represents a type of object to be measured (e.g. surface plate, lathe bed, machine column). Each module:
-
-- Defines what parameters it needs from the user (plate dimensions, grid size, etc.)
-- Exposes the list of available measurement strategies
-- Owns the calculator for its geometry type
+The single calculator interface. Both `LeastSquaresCalculator` and `SequentialIntegrationCalculator` implement it. Instantiated via `CalculatorFactory.Create(methodId, strategy)`.
 
 ```csharp
-public interface IGeometryModule
+public interface ISurfaceCalculator
 {
-    string ModuleId { get; }
+    string MethodId { get; }
     string DisplayName { get; }
-    IEnumerable<IMeasurementStrategy> AvailableStrategies { get; }
-    IGeometryCalculator CreateCalculator(ObjectDefinition definition);
+    SurfaceResult Calculate(
+        IReadOnlyList<MeasurementStep> steps,
+        ObjectDefinition definition,
+        CalculationParameters parameters);
 }
 ```
-
-> **Note:** `IGeometryModule` is defined but no concrete implementation (`SurfacePlateModule`) exists yet. `ProjectSetupViewModel` currently instantiates `FullGridStrategy` and `SurfacePlateCalculator` directly. The module plugin layer is reserved for when additional geometry types are introduced.
 
 
 
 ### IMeasurementStrategy
 
-Generates the ordered sequence of guided steps for a given object definition. A strategy's only job is to produce the step list — it knows nothing about calculation.
+Generates the ordered sequence of guided steps for a given object definition. A strategy's only job is to produce the step list — it knows nothing about calculation. Instantiated via `StrategyFactory.Create(strategyId)`.
 
 ```csharp
 public interface IMeasurementStrategy
@@ -183,37 +169,24 @@ public interface IMeasurementStrategy
     string StrategyId { get; }
     string DisplayName { get; }
     IReadOnlyList<MeasurementStep> GenerateSteps(ObjectDefinition definition);
+    (double X, double Y) GetNodePosition(MeasurementStep step, ObjectDefinition definition);
+    (double X, double Y) GetToNodePosition(MeasurementStep step, ObjectDefinition definition);
+    IReadOnlyList<IReadOnlyList<string>> GetPrimitiveLoopNodeIds(ObjectDefinition definition);
 }
 ```
 
 
 
-### IInstrumentProvider
+### StrategyFactory / CalculatorFactory
 
-Abstracts all instrument/connectivity code. Today it delegates to a caller-supplied async callback. Tomorrow it streams from Bluetooth. Geometry modules never know which provider is active.
-
-```csharp
-public interface IInstrumentProvider
-{
-    string ProviderId { get; }
-    string DisplayName { get; }
-    Task<double> GetReadingAsync(MeasurementStep step, CancellationToken ct);
-}
-```
-
-
-
-### IResultDisplay
-
-Each display module receives a completed result and renders it. Returns `object` (not `UIElement`) so that `LevelApp.Core` has zero UI framework dependencies; WinUI 3 callers cast the return value to `UIElement`.
+Two static factory classes in `Core/Geometry/` centralise creation of strategies and calculators. Adding a new strategy or algorithm = one new class + one line in the corresponding factory.
 
 ```csharp
-public interface IResultDisplay
-{
-    string DisplayId { get; }
-    string DisplayName { get; }
-    object Render(SurfaceResult result);
-}
+// Core/Geometry/StrategyFactory.cs
+public static IMeasurementStrategy Create(string strategyId);
+
+// Core/Geometry/CalculatorFactory.cs
+public static ISurfaceCalculator Create(string methodId, IMeasurementStrategy strategy);
 ```
 
 
@@ -564,12 +537,14 @@ The vertical exaggeration (`maxZPixels`) is computed per render as `max(10, (col
 
 | Decision | Rationale |
 |---|---|
-| Geometry modules as plugins | New object types (lathe bed, column, etc.) require no changes to core or UI |
+| Single `ISurfaceCalculator` interface | Eliminates the old `IGeometryCalculator` / `ISurfaceCalculator` split; both calculators share one polymorphic contract |
+| `StrategyFactory` / `CalculatorFactory` in Core | Centralise instantiation; adding a strategy or algorithm = one class + one line. Removes cross-VM static coupling |
 | Measurement strategies as plugins | Full Grid and Union Jack share the same guided workflow infrastructure |
-| Instrument providers as plugins | Manual entry and future Bluetooth/USB HID are interchangeable |
-| Display modules as plugins | 3D plot, heat map, table can be added independently over time |
 | ObjectDefinition.Parameters as flexible key-value | Different object types need very different parameters; avoids a rigid schema |
 | Least-squares over simple integration | Distributes inconsistencies optimally across all steps; more robust for noisy readings |
+| `MeasurementRound.MergeWithReplacements` static helper | Single definition for merging correction replacements into the original step list; eliminates three-way duplication and a subtle bug (missing NodeId/ToNodeId/PassId) |
+| `ClosureErrorCalculator` shared helper | Deduplicates ~70 lines of closure computation between the two calculators |
+| `IProjectFileService` interface | Decouples `MainViewModel` from the concrete file-service implementation; enables mocking in tests |
 | Corrections as separate rounds, originals preserved | Full audit trail; operator can review the history of a session |
 | JSON with schemaVersion | Human-readable, diffable, easily migrated as format evolves |
 | .levelproj file extension | Clearly identifies the file type; internally standard JSON |
@@ -577,11 +552,9 @@ The vertical exaggeration (`maxZPixels`) is computed per render as `max(10, (col
 | INavigationService / PageKey | ViewModels trigger page transitions without compile-time dependency on View types |
 | Microsoft.Extensions.DependencyInjection | Standard DI; services and ViewModels resolved from `App.Services` |
 | Core project has zero UI dependencies | All models, interfaces, and algorithms are unit-testable without a UI |
-| IResultDisplay returns object (not UIElement) | Keeps Core free of WinUI 3 assembly references |
-| ManualEntryProvider accepts a delegate | Provider is UI-agnostic; WinUI passes a dialog callback, tests pass a stub |
 | Win32 COM file dialogs instead of WinRT pickers | WinRT pickers create the underlying COM dialog lazily; `SetFolder` on the wrapper targets a discarded object. Driving `IFileOpenDialog`/`IFileSaveDialog` directly via `CoCreateInstance` gives reliable control over the initial folder |
 | Settings in `%LOCALAPPDATA%\LevelApp\settings.json` | `ApplicationData.Current.LocalFolder` throws for unpackaged apps; `Environment.SpecialFolder.LocalApplicationData` works unconditionally |
-| `OrientationConverter` over `JsonStringEnumConverter` | Adds explicit integer→enum mapping for backwards compatibility with files written before string serialisation was enforced |
+| `OrientationConverter` reads string enum only | No users exist, so legacy integer format support was removed (WP0.06) |
 
 
 
@@ -623,9 +596,19 @@ The vertical exaggeration (`maxZPixels`) is computed per render as `max(10, (col
 - Assembly/file version metadata in `.csproj`
 - Commit message convention: `[vX.Y.Z] description`
 
+### WP0.06 — Code Quality Cleanup ✓ Complete (v0.6.0)
+- Unified calculator interface: deleted `IGeometryCalculator`, consolidated on `ISurfaceCalculator`
+- `LeastSquaresCalculator` (renamed from `SurfacePlateCalculator`) moved to `Core/Geometry/Calculators/`; now respects `CalculationParameters.AutoExcludeOutliers`
+- `SequentialIntegrationCalculator` moved to `Core/Geometry/Calculators/`
+- `ClosureErrorCalculator` extracted as shared helper for both calculators
+- `StrategyFactory` and `CalculatorFactory` in `Core/Geometry/` replace scattered direct instantiation and cross-VM static calls
+- `MeasurementRound.MergeWithReplacements` eliminates three-way duplication and fixes a subtle bug in `MainViewModel`
+- `IProjectFileService` interface extracted; `MainViewModel` depends on it
+- `CorrectionViewModel` parallel arrays (`_flaggedSteps` + `_newReadings`) replaced with a single `List<(MeasurementStep, double?)>`
+- Deleted dead code: `IGeometryCalculator`, `IGeometryModule`, `IResultDisplay`, `IInstrumentProvider`, `ManualEntryProvider`, legacy `Render(SurfaceResult)` overload
+- Removed backward-compatibility code (integer `Orientation` JSON, numeric `rings` param, `RecalculateMissingResultsAsync`)
+
 ### Future phases
-- `UnionJackStrategy`
-- `SurfacePlateModule` (concrete `IGeometryModule` implementation; enables strategy/module plugin registry)
 - Additional display modules (heat map, numerical table, residuals chart)
 - Bluetooth LE instrument provider
 - USB HID instrument provider
@@ -650,8 +633,8 @@ The vertical exaggeration (`maxZPixels`) is computed per render as `max(10, (col
 public static class AppVersion
 {
     public const int Major = 0;
-    public const int Minor = 2;
-    public const int Patch = 1;
+    public const int Minor = 6;
+    public const int Patch = 0;
 
     public static string Full    => $"{Major}.{Minor}.{Patch}";
     public static string Display => $"v{Full}";

@@ -1,9 +1,8 @@
 using CommunityToolkit.Mvvm.Input;
 using LevelApp.App.DisplayModules.SurfacePlot3D;
 using LevelApp.App.Navigation;
-using LevelApp.Core.Geometry.SurfacePlate;
+using LevelApp.Core.Geometry;
 using LevelApp.Core.Geometry.SurfacePlate.Strategies;
-using LevelApp.Core.Interfaces;
 using LevelApp.Core.Models;
 using Microsoft.UI.Xaml;
 
@@ -37,7 +36,7 @@ public sealed partial class ResultsViewModel : ViewModelBase
                 : _session.InitialRound.Result
                   ?? throw new InvalidOperationException("Session has no result to display.");
 
-        var strategy   = CreateStrategy(_session.StrategyId);
+        var strategy   = StrategyFactory.Create(_session.StrategyId);
         var definition = _project.ObjectDefinition;
 
         UpdateDisplay(result, GetCurrentCalculationParameters(result));
@@ -49,7 +48,7 @@ public sealed partial class ResultsViewModel : ViewModelBase
     private void UpdateDisplay(SurfaceResult result, CalculationParameters parameters)
     {
         _currentResult = result;
-        var strategy   = CreateStrategy(_session.StrategyId);
+        var strategy   = StrategyFactory.Create(_session.StrategyId);
         var definition = _project.ObjectDefinition;
 
         // ── Info panel ────────────────────────────────────────────────────────
@@ -175,7 +174,7 @@ public sealed partial class ResultsViewModel : ViewModelBase
 
     public void StartNewMeasurement(string operatorName, string notes, string strategyId)
     {
-        var strategy   = CreateStrategy(strategyId);
+        var strategy   = StrategyFactory.Create(strategyId);
         var definition = _project.ObjectDefinition;
         var steps      = strategy.GenerateSteps(definition).ToList();
 
@@ -201,35 +200,22 @@ public sealed partial class ResultsViewModel : ViewModelBase
     /// </summary>
     public async Task RecalculateAsync(CalculationParameters parameters, bool saveParameters)
     {
-        var strategy   = CreateStrategy(_session.StrategyId);
+        var strategy   = StrategyFactory.Create(_session.StrategyId);
         var definition = _project.ObjectDefinition;
         var excluded   = new HashSet<int>(parameters.ManuallyExcludedStepIndices);
 
-        // Effective sigma: 0 = auto-exclude off means effectively infinite threshold
-        double sigmaThreshold = parameters.AutoExcludeOutliers
-            ? parameters.SigmaThreshold
-            : double.MaxValue;
-
         // Merge original steps with any correction replacements
-        var mergedSteps = GetMergedSteps();
+        var allReplacements = _session.Corrections.SelectMany(c => c.ReplacedSteps);
+        var mergedSteps = MeasurementRound.MergeWithReplacements(
+            _session.InitialRound.Steps, allReplacements);
 
         // Filter manually excluded steps
         var effectiveSteps = mergedSteps
             .Where(s => !excluded.Contains(s.Index))
             .ToList();
 
-        var tempRound = new MeasurementRound { Steps = effectiveSteps };
-
-        var result = await Task.Run(() => parameters.MethodId == "SequentialIntegration"
-            ? new SequentialIntegrationCalculator(strategy)
-                .Calculate(effectiveSteps, definition, new CalculationParameters
-                {
-                    MethodId            = parameters.MethodId,
-                    SigmaThreshold      = sigmaThreshold,
-                    AutoExcludeOutliers = parameters.AutoExcludeOutliers
-                })
-            : new SurfacePlateCalculator(definition, strategy, sigmaThreshold)
-                .Calculate(tempRound));
+        var calculator = CalculatorFactory.Create(parameters.MethodId, strategy);
+        var result = await Task.Run(() => calculator.Calculate(effectiveSteps, definition, parameters));
 
         UpdateDisplay(result, parameters);
         PlotContent = new SurfacePlot3DDisplay().Render(result, strategy, definition, _session.InitialRound.Steps);
@@ -245,11 +231,6 @@ public sealed partial class ResultsViewModel : ViewModelBase
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    internal static IMeasurementStrategy CreateStrategy(string strategyId) =>
-        strategyId == "UnionJack"
-            ? new UnionJackStrategy()
-            : new FullGridStrategy();
-
     private CalculationParameters GetCurrentCalculationParameters(SurfaceResult? result)
     {
         // Prefer persisted params from the round
@@ -263,35 +244,6 @@ public sealed partial class ResultsViewModel : ViewModelBase
             SigmaThreshold      = result?.SigmaThreshold ?? 2.5,
             AutoExcludeOutliers = true
         };
-    }
-
-    /// <summary>
-    /// Returns the initial round steps with all correction replacements applied.
-    /// </summary>
-    private List<MeasurementStep> GetMergedSteps()
-    {
-        if (_session.Corrections.Count == 0)
-            return _session.InitialRound.Steps;
-
-        var replacedMap = new Dictionary<int, double>();
-        foreach (var correction in _session.Corrections)
-            foreach (var r in correction.ReplacedSteps)
-                replacedMap[r.OriginalStepIndex] = r.Reading;
-
-        return _session.InitialRound.Steps
-            .Select(s => new MeasurementStep
-            {
-                Index           = s.Index,
-                GridCol         = s.GridCol,
-                GridRow         = s.GridRow,
-                Orientation     = s.Orientation,
-                InstructionText = s.InstructionText,
-                NodeId          = s.NodeId,
-                ToNodeId        = s.ToNodeId,
-                PassId          = s.PassId,
-                Reading         = replacedMap.TryGetValue(s.Index, out double nr) ? nr : s.Reading
-            })
-            .ToList();
     }
 
     private static string FormatDimensions(ObjectDefinition def)

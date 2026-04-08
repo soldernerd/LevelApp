@@ -18,7 +18,7 @@ namespace LevelApp.App.DisplayModules.SurfacePlot3D;
 ///
 /// Nodes are coloured blue (low) → cyan → green → yellow → red (high).
 /// </summary>
-public sealed class SurfacePlot3DDisplay : IResultDisplay
+public sealed class SurfacePlot3DDisplay
 {
     public string DisplayId   => "surface-plot-3d";
     public string DisplayName => "3D Surface Plot";
@@ -143,12 +143,6 @@ public sealed class SurfacePlot3DDisplay : IResultDisplay
 
         return canvas;
     }
-
-    /// <summary>
-    /// Legacy overload for <see cref="IResultDisplay.Render"/> — returns an empty canvas
-    /// since step list and strategy are required.
-    /// </summary>
-    public object Render(SurfaceResult result) => new Canvas();
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 

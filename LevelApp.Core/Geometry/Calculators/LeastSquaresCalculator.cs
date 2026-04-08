@@ -1,8 +1,7 @@
-using LevelApp.Core.Geometry.SurfacePlate.Strategies;
 using LevelApp.Core.Interfaces;
 using LevelApp.Core.Models;
 
-namespace LevelApp.Core.Geometry.SurfacePlate;
+namespace LevelApp.Core.Geometry.Calculators;
 
 /// <summary>
 /// Least-squares surface fitting for any measurement strategy.
@@ -17,39 +16,29 @@ namespace LevelApp.Core.Geometry.SurfacePlate;
 /// Degrees of freedom = M − (N − 1), where N = unique node count, M = step count.
 /// Per-step residuals drive outlier detection: flag steps where |r| > k·σ.
 /// </summary>
-public sealed class SurfacePlateCalculator : IGeometryCalculator
+public sealed class LeastSquaresCalculator : ISurfaceCalculator
 {
-    private readonly ObjectDefinition     _definition;
     private readonly IMeasurementStrategy _strategy;
-    private readonly double               _sigmaThreshold;
 
-    public SurfacePlateCalculator(
+    public LeastSquaresCalculator(IMeasurementStrategy strategy)
+        => _strategy = strategy;
+
+    public string MethodId    => "LeastSquares";
+    public string DisplayName => "Least Squares";
+
+    public SurfaceResult Calculate(
+        IReadOnlyList<MeasurementStep> steps,
         ObjectDefinition definition,
-        IMeasurementStrategy strategy,
-        double sigmaThreshold = 2.5)
+        CalculationParameters parameters)
     {
-        _definition     = definition;
-        _strategy       = strategy;
-        _sigmaThreshold = sigmaThreshold;
-    }
-
-    /// <summary>Convenience overload — uses FullGridStrategy (preserves backward compatibility).</summary>
-    public SurfacePlateCalculator(ObjectDefinition definition, double sigmaThreshold = 2.5)
-        : this(definition, new FullGridStrategy(), sigmaThreshold) { }
-
-    public SurfaceResult Calculate(MeasurementRound round)
-    {
-        var steps = round.Steps;
-
         if (steps.Count == 0)
-            throw new ArgumentException("Round contains no steps.", nameof(round));
+            throw new ArgumentException("Steps list is empty.", nameof(steps));
 
         if (steps.Any(s => !s.Reading.HasValue))
             throw new InvalidOperationException(
                 "All steps must have a reading before the surface can be calculated.");
 
         // ── Build ordered node list and index map ─────────────────────────────
-        // Collect all unique node ids in the order they first appear.
         var nodeOrder = new List<string>();
         var nodeIndex = new Dictionary<string, int>();
 
@@ -75,8 +64,8 @@ public sealed class SurfacePlateCalculator : IGeometryCalculator
         double[] stepLensMm = new double[m];
         for (int i = 0; i < m; i++)
         {
-            var (fx, fy) = _strategy.GetNodePosition(steps[i], _definition);
-            var (tx, ty) = _strategy.GetToNodePosition(steps[i], _definition);
+            var (fx, fy) = _strategy.GetNodePosition(steps[i], definition);
+            var (tx, ty) = _strategy.GetToNodePosition(steps[i], definition);
             stepLensMm[i] = Math.Sqrt((tx - fx) * (tx - fx) + (ty - fy) * (ty - fy));
         }
 
@@ -122,9 +111,13 @@ public sealed class SurfacePlateCalculator : IGeometryCalculator
             : 0.0;
 
         // ── Outlier detection ─────────────────────────────────────────────────
+        double threshold = parameters.AutoExcludeOutliers
+            ? parameters.SigmaThreshold
+            : double.MaxValue;
+
         var flagged = steps
             .Select((s, i) => (s.Index, AbsResidual: Math.Abs(residuals[i])))
-            .Where(x => x.AbsResidual > _sigmaThreshold * sigma)
+            .Where(x => x.AbsResidual > threshold * sigma)
             .Select(x => x.Index)
             .ToList();
 
@@ -133,61 +126,9 @@ public sealed class SurfacePlateCalculator : IGeometryCalculator
         for (int i = 0; i < n; i++)
             nodeHeights[nodeOrder[i]] = h[i];
 
-        // ── Primitive closure loops ───────────────────────────────────────────
-        // Build a lookup: (fromNodeId, toNodeId) → step index (list position)
-        var stepFwd = new Dictionary<(string, string), int>(m);
-        for (int i = 0; i < m; i++)
-            stepFwd[(steps[i].NodeId, steps[i].ToNodeId)] = i;
-
-        var loopDefs    = _strategy.GetPrimitiveLoopNodeIds(_definition);
-        var loopResults = new List<PrimitiveLoop>(loopDefs.Count);
-
-        foreach (var nodeIds in loopDefs)
-        {
-            double closureErr = 0.0;
-            bool   valid      = true;
-
-            for (int j = 0; j < nodeIds.Count; j++)
-            {
-                string fromId = nodeIds[j];
-                string toId   = nodeIds[(j + 1) % nodeIds.Count];
-
-                if (stepFwd.TryGetValue((fromId, toId), out int si))
-                {
-                    closureErr += steps[si].Reading!.Value * stepLensMm[si] / 1000.0;
-                }
-                else if (stepFwd.TryGetValue((toId, fromId), out int siRev))
-                {
-                    closureErr -= steps[siRev].Reading!.Value * stepLensMm[siRev] / 1000.0;
-                }
-                else
-                {
-                    valid = false;
-                    break;
-                }
-            }
-
-            if (valid)
-                loopResults.Add(new PrimitiveLoop(nodeIds.ToArray(), closureErr));
-        }
-
-        // ── Closure error statistics ──────────────────────────────────────────
-        double closureMean = 0, closureMedian = 0, closureMax = 0, closureRms = 0;
-        if (loopResults.Count > 0)
-        {
-            double[] absErrors = loopResults.Select(l => Math.Abs(l.ClosureErrorMm)).ToArray();
-            double[] errors    = loopResults.Select(l => l.ClosureErrorMm).ToArray();
-
-            closureMean = errors.Average();
-            closureMax  = absErrors.Max();
-            closureRms  = Math.Sqrt(errors.Sum(e => e * e) / errors.Length);
-
-            Array.Sort(absErrors);
-            int mid = absErrors.Length / 2;
-            closureMedian = absErrors.Length % 2 == 0
-                ? (absErrors[mid - 1] + absErrors[mid]) / 2.0
-                : absErrors[mid];
-        }
+        // ── Closure errors ────────────────────────────────────────────────────
+        var (loops, closureMean, closureMedian, closureMax, closureRms) =
+            ClosureErrorCalculator.Compute(steps, stepLensMm, _strategy, definition);
 
         return new SurfaceResult
         {
@@ -195,9 +136,9 @@ public sealed class SurfacePlateCalculator : IGeometryCalculator
             FlatnessValueMm    = h.Max() - h.Min(),
             Residuals          = residuals,
             FlaggedStepIndices = flagged,
-            SigmaThreshold     = _sigmaThreshold,
+            SigmaThreshold     = parameters.SigmaThreshold,
             Sigma              = sigma,
-            PrimitiveLoops     = [.. loopResults],
+            PrimitiveLoops     = loops,
             ClosureErrorMean   = closureMean,
             ClosureErrorMedian = closureMedian,
             ClosureErrorMax    = closureMax,

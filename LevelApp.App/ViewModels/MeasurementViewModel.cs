@@ -1,8 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LevelApp.App.Navigation;
-using LevelApp.Core.Geometry.SurfacePlate;
-using LevelApp.Core.Geometry.SurfacePlate.Strategies;
+using LevelApp.Core.Geometry;
 using LevelApp.Core.Models;
 using Microsoft.UI.Xaml;
 
@@ -137,10 +136,11 @@ public sealed partial class MeasurementViewModel : ViewModelBase
 
             var definition = _definition;
             var round      = _session.InitialRound;
+            var strategy   = StrategyFactory.Create(_session.StrategyId);
+            var calculator = CalculatorFactory.Create("LeastSquares", strategy);
+            var parameters = round.CalculationParameters ?? new CalculationParameters();
 
-            var strategy = ResultsViewModel.CreateStrategy(_session.StrategyId);
-            var result = await Task.Run(() =>
-                new SurfacePlateCalculator(definition, strategy).Calculate(round));
+            var result = await Task.Run(() => calculator.Calculate(round.Steps, definition, parameters));
 
             round.Result      = result;
             round.CompletedAt = DateTime.UtcNow;

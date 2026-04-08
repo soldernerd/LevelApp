@@ -1,7 +1,7 @@
 using LevelApp.Core.Interfaces;
 using LevelApp.Core.Models;
 
-namespace LevelApp.Core.Geometry.SurfacePlate;
+namespace LevelApp.Core.Geometry.Calculators;
 
 /// <summary>
 /// Sequential integration with proportional closure distribution.
@@ -168,50 +168,9 @@ public sealed class SequentialIntegrationCalculator : ISurfaceCalculator
             .Select(x => x.Index)
             .ToList();
 
-        // ── Primitive closure loops (same as LeastSquares) ────────────────────
-        var stepFwd = new Dictionary<(string, string), int>(steps.Count);
-        for (int i = 0; i < steps.Count; i++)
-            stepFwd[(steps[i].NodeId, steps[i].ToNodeId)] = i;
-
-        var loopDefs    = _strategy.GetPrimitiveLoopNodeIds(definition);
-        var loopResults = new List<PrimitiveLoop>(loopDefs.Count);
-
-        foreach (var nodeIds in loopDefs)
-        {
-            double closureErr = 0.0;
-            bool   valid      = true;
-
-            for (int j = 0; j < nodeIds.Count; j++)
-            {
-                string fromId = nodeIds[j];
-                string toId   = nodeIds[(j + 1) % nodeIds.Count];
-
-                if (stepFwd.TryGetValue((fromId, toId), out int si))
-                    closureErr += steps[si].Reading!.Value * stepLensMm[si] / 1000.0;
-                else if (stepFwd.TryGetValue((toId, fromId), out int siRev))
-                    closureErr -= steps[siRev].Reading!.Value * stepLensMm[siRev] / 1000.0;
-                else { valid = false; break; }
-            }
-
-            if (valid)
-                loopResults.Add(new PrimitiveLoop(nodeIds.ToArray(), closureErr));
-        }
-
-        double closureMean = 0, closureMedian = 0, closureMax = 0, closureRms = 0;
-        if (loopResults.Count > 0)
-        {
-            double[] absErrors = loopResults.Select(l => Math.Abs(l.ClosureErrorMm)).ToArray();
-            double[] errors    = loopResults.Select(l => l.ClosureErrorMm).ToArray();
-            closureMean = errors.Average();
-            closureMax  = absErrors.Max();
-            closureRms  = Math.Sqrt(errors.Sum(e => e * e) / errors.Length);
-
-            Array.Sort(absErrors);
-            int mid = absErrors.Length / 2;
-            closureMedian = absErrors.Length % 2 == 0
-                ? (absErrors[mid - 1] + absErrors[mid]) / 2.0
-                : absErrors[mid];
-        }
+        // ── Closure errors ────────────────────────────────────────────────────
+        var (loops, closureMean, closureMedian, closureMax, closureRms) =
+            ClosureErrorCalculator.Compute(steps, stepLensMm, _strategy, definition);
 
         return new SurfaceResult
         {
@@ -221,7 +180,7 @@ public sealed class SequentialIntegrationCalculator : ISurfaceCalculator
             FlaggedStepIndices = flagged,
             SigmaThreshold     = parameters.SigmaThreshold,
             Sigma              = sigma,
-            PrimitiveLoops     = [..loopResults],
+            PrimitiveLoops     = loops,
             ClosureErrorMean   = closureMean,
             ClosureErrorMedian = closureMedian,
             ClosureErrorMax    = closureMax,

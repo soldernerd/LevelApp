@@ -262,18 +262,6 @@ public class UnionJackStrategyTests
         Assert.All(steps, s => Assert.False(string.IsNullOrEmpty(s.InstructionText)));
     }
 
-    // ── Backward-compatibility: legacy numeric rings parameter ────────────────
-
-    [Theory]
-    [InlineData(0, UnionJackRings.None)]
-    [InlineData(1, UnionJackRings.Full)]
-    [InlineData(3, UnionJackRings.Full)]
-    public void ParseRingsOption_LegacyInteger_MapsCorrectly(int legacyValue, UnionJackRings expected)
-    {
-        var result = UnionJackStrategy.ParseRingsOption((object)legacyValue);
-        Assert.Equal(expected, result);
-    }
-
     [Theory]
     [InlineData("None",          UnionJackRings.None)]
     [InlineData("Circumference", UnionJackRings.Circumference)]

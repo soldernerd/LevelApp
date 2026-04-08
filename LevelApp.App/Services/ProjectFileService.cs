@@ -18,7 +18,7 @@ namespace LevelApp.App.Services;
 /// Call <see cref="Initialize"/> once from <c>MainWindow</c> after the window handle
 /// is available.
 /// </summary>
-public sealed class ProjectFileService
+public sealed class ProjectFileService : IProjectFileService
 {
     private readonly ISettingsService _settings;
     private nint _hwnd;
@@ -63,7 +63,7 @@ public sealed class ProjectFileService
     /// Auto-generates a suggested filename from the project's object definition.
     /// Format: {GeometryType}_{WidthMm}x{HeightMm}  e.g. <c>SurfacePlate_1200x800</c>
     /// </summary>
-    public static string SuggestFileName(Project project)
+    public string SuggestFileName(Project project)
     {
         var def = project.ObjectDefinition;
         string geom = def.GeometryModuleId;

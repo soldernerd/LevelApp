@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LevelApp.App.DisplayModules.StrategyPreview;
 using LevelApp.App.Navigation;
+using LevelApp.Core.Geometry;
 using LevelApp.Core.Geometry.SurfacePlate.Strategies;
 using LevelApp.Core.Interfaces;
 using LevelApp.Core.Models;
@@ -259,7 +260,7 @@ public sealed partial class ProjectSetupViewModel : ViewModelBase
             if (seg < 1) throw new InvalidOperationException("segments must be ≥ 1.");
             parameters["segments"] = seg;
             parameters["rings"]    = UnionJackRingsOption.ToString();
-            strategy = new UnionJackStrategy();
+            strategy = StrategyFactory.Create("UnionJack");
         }
         else
         {
@@ -268,7 +269,7 @@ public sealed partial class ProjectSetupViewModel : ViewModelBase
             if (cols < 2 || rows < 2) throw new InvalidOperationException("Grid too small.");
             parameters["columnsCount"] = cols;
             parameters["rowsCount"]    = rows;
-            strategy = new FullGridStrategy();
+            strategy = StrategyFactory.Create("FullGrid");
         }
 
         var definition = new ObjectDefinition

@@ -32,20 +32,6 @@ public sealed class OrientationConverter : JsonConverter<Orientation>
             };
         }
 
-        // ── Integer format (legacy) ───────────────────────────────────────────
-        // Matches the original enum declaration: { North=0, South=1, East=2, West=3 }
-        if (reader.TokenType == JsonTokenType.Number)
-        {
-            return reader.GetInt32() switch
-            {
-                0 => Orientation.North,
-                1 => Orientation.South,
-                2 => Orientation.East,
-                3 => Orientation.West,
-                var n => throw new JsonException($"Unknown Orientation integer {n}.")
-            };
-        }
-
         throw new JsonException(
             $"Unexpected token '{reader.TokenType}' while reading Orientation.");
     }

@@ -247,13 +247,9 @@ public sealed class UnionJackStrategy : IMeasurementStrategy
     /// </summary>
     public static UnionJackRings ParseRingsOption(object value)
     {
-        if (value is string s)
-            return Enum.TryParse<UnionJackRings>(s, ignoreCase: true, out var parsed)
-                ? parsed
-                : UnionJackRings.Circumference;
-
-        // Legacy: numeric rings count stored by older versions
-        return Convert.ToInt32(value) == 0 ? UnionJackRings.None : UnionJackRings.Full;
+        if (value is string s && Enum.TryParse<UnionJackRings>(s, ignoreCase: true, out var parsed))
+            return parsed;
+        throw new ArgumentException($"Unrecognized rings value '{value}'.", nameof(value));
     }
 
     /// <summary>

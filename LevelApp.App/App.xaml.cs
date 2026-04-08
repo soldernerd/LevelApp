@@ -22,7 +22,7 @@ public partial class App : Application
         services.AddSingleton<INavigationService, NavigationService>();
 
         // Services
-        services.AddSingleton<ProjectFileService>();
+        services.AddSingleton<IProjectFileService, ProjectFileService>();
 
         // Shell ViewModel — singleton so all page VMs share the same project state
         services.AddSingleton<MainViewModel>();

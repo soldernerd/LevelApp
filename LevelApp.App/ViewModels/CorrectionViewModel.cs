@@ -1,8 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LevelApp.App.Navigation;
-using LevelApp.Core.Geometry.SurfacePlate;
-using LevelApp.Core.Geometry.SurfacePlate.Strategies;
+using LevelApp.Core.Geometry;
 using LevelApp.Core.Models;
 using Microsoft.UI.Xaml;
 
@@ -17,11 +16,8 @@ public sealed partial class CorrectionViewModel : ViewModelBase
     private MeasurementSession _session    = null!;
     private ObjectDefinition   _definition = null!;
 
-    /// <summary>Subset of InitialRound.Steps whose Index appears in the latest flagged list.</summary>
-    private List<MeasurementStep> _flaggedSteps = [];
-
-    /// <summary>New readings collected during this correction session (parallel to _flaggedSteps).</summary>
-    private double[] _newReadings = [];
+    /// <summary>Flagged steps paired with the new reading collected during this session.</summary>
+    private List<(MeasurementStep Step, double? NewReading)> _flagged = [];
 
     public CorrectionViewModel(INavigationService navigation, MainViewModel mainViewModel)
     {
@@ -42,12 +38,11 @@ public sealed partial class CorrectionViewModel : ViewModelBase
             _session.Corrections.Last().Result is { } cr ? cr : _session.InitialRound.Result!;
 
         var allSteps = _session.InitialRound.Steps;
-        _flaggedSteps = effectiveResult.FlaggedStepIndices
+        _flagged = effectiveResult.FlaggedStepIndices
             .Select(idx => allSteps.First(s => s.Index == idx))
             .OrderBy(s => s.Index)
+            .Select(s => (Step: s, NewReading: (double?)null))
             .ToList();
-
-        _newReadings = new double[_flaggedSteps.Count];
 
         GridColumns      = _definition.Parameters.TryGetValue("columnsCount", out var c) ? Convert.ToInt32(c) : 0;
         GridRows         = _definition.Parameters.TryGetValue("rowsCount",    out var r) ? Convert.ToInt32(r) : 0;
@@ -86,10 +81,10 @@ public sealed partial class CorrectionViewModel : ViewModelBase
     // ── Computed display properties ───────────────────────────────────────────
 
     public MeasurementStep? CurrentStep =>
-        _flaggedSteps.Count > 0 && CurrentStepIndex < _flaggedSteps.Count
-            ? _flaggedSteps[CurrentStepIndex] : null;
+        _flagged.Count > 0 && CurrentStepIndex < _flagged.Count
+            ? _flagged[CurrentStepIndex].Step : null;
 
-    public int    TotalFlaggedSteps => _flaggedSteps.Count;
+    public int    TotalFlaggedSteps => _flagged.Count;
     public string ProgressText      => TotalFlaggedSteps > 0
         ? $"Correction step {CurrentStepIndex + 1} of {TotalFlaggedSteps}" : string.Empty;
 
@@ -115,7 +110,7 @@ public sealed partial class CorrectionViewModel : ViewModelBase
     public IReadOnlyList<MeasurementStep> AllSteps => _session?.InitialRound.Steps ?? [];
 
     /// <summary>The flagged steps being re-measured.</summary>
-    public IReadOnlyList<MeasurementStep> FlaggedSteps => _flaggedSteps;
+    public IReadOnlyList<MeasurementStep> FlaggedSteps => _flagged.Select(f => f.Step).ToList();
 
     // ── Command ───────────────────────────────────────────────────────────────
 
@@ -124,7 +119,7 @@ public sealed partial class CorrectionViewModel : ViewModelBase
     {
         if (CurrentStep is null) return;
 
-        _newReadings[CurrentStepIndex] = Reading;
+        _flagged[CurrentStepIndex] = (_flagged[CurrentStepIndex].Step, Reading);
         Reading = double.NaN;
 
         if (CurrentStepIndex < TotalFlaggedSteps - 1)
@@ -140,40 +135,28 @@ public sealed partial class CorrectionViewModel : ViewModelBase
             {
                 TriggeredAt   = DateTime.UtcNow,
                 Operator      = _project.Operator,
-                ReplacedSteps = _flaggedSteps
-                    .Select((s, i) => new ReplacedStep
+                ReplacedSteps = _flagged
+                    .Select(f => new ReplacedStep
                     {
-                        OriginalStepIndex = s.Index,
-                        Reading           = _newReadings[i]
+                        OriginalStepIndex = f.Step.Index,
+                        Reading           = f.NewReading!.Value
                     })
                     .ToList()
             };
 
-            // Merge original readings with replacements
-            var replacedMap = correctionRound.ReplacedSteps
-                .ToDictionary(r => r.OriginalStepIndex, r => r.Reading);
+            var allReplacements = _session.Corrections
+                .SelectMany(c => c.ReplacedSteps)
+                .Concat(correctionRound.ReplacedSteps);
 
-            var mergedSteps = _session.InitialRound.Steps
-                .Select(s => new MeasurementStep
-                {
-                    Index           = s.Index,
-                    GridCol         = s.GridCol,
-                    GridRow         = s.GridRow,
-                    Orientation     = s.Orientation,
-                    InstructionText = s.InstructionText,
-                    NodeId          = s.NodeId,
-                    ToNodeId        = s.ToNodeId,
-                    PassId          = s.PassId,
-                    Reading         = replacedMap.TryGetValue(s.Index, out double nr) ? nr : s.Reading
-                })
-                .ToList();
+            var mergedSteps = MeasurementRound.MergeWithReplacements(
+                _session.InitialRound.Steps, allReplacements);
 
-            var mergedRound = new MeasurementRound { Steps = mergedSteps };
-            var definition  = _definition;
-            var strategy    = ResultsViewModel.CreateStrategy(_session.StrategyId);
+            var definition = _definition;
+            var strategy   = StrategyFactory.Create(_session.StrategyId);
+            var calculator = CalculatorFactory.Create("LeastSquares", strategy);
+            var parameters = _session.InitialRound.CalculationParameters ?? new CalculationParameters();
 
-            var result = await Task.Run(() =>
-                new SurfacePlateCalculator(definition, strategy).Calculate(mergedRound));
+            var result = await Task.Run(() => calculator.Calculate(mergedSteps, definition, parameters));
 
             correctionRound.Result = result;
             _session.Corrections.Add(correctionRound);

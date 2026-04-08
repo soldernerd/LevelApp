@@ -1,10 +1,10 @@
-using LevelApp.Core.Geometry.SurfacePlate;
+using LevelApp.Core.Geometry.Calculators;
 using LevelApp.Core.Geometry.SurfacePlate.Strategies;
 using LevelApp.Core.Models;
 
 namespace LevelApp.Tests;
 
-public class SurfacePlateCalculatorTests
+public class LeastSquaresCalculatorTests
 {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -19,6 +19,13 @@ public class SurfacePlateCalculatorTests
             ["widthMm"]      = widthMm,
             ["heightMm"]     = heightMm
         }
+    };
+
+    private static CalculationParameters Params(double sigmaThreshold = 2.5, bool autoExclude = true) => new()
+    {
+        MethodId            = "LeastSquares",
+        SigmaThreshold      = sigmaThreshold,
+        AutoExcludeOutliers = autoExclude
     };
 
     /// <summary>
@@ -68,6 +75,9 @@ public class SurfacePlateCalculatorTests
     private static double NodeHeight(SurfaceResult result, int col, int row)
         => result.NodeHeights[$"col{col}_row{row}"];
 
+    private static LeastSquaresCalculator Calculator() =>
+        new(new FullGridStrategy());
+
     // ── Tests ─────────────────────────────────────────────────────────────────
 
     [Fact]
@@ -76,7 +86,7 @@ public class SurfacePlateCalculatorTests
         var def   = Def(3, 3);
         var round = BuildRound(def, ZeroHeights(3, 3));
 
-        var result = new SurfacePlateCalculator(def).Calculate(round);
+        var result = Calculator().Calculate(round.Steps, def, Params());
 
         Assert.Equal(0.0, result.FlatnessValueMm, precision: 9);
         Assert.All(result.NodeHeights.Values, h => Assert.Equal(0.0, h, precision: 9));
@@ -94,7 +104,7 @@ public class SurfacePlateCalculatorTests
             .Select(r => Enumerable.Range(0, cols).Select(c => c * 0.1).ToArray())
             .ToArray();
 
-        var result = new SurfacePlateCalculator(def).Calculate(BuildRound(def, trueH));
+        var result = Calculator().Calculate(BuildRound(def, trueH).Steps, def, Params());
 
         for (int r = 0; r < rows; r++)
             for (int c = 0; c < cols; c++)
@@ -115,7 +125,7 @@ public class SurfacePlateCalculatorTests
             .Select(r => Enumerable.Range(0, cols).Select(c => c * 0.1 + r * 0.05).ToArray())
             .ToArray();
 
-        var result = new SurfacePlateCalculator(def).Calculate(BuildRound(def, trueH));
+        var result = Calculator().Calculate(BuildRound(def, trueH).Steps, def, Params());
 
         for (int r = 0; r < rows; r++)
             for (int c = 0; c < cols; c++)
@@ -129,14 +139,11 @@ public class SurfacePlateCalculatorTests
     {
         // After injecting large noise on step 0, the step with the biggest absolute
         // residual must be flagged when using a threshold k < √(DOF/M).
-        //
-        // Proof: r_max ≥ σ·√(DOF/M) = σ·√(9/24) ≈ σ·0.61  (Cauchy-Schwarz)
-        // With k = 0.5 < 0.61 this is mathematically guaranteed regardless of
-        // how the error is distributed across the network.
         var def   = Def(4, 4);
         var round = BuildRound(def, ZeroHeights(4, 4), noiseOnStepIndex: 0, noiseValue: 50.0);
 
-        var result = new SurfacePlateCalculator(def, sigmaThreshold: 0.5).Calculate(round);
+        var result = new LeastSquaresCalculator(new FullGridStrategy())
+            .Calculate(round.Steps, def, Params(sigmaThreshold: 0.5));
 
         int worstListIdx = result.Residuals
             .Select((r, i) => (AbsR: Math.Abs(r), i))
@@ -152,7 +159,7 @@ public class SurfacePlateCalculatorTests
         var def   = Def(4, 4);
         var round = BuildRound(def, ZeroHeights(4, 4));
 
-        var result = new SurfacePlateCalculator(def).Calculate(round);
+        var result = Calculator().Calculate(round.Steps, def, Params());
 
         Assert.Empty(result.FlaggedStepIndices);
     }
@@ -163,7 +170,7 @@ public class SurfacePlateCalculatorTests
         var def   = Def(3, 3);
         var round = BuildRound(def, ZeroHeights(3, 3));
 
-        var result = new SurfacePlateCalculator(def).Calculate(round);
+        var result = Calculator().Calculate(round.Steps, def, Params());
 
         Assert.Equal(round.Steps.Count, result.Residuals.Length);
     }
@@ -176,7 +183,7 @@ public class SurfacePlateCalculatorTests
             .Select(r => Enumerable.Range(0, 3).Select(c => c * 0.07 + r * 0.03).ToArray())
             .ToArray();
 
-        var result = new SurfacePlateCalculator(def).Calculate(BuildRound(def, trueH));
+        var result = Calculator().Calculate(BuildRound(def, trueH).Steps, def, Params());
 
         double expectedFlatness = result.NodeHeights.Values.Max() - result.NodeHeights.Values.Min();
         Assert.Equal(expectedFlatness, result.FlatnessValueMm, precision: 9);
@@ -189,8 +196,10 @@ public class SurfacePlateCalculatorTests
         var def   = Def(3, 3);
         var round = BuildRound(def, ZeroHeights(3, 3), noiseOnStepIndex: 2, noiseValue: 5.0);
 
-        var resultTight = new SurfacePlateCalculator(def, sigmaThreshold: 0.1).Calculate(round);
-        var resultLoose = new SurfacePlateCalculator(def, sigmaThreshold: 100.0).Calculate(round);
+        var resultTight = new LeastSquaresCalculator(new FullGridStrategy())
+            .Calculate(round.Steps, def, Params(sigmaThreshold: 0.1));
+        var resultLoose = new LeastSquaresCalculator(new FullGridStrategy())
+            .Calculate(round.Steps, def, Params(sigmaThreshold: 100.0));
 
         Assert.NotEmpty(resultTight.FlaggedStepIndices);
         Assert.Empty(resultLoose.FlaggedStepIndices);
@@ -204,16 +213,26 @@ public class SurfacePlateCalculatorTests
         round.Steps[3].Reading = null;
 
         Assert.Throws<InvalidOperationException>(() =>
-            new SurfacePlateCalculator(def).Calculate(round));
+            Calculator().Calculate(round.Steps, def, Params()));
     }
 
     [Fact]
-    public void EmptyRound_ThrowsArgumentException()
+    public void EmptySteps_ThrowsArgumentException()
     {
-        var def   = Def(3, 3);
-        var round = new MeasurementRound();   // no steps
+        var def = Def(3, 3);
 
         Assert.Throws<ArgumentException>(() =>
-            new SurfacePlateCalculator(def).Calculate(round));
+            Calculator().Calculate([], def, Params()));
+    }
+
+    [Fact]
+    public void AutoExcludeOff_ProducesNoFlaggedSteps()
+    {
+        var def   = Def(3, 3);
+        var round = BuildRound(def, ZeroHeights(3, 3), noiseOnStepIndex: 2, noiseValue: 5.0);
+
+        var result = Calculator().Calculate(round.Steps, def, Params(autoExclude: false));
+
+        Assert.Empty(result.FlaggedStepIndices);
     }
 }
