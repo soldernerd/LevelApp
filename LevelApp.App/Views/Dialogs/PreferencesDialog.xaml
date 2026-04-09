@@ -38,6 +38,19 @@
             </RadioButtons>
         </StackPanel>
 
+        <StackPanel Spacing="8">
+            <TextBlock x:Uid="Preferences_Language_Label"
+                       Style="{StaticResource SectionHeaderStyle}"/>
+            <RadioButtons SelectedIndex="{x:Bind LanguageIndex, Mode=TwoWay}">
+                <RadioButton x:Uid="Preferences_Language_System"/>
+                <RadioButton x:Uid="Preferences_Language_English"/>
+                <RadioButton x:Uid="Preferences_Language_Deutsch"/>
+            </RadioButtons>
+            <TextBlock x:Uid="Preferences_Language_RestartNote"
+                       Style="{StaticResource CaptionTextBlockStyle}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        </StackPanel>
+
     </StackPanel>
 
 </ContentDialog>

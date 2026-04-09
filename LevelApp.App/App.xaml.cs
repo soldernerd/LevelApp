@@ -51,7 +51,13 @@ public partial class App : Application
         Services = BuildServiceProvider();
 
         // Load persisted settings before any UI is created
-        Services.GetRequiredService<ISettingsService>().Load();
+        var settings = Services.GetRequiredService<ISettingsService>();
+        settings.Load();
+
+        // Apply language override before XAML is parsed so x:Uid strings use the right language.
+        // An empty string clears the override and falls back to the system language.
+        Windows.Globalization.ApplicationLanguages.PrimaryLanguageOverride =
+            settings.AppLanguage ?? string.Empty;
 
         this.InitializeComponent();
     }

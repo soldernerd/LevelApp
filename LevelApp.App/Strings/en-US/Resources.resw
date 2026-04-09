@@ -139,6 +139,11 @@
   <data name="Preferences_DefaultFolder_Label.Text" xml:space="preserve"><value>Default project folder</value></data>
   <data name="Preferences_DefaultFolder_Tooltip.Content" xml:space="preserve"><value>The folder that the Open and Save dialogs open to by default.</value></data>
   <data name="Preferences_BrowseFolder.Content" xml:space="preserve"><value>Browse…</value></data>
+  <data name="Preferences_Language_Label.Text" xml:space="preserve"><value>Language</value></data>
+  <data name="Preferences_Language_System.Content" xml:space="preserve"><value>Follow system</value></data>
+  <data name="Preferences_Language_English.Content" xml:space="preserve"><value>English</value></data>
+  <data name="Preferences_Language_Deutsch.Content" xml:space="preserve"><value>Deutsch</value></data>
+  <data name="Preferences_Language_RestartNote.Text" xml:space="preserve"><value>Takes effect after restarting the app.</value></data>
   <data name="Preferences_OkButton.Content" xml:space="preserve"><value>OK</value></data>
   <data name="Preferences_CancelButton.Content" xml:space="preserve"><value>Cancel</value></data>
 
