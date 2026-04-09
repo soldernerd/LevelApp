@@ -10,6 +10,7 @@ The software guides the operator through a defined measurement procedure, acquir
 
 - **Guided measurement workflow** — step-by-step instructions with a live grid map showing position, orientation arrow, and progress indicator
 - **Full Grid strategy** — boustrophedon row and column traversal ensures every interior grid point is measured twice (once horizontally, once vertically) for redundancy
+- **Union Jack strategy** — eight arms from the centre in the cardinal and diagonal directions, with configurable segment count and optional circumference ring; supports Full (with closure loops) and Circumference variants
 - **Least-squares surface fitting** — closure errors are distributed optimally across the grid rather than allowed to accumulate through simple sequential integration
 - **Outlier detection** — suspect readings are flagged automatically when their residual exceeds a configurable sigma threshold (default: 2.5σ)
 - **Correction workflow** — flagged steps can be re-measured in a guided mini-session; original readings are always preserved and the full correction history is stored
@@ -66,7 +67,7 @@ Open `LevelApp.slnx` in Visual Studio 2022 and build the solution (`Ctrl+Shift+B
 1. Enter a project name, operator name and optional notes
 2. Select **Surface Plate** as the geometry type
 3. Enter the plate dimensions (mm) and grid size (columns × rows)
-4. Select a measurement strategy (currently: Full Grid)
+4. Select a measurement strategy (Full Grid or Union Jack)
 5. Click **Start Measurement**
 
 ### Take measurements
@@ -97,9 +98,9 @@ After all steps are complete the app runs the least-squares solver and displays:
 LevelApp/
 ├── LevelApp.Core/               # No UI dependencies — fully unit-testable
 │   ├── Models/                  # Project, Session, Step, Result data models
-│   ├── Interfaces/              # IGeometryModule, IMeasurementStrategy,
-│   │                            # IInstrumentProvider, IResultDisplay
-│   ├── Geometry/SurfacePlate/   # FullGridStrategy, SurfacePlateCalculator
+│   ├── Interfaces/              # IMeasurementStrategy, ISurfaceCalculator
+│   ├── Geometry/                # StrategyFactory, CalculatorFactory,
+│   │                            # Calculators/, SurfacePlate/Strategies/
 │   └── Serialization/           # ProjectSerializer, ObjectValueConverter,
 │                                # OrientationConverter
 ├── LevelApp.App/                # WinUI 3 application
@@ -107,7 +108,8 @@ LevelApp/
 │   │                            # ResultsView, CorrectionView, Dialogs/
 │   ├── ViewModels/              # MVVM view models
 │   ├── Services/                # ProjectFileService, SettingsService
-│   └── DisplayModules/          # SurfacePlot3DDisplay
+│   └── DisplayModules/          # SurfacePlot3DDisplay, MeasurementsGridRenderer,
+│                                # StrategyPreviewRenderer
 ├── LevelApp.Tests/              # xUnit unit tests (Core only)
 └── docs/
     ├── architecture.md          # Full architecture and design reference
@@ -118,7 +120,7 @@ LevelApp/
 
 ## Roadmap
 
-- [ ] Union Jack measurement strategy
+- [x] Union Jack measurement strategy
 - [ ] Heat map display module
 - [ ] Numerical table display module
 - [ ] Residuals chart display module

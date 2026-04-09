@@ -110,6 +110,7 @@ LevelApp/
 │   │   └── Dialogs/
 │   │       ├── PreferencesDialog.xaml   ← default project folder setting
 │   │       ├── NewMeasurementDialog.xaml
+│   │       ├── RecalculateDialog.xaml   ← recalculation parameters + save option
 │   │       └── AboutDialog.xaml         ← version, copyright, license, GitHub link
 │   ├── ViewModels/
 │   │   ├── ViewModelBase.cs       ← inherits ObservableObject
@@ -120,8 +121,12 @@ LevelApp/
 │   │   ├── CorrectionViewModel.cs
 │   │   └── FlaggedStepItem.cs     ← display DTO for flagged step list
 │   └── DisplayModules/
-│       └── SurfacePlot3D/
-│           └── SurfacePlot3DDisplay.cs
+│       ├── SurfacePlot3D/
+│       │   └── SurfacePlot3DDisplay.cs
+│       ├── MeasurementsGrid/
+│       │   └── MeasurementsGridRenderer.cs  ← 2D step-map canvas (arrows, loop fills, zoom)
+│       └── StrategyPreview/
+│           └── StrategyPreviewRenderer.cs   ← small preview canvas in ProjectSetupView
 ├── LevelApp.Tests/
 │   ├── FullGridStrategyTests.cs
 │   ├── UnionJackStrategyTests.cs
@@ -274,7 +279,12 @@ Column pass:
 
 ### Union Jack
 
-Adds diagonal traversals to the Full Grid (or uses diagonals + perimeter only as the classic Moody method). More steps, higher redundancy. *(Not yet implemented.)*
+Eight arms radiate from the centre node in the cardinal and diagonal directions (N, NE, E, SE, S, SW, W, NW). Each arm is divided into a configurable number of equal segments. Two ring variants are supported:
+
+- **Full** — a complete circumference ring is added, creating closure loops between adjacent arm tips. The solver can compute closure errors for each loop, and the Measurements tab colour-codes each triangular sector by its closure error relative to σ.
+- **Circumference** — only the eight arms are measured (no ring). There are no closure loops and no loop-error colour coding.
+
+`NodeId` / `ToNodeId` on each step are symbolic identifiers (e.g. `"center"`, `"armN_seg2"`, `"armNE_seg3"`). `UnionJackStrategy.NodePositionById` converts them to physical (mm) coordinates for rendering and calculation. Total steps depend on the number of arms, segments per arm, and whether a circumference ring is present.
 
 
 
@@ -515,6 +525,8 @@ Implements `IResultDisplay`. Each module receives a `SurfaceResult` and returns 
 | Module | Status | Notes |
 |---|---|---|
 | 3D Surface Plot | **Built** | Pseudo-3D isometric canvas; nodes coloured blue→cyan→green→yellow→red by height |
+| Measurements Grid | **Built** | 2D step-map canvas with directed arrows, value labels, loop-closure colour fills, and mouse-wheel zoom |
+| Strategy Preview | **Built** | Small read-only canvas in ProjectSetupView showing step layout for the selected strategy |
 | Colour / Heat Map | Future | Intuitive flatness overview |
 | Numerical Table | Future | Raw height values per grid point |
 | Residuals Chart | Future | Useful for diagnosing bad readings |
@@ -606,7 +618,8 @@ The vertical exaggeration (`maxZPixels`) is computed per render as `max(10, (col
 - `IProjectFileService` interface extracted; `MainViewModel` depends on it
 - `CorrectionViewModel` parallel arrays (`_flaggedSteps` + `_newReadings`) replaced with a single `List<(MeasurementStep, double?)>`
 - Deleted dead code: `IGeometryCalculator`, `IGeometryModule`, `IResultDisplay`, `IInstrumentProvider`, `ManualEntryProvider`, legacy `Render(SurfaceResult)` overload
-- Removed backward-compatibility code (integer `Orientation` JSON, numeric `rings` param, `RecalculateMissingResultsAsync`)
+- Removed backward-compatibility code (integer `Orientation` JSON, numeric `rings` param)
+- `RecalculateMissingResultsAsync` in `MainViewModel` was temporarily removed during the cleanup but was restored in v0.6.2 — it is still needed to recompute results for files that were saved before result serialisation was enforced
 
 ### Future phases
 - Additional display modules (heat map, numerical table, residuals chart)
