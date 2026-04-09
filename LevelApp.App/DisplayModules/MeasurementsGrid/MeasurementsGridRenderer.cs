@@ -433,10 +433,11 @@ public static class MeasurementsGridRenderer
         double canvasW = widthMm  * scale + CanvasPad * 2;
         double canvasH = heightMm * scale + CanvasPad * 2;
 
-        // Invisible background rectangle — ensures the canvas has a uniform
-        // hit-test surface even when no filled loop polygons are drawn.
+        // Near-transparent background rectangle — ensures the canvas has a
+        // uniform hit-test surface even when no filled loop polygons are drawn.
+        // Alpha must be > 0 to be recognized as a hit target by WinUI 3.
         canvas.Children.Add(new Rectangle { Width = canvasW, Height = canvasH,
-            Fill = new SolidColorBrush(Color.FromArgb(1, 0, 0, 0)) });
+            Fill = new SolidColorBrush(Color.FromArgb(35, 128, 128, 128)) });
 
         var flaggedSet   = result.FlaggedStepIndices.ToHashSet();
         var normalBrush  = new SolidColorBrush(Color.FromArgb(200, 100, 100, 100));
