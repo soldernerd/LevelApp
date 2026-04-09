@@ -430,6 +430,14 @@ public static class MeasurementsGridRenderer
             return ToCanvas(mmX, mmY);
         }
 
+        double canvasW = widthMm  * scale + CanvasPad * 2;
+        double canvasH = heightMm * scale + CanvasPad * 2;
+
+        // Invisible background rectangle — ensures the canvas has a uniform
+        // hit-test surface even when no filled loop polygons are drawn.
+        canvas.Children.Add(new Rectangle { Width = canvasW, Height = canvasH,
+            Fill = new SolidColorBrush(Color.FromArgb(1, 0, 0, 0)) });
+
         var flaggedSet   = result.FlaggedStepIndices.ToHashSet();
         var normalBrush  = new SolidColorBrush(Color.FromArgb(200, 100, 100, 100));
         var flaggedBrush = new SolidColorBrush(Color.FromArgb(255, 210,  80,  20));
@@ -556,8 +564,8 @@ public static class MeasurementsGridRenderer
         }
 
         // ── Canvas size ───────────────────────────────────────────────────────
-        canvas.Width  = widthMm * scale + CanvasPad * 2;
-        canvas.Height = heightMm * scale + CanvasPad * 2;
+        canvas.Width  = canvasW;
+        canvas.Height = canvasH;
     }
 
     // ── Shared helpers ────────────────────────────────────────────────────────
