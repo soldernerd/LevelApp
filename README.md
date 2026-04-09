@@ -114,7 +114,8 @@ LevelApp/
 │   ├── Views/                   # ProjectSetupView, MeasurementView,
 │   │                            # ResultsView, CorrectionView, Dialogs/
 │   ├── ViewModels/              # MVVM view models
-│   ├── Services/                # ProjectFileService, SettingsService
+│   ├── Services/                # ProjectFileService, SettingsService, ThemeService
+│   ├── Helpers/                 # ThemeHelper (shared colour resolution for all renderers)
 │   ├── Styles/                  # ThemeColors.xaml, TextStyles.xaml, ControlStyles.xaml
 │   └── DisplayModules/          # SurfacePlot3DDisplay, MeasurementsGridRenderer,
 │                                # StrategyPreviewRenderer, ParallelWaysDisplay

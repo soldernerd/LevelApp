@@ -4,7 +4,7 @@
 
 > Living document. Update as the project evolves.
 
-> Last updated: 2026-04-09 *(revised to reflect WP0.08: theme architecture)*
+> Last updated: 2026-04-09 *(revised to reflect v0.8.4: ThemeHelper, IThemeService, code quality improvements)*
 
 
 
@@ -98,7 +98,9 @@ LevelApp/
 │       └── OrientationConverter.cs   ← reads/writes Orientation as string enum
 ├── LevelApp.App/                  ← WinUI 3 application
 │   ├── App.xaml / App.xaml.cs     ← DI container setup; merges resource dictionaries
-│   ├── MainWindow.xaml / .cs      ← Menu bar (File, Edit, Help); ApplyTheme(); ApplyPersistedTheme()
+│   ├── MainWindow.xaml / .cs      ← Menu bar (File, Edit, Help); wires IThemeService to RootFrame
+│   ├── Helpers/
+│   │   └── ThemeHelper.cs         ← GetColor, GetBrush, PlotRamp, InterpolateRamp (shared by all renderers)
 │   ├── Styles/
 │   │   ├── ThemeColors.xaml       ← ThemeDictionaries: all colour tokens (Light + Default/Dark)
 │   │   ├── TextStyles.xaml        ← Named TextBlock styles keyed to ThemeResource tokens
@@ -114,7 +116,9 @@ LevelApp/
 │   │   ├── IProjectFileService.cs ← interface for file I/O (testable)
 │   │   ├── ProjectFileService.cs  ← Win32 IFileOpenDialog/IFileSaveDialog + JSON I/O
 │   │   ├── ISettingsService.cs    ← DefaultProjectFolder, AppTheme (ElementTheme)
-│   │   └── SettingsService.cs     ← persists settings to %LOCALAPPDATA%\LevelApp\settings.json
+│   │   ├── SettingsService.cs     ← persists settings to %LOCALAPPDATA%\LevelApp\settings.json
+│   │   ├── IThemeService.cs       ← Apply(ElementTheme), SetTarget(FrameworkElement)
+│   │   └── ThemeService.cs        ← singleton; applies RequestedTheme to RootFrame
 │   ├── Views/
 │   │   ├── ProjectSetupView.xaml
 │   │   ├── MeasurementView.xaml
@@ -584,15 +588,19 @@ Implements `IResultDisplay`. Each module receives a `SurfaceResult` and returns 
 
 | Module | Status | Notes |
 |---|---|---|
-| 3D Surface Plot | **Built** | Pseudo-3D isometric canvas; nodes coloured blue→cyan→green→yellow→red by height |
+| 3D Surface Plot | **Built** | Pseudo-3D isometric canvas; nodes coloured low→mid-low→mid→mid-high→high by height |
 | Measurements Grid | **Built** | 2D step-map canvas with directed arrows, value labels, loop-closure colour fills, and mouse-wheel zoom |
 | Strategy Preview | **Built** | Small read-only canvas in ProjectSetupView showing step layout for the selected strategy |
-| Parallel Ways Display | **Built** | 2D rail schematic canvas showing station dots coloured by step state (pending / measured / current) |
+| Parallel Ways Display | **Built** | 2D rail schematic canvas showing station dots coloured by height on the themed ramp |
 | Colour / Heat Map | Future | Intuitive flatness overview |
 | Numerical Table | Future | Raw height values per grid point |
 | Residuals Chart | Future | Useful for diagnosing bad readings |
 
 Adding a new display: implement `IResultDisplay`, register it. The results page discovers available modules automatically.
+
+#### Theme colour resolution in renderers
+
+All display modules resolve colours via `ThemeHelper` (`LevelApp.App/Helpers/ThemeHelper.cs`) rather than hardcoding ARGB values. `ThemeHelper.GetColor` and `ThemeHelper.GetBrush` look up named keys from `ThemeColors.xaml` at render time, falling back to `Colors.Gray` if a key is missing. The five-stop plot ramp (`PlotRamp`) is resolved once per render pass with `ThemeHelper.GetPlotRamp`, then interpolated per-node with `ThemeHelper.InterpolateRamp` — avoiding repeated resource lookups in tight loops. Views subscribe to `ActualThemeChanged` and re-render the canvas so colour is always correct for the active theme.
 
 #### 3D Surface Plot — z-scale
 
@@ -628,7 +636,9 @@ The vertical exaggeration (`maxZPixels`) is computed per render as `max(10, (col
 | Win32 COM file dialogs instead of WinRT pickers | WinRT pickers create the underlying COM dialog lazily; `SetFolder` on the wrapper targets a discarded object. Driving `IFileOpenDialog`/`IFileSaveDialog` directly via `CoCreateInstance` gives reliable control over the initial folder |
 | Settings in `%LOCALAPPDATA%\LevelApp\settings.json` | `ApplicationData.Current.LocalFolder` throws for unpackaged apps; `Environment.SpecialFolder.LocalApplicationData` works unconditionally |
 | `OrientationConverter` reads string enum only | No users exist, so legacy integer format support was removed (WP0.06) |
-| Theme colours in `ResourceDictionary.ThemeDictionaries` | All canvas renderers call `Application.Current.Resources.TryGetValue()` at render time; on theme change views subscribe to `ActualThemeChanged` and re-render, so the full colour ramp is always correct for the active theme |
+| Theme colours in `ResourceDictionary.ThemeDictionaries` | All canvas renderers resolve colours at render time from named keys in `ThemeColors.xaml`; on theme change views subscribe to `ActualThemeChanged` and re-render, so the full colour ramp is always correct for the active theme |
+| `ThemeHelper` in `LevelApp.App/Helpers/` | Single shared helper (`GetColor`, `GetBrush`, `PlotRamp`, `InterpolateRamp`) eliminates copy-pasted lookup methods across all four display modules and two views; the `PlotRamp` struct is resolved once per render pass to avoid repeated dictionary lookups inside node loops |
+| `IThemeService` / `ThemeService` singleton | Decouples live theme switching from `MainWindow`; `PreferencesDialog` calls `_theme.Apply()` directly without holding a reference to the window; `ThemeService.SetTarget(RootFrame)` is called once on startup by `MainWindow` |
 | Plot canvas rebuild on theme change | `ResultsViewModel.RebuildPlotCanvas()` reconstructs the `Canvas` from cached session/result data; `ResultsView.OnActualThemeChanged` swaps `PlotContainer.Content` — avoids storing mutable brushes on a live canvas |
 
 
