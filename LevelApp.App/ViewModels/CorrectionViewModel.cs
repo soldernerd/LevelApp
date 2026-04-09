@@ -37,11 +37,12 @@ public sealed partial class CorrectionViewModel : ViewModelBase
         SurfaceResult effectiveResult = _session.Corrections.Count > 0 &&
             _session.Corrections.Last().Result is { } cr ? cr : _session.InitialRound.Result!;
 
-        var allSteps = _session.InitialRound.Steps;
+        var allSteps   = _session.InitialRound.Steps;
+        var stepLookup = allSteps.ToDictionary(s => s.Index);
         _flagged = effectiveResult.FlaggedStepIndices
-            .Select(idx => allSteps.First(s => s.Index == idx))
-            .OrderBy(s => s.Index)
-            .Select(s => (Step: s, NewReading: (double?)null))
+            .Where(idx => stepLookup.ContainsKey(idx))
+            .Select(idx => (Step: stepLookup[idx], NewReading: (double?)null))
+            .OrderBy(f => f.Step.Index)
             .ToList();
 
         GridColumns      = _definition.Parameters.TryGetValue("columnsCount", out var c) ? Convert.ToInt32(c) : 0;
@@ -152,9 +153,9 @@ public sealed partial class CorrectionViewModel : ViewModelBase
                 _session.InitialRound.Steps, allReplacements);
 
             var definition = _definition;
-            var strategy   = StrategyFactory.Create(_session.StrategyId);
-            var calculator = CalculatorFactory.Create("LeastSquares", strategy);
             var parameters = _session.InitialRound.CalculationParameters ?? new CalculationParameters();
+            var strategy   = StrategyFactory.Create(_session.StrategyId);
+            var calculator = CalculatorFactory.Create(parameters.MethodId, strategy);
 
             var result = await Task.Run(() => calculator.Calculate(mergedSteps, definition, parameters));
 

@@ -10,18 +10,21 @@ namespace LevelApp.App.ViewModels;
 
 public sealed partial class MeasurementViewModel : ViewModelBase
 {
-    private readonly INavigationService _navigation;
-    private readonly MainViewModel      _mainViewModel;
+    private readonly INavigationService     _navigation;
+    private readonly MainViewModel          _mainViewModel;
+    private readonly ParallelWaysCalculator _pwCalculator;
 
     private Project            _project    = null!;
     private MeasurementSession _session    = null!;
     private List<MeasurementStep> _steps   = [];
     private ObjectDefinition   _definition = null!;
 
-    public MeasurementViewModel(INavigationService navigation, MainViewModel mainViewModel)
+    public MeasurementViewModel(INavigationService navigation, MainViewModel mainViewModel,
+                                ParallelWaysCalculator pwCalculator)
     {
         _navigation    = navigation;
         _mainViewModel = mainViewModel;
+        _pwCalculator  = pwCalculator;
     }
 
     // ── Initialisation ────────────────────────────────────────────────────────
@@ -153,18 +156,16 @@ public sealed partial class MeasurementViewModel : ViewModelBase
 
             if (IsParallelWays)
             {
-                var pwCalc     = new ParallelWaysCalculator();
-                var pwParams   = new CalculationParameters();
-
+                var pwParams = new CalculationParameters();
                 var pwResult = await Task.Run(
-                    () => pwCalc.Calculate(round.Steps, definition, pwParams));
+                    () => _pwCalculator.Calculate(round.Steps, definition, pwParams));
                 round.ParallelWaysResult = pwResult;
             }
             else
             {
-                var strategy   = StrategyFactory.Create(_session.StrategyId);
-                var calculator = CalculatorFactory.Create("LeastSquares", strategy);
                 var parameters = round.CalculationParameters ?? new CalculationParameters();
+                var strategy   = StrategyFactory.Create(_session.StrategyId);
+                var calculator = CalculatorFactory.Create(parameters.MethodId, strategy);
 
                 var result = await Task.Run(() => calculator.Calculate(round.Steps, definition, parameters));
                 round.Result = result;

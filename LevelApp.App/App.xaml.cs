@@ -1,6 +1,7 @@
 using LevelApp.App.Navigation;
 using LevelApp.App.Services;
 using LevelApp.App.ViewModels;
+using LevelApp.Core.Geometry.ParallelWays;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 
@@ -29,6 +30,9 @@ public partial class App : Application
 
         // Shell ViewModel — singleton so all page VMs share the same project state
         services.AddSingleton<MainViewModel>();
+
+        // Core calculators resolved via DI so ViewModels don't directly instantiate them
+        services.AddTransient<ParallelWaysCalculator>();
 
         // ViewModels — Transient so each navigation gets a fresh instance
         services.AddTransient<ProjectSetupViewModel>();
