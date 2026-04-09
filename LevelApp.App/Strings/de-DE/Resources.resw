@@ -37,8 +37,8 @@
   <data name="Object_SectionHeader.Text" xml:space="preserve"><value>Objekt</value></data>
   <data name="GeometryType_Label.Text" xml:space="preserve"><value>Geometrietyp</value></data>
   <data name="GeometryType_Label_Tooltip.Content" xml:space="preserve"><value>Der Typ des Messobjekts. Jeder Geometrietyp verwendet eine andere Messstrategie und Berechnungsmethode.</value></data>
-  <data name="GeometryType_SurfacePlate.Text" xml:space="preserve"><value>Tuschierplatte</value></data>
-  <data name="GeometryType_ParallelWays.Text" xml:space="preserve"><value>Parallele Führungsbahnen</value></data>
+  <data name="GeometryType_SurfacePlate.Content" xml:space="preserve"><value>Tuschierplatte</value></data>
+  <data name="GeometryType_ParallelWays.Content" xml:space="preserve"><value>Parallele Führungsbahnen</value></data>
   <data name="Width_Label.Text" xml:space="preserve"><value>Breite (mm)</value></data>
   <data name="Width_Label_Tooltip.Content" xml:space="preserve"><value>Physische Breite der Tuschierplatte in Millimetern. Wird zur Berechnung der Schrittweite zwischen Gitterpunkten verwendet.</value></data>
   <data name="Height_Label.Text" xml:space="preserve"><value>Höhe (mm)</value></data>
@@ -50,9 +50,9 @@
   <data name="Strategy_SectionHeader.Text" xml:space="preserve"><value>Messstrategie</value></data>
   <data name="Strategy_Label.Text" xml:space="preserve"><value>Strategie</value></data>
   <data name="Strategy_Label_Tooltip.Content" xml:space="preserve"><value>Das Traversierungsmuster, das verwendet wird, um alle Messpunkte zu besuchen. Verschiedene Strategien bieten unterschiedliche Redundanzniveaus.</value></data>
-  <data name="Strategy_FullGrid.Text" xml:space="preserve"><value>Vollraster (Boustrophedon)</value></data>
-  <data name="Strategy_UnionJack.Text" xml:space="preserve"><value>Union Jack</value></data>
-  <data name="Strategy_ParallelWays.Text" xml:space="preserve"><value>Parallele Führungsbahnen</value></data>
+  <data name="Strategy_FullGrid.Content" xml:space="preserve"><value>Vollraster (Boustrophedon)</value></data>
+  <data name="Strategy_UnionJack.Content" xml:space="preserve"><value>Union Jack</value></data>
+  <data name="Strategy_ParallelWays.Content" xml:space="preserve"><value>Parallele Führungsbahnen</value></data>
   <data name="StepCount_Label.Text" xml:space="preserve"><value>Schritte</value></data>
   <data name="StepCount_Label_Tooltip.Content" xml:space="preserve"><value>Gesamtzahl der für diese Konfiguration erforderlichen Einzelmessungen.</value></data>
   <data name="StartMeasurement_Button.Content" xml:space="preserve"><value>Messung starten</value></data>
@@ -115,8 +115,8 @@
   <data name="Recalculate_Title.Text" xml:space="preserve"><value>Neuberechnung</value></data>
   <data name="Recalculate_Method_Label.Text" xml:space="preserve"><value>Berechnungsmethode</value></data>
   <data name="Recalculate_Method_Tooltip.Content" xml:space="preserve"><value>Wählen Sie den Algorithmus, der zur Berechnung der Knotenhöhen aus den Messschritten verwendet wird.</value></data>
-  <data name="Recalculate_Method_LeastSquares.Text" xml:space="preserve"><value>Kleinste Quadrate (empfohlen)</value></data>
-  <data name="Recalculate_Method_Sequential.Text" xml:space="preserve"><value>Sequentielle Integration</value></data>
+  <data name="Recalculate_Method_LeastSquares.Content" xml:space="preserve"><value>Kleinste Quadrate (empfohlen)</value></data>
+  <data name="Recalculate_Method_Sequential.Content" xml:space="preserve"><value>Sequentielle Integration</value></data>
   <data name="Recalculate_SigmaThreshold_Label.Text" xml:space="preserve"><value>Sigma-Schwellenwert (k)</value></data>
   <data name="Recalculate_AutoExclude_Label.Text" xml:space="preserve"><value>Ausreißer automatisch ausschließen</value></data>
   <data name="Recalculate_AutoExclude_Tooltip.Content" xml:space="preserve"><value>Wenn aktiviert, werden markierte Schritte automatisch aus dem Kleinste-Quadrate-System ausgeschlossen und beeinflussen die berechnete Fläche nicht. Wenn deaktiviert, verbleiben sie im System, werden aber dennoch gemeldet.</value></data>
@@ -167,8 +167,8 @@
   <data name="PW_RailSeparation_Tooltip.Content" xml:space="preserve"><value>Abstand zwischen dieser Führungsbahn und der Referenzführungsbahn, gemessen senkrecht zur Fahrtrichtung.</value></data>
   <data name="PW_Tasks_SectionHeader.Text" xml:space="preserve"><value>Aufgaben</value></data>
   <data name="PW_AddTask_Button.Content" xml:space="preserve"><value>Aufgabe hinzufügen</value></data>
-  <data name="PW_TaskType_AlongRail.Text" xml:space="preserve"><value>Entlang der Bahn</value></data>
-  <data name="PW_TaskType_Bridge.Text" xml:space="preserve"><value>Querbrücke</value></data>
+  <data name="PW_TaskType_AlongRail.Content" xml:space="preserve"><value>Entlang der Bahn</value></data>
+  <data name="PW_TaskType_Bridge.Content" xml:space="preserve"><value>Querbrücke</value></data>
   <data name="PW_Orientation_Label.Text" xml:space="preserve"><value>Ausrichtung</value></data>
   <data name="PW_Orientation_Tooltip.Content" xml:space="preserve"><value>Die physische Richtung, in der die Führungsbahnen verlaufen. Wird für Anzeigezwecke und zur Beschriftung von Schrittanweisungen verwendet.</value></data>
   <data name="PW_DriftCorrection_Label.Text" xml:space="preserve"><value>Driftkorrektur</value></data>

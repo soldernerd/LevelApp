@@ -37,8 +37,8 @@
   <data name="Object_SectionHeader.Text" xml:space="preserve"><value>Object</value></data>
   <data name="GeometryType_Label.Text" xml:space="preserve"><value>Geometry type</value></data>
   <data name="GeometryType_Label_Tooltip.Content" xml:space="preserve"><value>The type of object being measured. Each geometry type uses a different measurement strategy and calculation method.</value></data>
-  <data name="GeometryType_SurfacePlate.Text" xml:space="preserve"><value>Surface Plate</value></data>
-  <data name="GeometryType_ParallelWays.Text" xml:space="preserve"><value>Parallel Ways</value></data>
+  <data name="GeometryType_SurfacePlate.Content" xml:space="preserve"><value>Surface Plate</value></data>
+  <data name="GeometryType_ParallelWays.Content" xml:space="preserve"><value>Parallel Ways</value></data>
   <data name="Width_Label.Text" xml:space="preserve"><value>Width (mm)</value></data>
   <data name="Width_Label_Tooltip.Content" xml:space="preserve"><value>Physical width of the surface plate in millimetres. Used to compute the step length between grid nodes.</value></data>
   <data name="Height_Label.Text" xml:space="preserve"><value>Height (mm)</value></data>
@@ -50,9 +50,9 @@
   <data name="Strategy_SectionHeader.Text" xml:space="preserve"><value>Measurement Strategy</value></data>
   <data name="Strategy_Label.Text" xml:space="preserve"><value>Strategy</value></data>
   <data name="Strategy_Label_Tooltip.Content" xml:space="preserve"><value>The traversal pattern used to visit all measurement points. Different strategies offer different levels of redundancy.</value></data>
-  <data name="Strategy_FullGrid.Text" xml:space="preserve"><value>Full Grid (boustrophedon)</value></data>
-  <data name="Strategy_UnionJack.Text" xml:space="preserve"><value>Union Jack</value></data>
-  <data name="Strategy_ParallelWays.Text" xml:space="preserve"><value>Parallel Ways</value></data>
+  <data name="Strategy_FullGrid.Content" xml:space="preserve"><value>Full Grid (boustrophedon)</value></data>
+  <data name="Strategy_UnionJack.Content" xml:space="preserve"><value>Union Jack</value></data>
+  <data name="Strategy_ParallelWays.Content" xml:space="preserve"><value>Parallel Ways</value></data>
   <data name="StepCount_Label.Text" xml:space="preserve"><value>Steps</value></data>
   <data name="StepCount_Label_Tooltip.Content" xml:space="preserve"><value>Total number of individual level readings required for this configuration.</value></data>
   <data name="StartMeasurement_Button.Content" xml:space="preserve"><value>Start Measurement</value></data>
@@ -115,8 +115,8 @@
   <data name="Recalculate_Title.Text" xml:space="preserve"><value>Recalculate</value></data>
   <data name="Recalculate_Method_Label.Text" xml:space="preserve"><value>Calculation method</value></data>
   <data name="Recalculate_Method_Tooltip.Content" xml:space="preserve"><value>Choose the algorithm used to compute node heights from the step readings.</value></data>
-  <data name="Recalculate_Method_LeastSquares.Text" xml:space="preserve"><value>Least-Squares (recommended)</value></data>
-  <data name="Recalculate_Method_Sequential.Text" xml:space="preserve"><value>Sequential Integration</value></data>
+  <data name="Recalculate_Method_LeastSquares.Content" xml:space="preserve"><value>Least-Squares (recommended)</value></data>
+  <data name="Recalculate_Method_Sequential.Content" xml:space="preserve"><value>Sequential Integration</value></data>
   <data name="Recalculate_SigmaThreshold_Label.Text" xml:space="preserve"><value>Sigma threshold (k)</value></data>
   <data name="Recalculate_AutoExclude_Label.Text" xml:space="preserve"><value>Auto-exclude outliers</value></data>
   <data name="Recalculate_AutoExclude_Tooltip.Content" xml:space="preserve"><value>When enabled, flagged steps are automatically excluded from the least-squares system and do not influence the computed surface. When disabled, they remain in the system but are still reported.</value></data>
@@ -167,8 +167,8 @@
   <data name="PW_RailSeparation_Tooltip.Content" xml:space="preserve"><value>Distance between this rail and the reference rail, measured perpendicular to the direction of travel.</value></data>
   <data name="PW_Tasks_SectionHeader.Text" xml:space="preserve"><value>Tasks</value></data>
   <data name="PW_AddTask_Button.Content" xml:space="preserve"><value>Add Task</value></data>
-  <data name="PW_TaskType_AlongRail.Text" xml:space="preserve"><value>Along Rail</value></data>
-  <data name="PW_TaskType_Bridge.Text" xml:space="preserve"><value>Bridge</value></data>
+  <data name="PW_TaskType_AlongRail.Content" xml:space="preserve"><value>Along Rail</value></data>
+  <data name="PW_TaskType_Bridge.Content" xml:space="preserve"><value>Bridge</value></data>
   <data name="PW_Orientation_Label.Text" xml:space="preserve"><value>Orientation</value></data>
   <data name="PW_Orientation_Tooltip.Content" xml:space="preserve"><value>The physical direction in which the rails run. Used for display purposes and to label step instructions.</value></data>
   <data name="PW_DriftCorrection_Label.Text" xml:space="preserve"><value>Drift correction</value></data>
