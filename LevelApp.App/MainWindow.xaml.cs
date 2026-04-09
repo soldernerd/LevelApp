@@ -29,7 +29,7 @@ public sealed partial class MainWindow : Window
         AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "levelapp.ico"));
 
         // Initialise services that need the window handle
-        App.Services.GetRequiredService<ProjectFileService>().Initialize(_hwnd);
+        App.Services.GetRequiredService<IProjectFileService>().Initialize(_hwnd);
         ViewModel.Hwnd = _hwnd;
 
         // Attach navigation frame
