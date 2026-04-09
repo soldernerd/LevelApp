@@ -4,7 +4,7 @@
 
 > Living document. Update as the project evolves.
 
-> Last updated: 2026-04-09 *(revised to reflect v0.9.0: WP0.09 contextual help system and localisation)*
+> Last updated: 2026-04-09 *(revised to reflect v0.9.11)*
 
 
 
@@ -762,8 +762,8 @@ The vertical exaggeration (`maxZPixels`) is computed per render as `max(10, (col
 public static class AppVersion
 {
     public const int Major = 0;
-    public const int Minor = 8;
-    public const int Patch = 1;
+    public const int Minor = 9;
+    public const int Patch = 11;
 
     public static string Full    => $"{Major}.{Minor}.{Patch}";
     public static string Display => $"v{Full}";
