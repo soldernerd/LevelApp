@@ -433,40 +433,10 @@ public static class MeasurementsGridRenderer
         double canvasW = widthMm  * scale + CanvasPad * 2;
         double canvasH = heightMm * scale + CanvasPad * 2;
 
-        // ── Sector background fills ───────────────────────────────────────────
-        // Draw white triangular fills for all 8 arm sectors (centre → adjacent
-        // outer tips). These are drawn first (lowest z-order) and serve two
-        // purposes: they look like the page background inside otherwise-empty
-        // sectors, and they give the canvas a uniform hit-test surface so that
-        // mouse-wheel zoom works everywhere — not only where lines/dots exist.
-        // For Full-rings projects the coloured loop polygons are drawn on top
-        // and completely cover these fills, so appearance is unchanged.
-        {
-            int segs = Convert.ToInt32(definition.Parameters["segments"]);
-            var (ctrX, ctrY) = NodePx("center");
-            var sectorFill   = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
-            string[][] pairs =
-            [
-                ["armSW", "armS"],  ["armS",  "armSE"], ["armSE", "armE"],
-                ["armE",  "armNE"], ["armNE", "armN"],  ["armN",  "armNW"],
-                ["armNW", "armW"],  ["armW",  "armSW"]
-            ];
-            foreach (var pair in pairs)
-            {
-                var (ax, ay) = NodePx($"{pair[0]}_seg{segs}");
-                var (bx, by) = NodePx($"{pair[1]}_seg{segs}");
-                canvas.Children.Add(new Polygon
-                {
-                    Points = new PointCollection
-                    {
-                        new Point(ctrX, ctrY),
-                        new Point(ax, ay),
-                        new Point(bx, by)
-                    },
-                    Fill = sectorFill
-                });
-            }
-        }
+        // Invisible background rectangle — ensures the canvas has a uniform
+        // hit-test surface even when no filled loop polygons are drawn.
+        canvas.Children.Add(new Rectangle { Width = canvasW, Height = canvasH,
+            Fill = new SolidColorBrush(Color.FromArgb(1, 0, 0, 0)) });
 
         var flaggedSet   = result.FlaggedStepIndices.ToHashSet();
         var normalBrush  = new SolidColorBrush(Color.FromArgb(200, 100, 100, 100));
