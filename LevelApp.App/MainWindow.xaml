@@ -22,7 +22,7 @@
                                 Command="{x:Bind ViewModel.ExitCommand}"/>
             </MenuBarItem>
 
-            <MenuBarItem Title="Settings">
+            <MenuBarItem Title="Edit">
                 <MenuFlyoutItem Text="Preferences..."
                                 Click="OnPreferencesClicked"/>
             </MenuBarItem>
