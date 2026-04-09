@@ -35,13 +35,6 @@ public sealed partial class PreferencesDialog : ContentDialog
         }
     }
 
-    // ── LanguageIndex ─────────────────────────────────────────────────────────
-    // 0 = Follow system (null)
-    // 1 = English        ("en-US")
-    // 2 = Deutsch        ("de-DE")
-
-    public int LanguageIndex { get; set; }
-
     public PreferencesDialog(ISettingsService settings, nint hwnd, IThemeService theme)
     {
         _settings      = settings;
@@ -49,7 +42,6 @@ public sealed partial class PreferencesDialog : ContentDialog
         _theme         = theme;
         _originalTheme = settings.AppTheme;
         _themeIndex    = ThemeToIndex(settings.AppTheme);
-        LanguageIndex  = LanguageToIndex(settings.AppLanguage);
 
         InitializeComponent();
 
@@ -60,10 +52,8 @@ public sealed partial class PreferencesDialog : ContentDialog
     {
         _settings.DefaultProjectFolder = FolderPathBox.Text;
         _settings.AppTheme             = IndexToTheme(ThemeIndex);
-        _settings.AppLanguage          = IndexToLanguage(LanguageIndex);
         _settings.Save();
         // Theme is already applied live; nothing more needed here.
-        // Language takes effect on next app start (set via ApplicationLanguages.PrimaryLanguageOverride in App()).
     }
 
     private void OnCancelClicked(ContentDialog sender, ContentDialogButtonClickEventArgs args)
@@ -98,19 +88,5 @@ public sealed partial class PreferencesDialog : ContentDialog
         1 => ElementTheme.Light,
         2 => ElementTheme.Dark,
         _ => ElementTheme.Default
-    };
-
-    private static int LanguageToIndex(string? lang) => lang switch
-    {
-        "en-US" => 1,
-        "de-DE" => 2,
-        _       => 0   // null / unknown = follow system
-    };
-
-    private static string? IndexToLanguage(int index) => index switch
-    {
-        1 => "en-US",
-        2 => "de-DE",
-        _ => null
     };
 }

@@ -139,11 +139,6 @@
   <data name="Preferences_DefaultFolder_Label.Text" xml:space="preserve"><value>Standard-Projektordner</value></data>
   <data name="Preferences_DefaultFolder_Tooltip.Content" xml:space="preserve"><value>Der Ordner, den die Öffnen- und Speichern-Dialoge standardmäßig öffnen.</value></data>
   <data name="Preferences_BrowseFolder.Content" xml:space="preserve"><value>Durchsuchen…</value></data>
-  <data name="Preferences_Language_Label.Text" xml:space="preserve"><value>Sprache</value></data>
-  <data name="Preferences_Language_System.Content" xml:space="preserve"><value>Systemeinstellung folgen</value></data>
-  <data name="Preferences_Language_English.Content" xml:space="preserve"><value>English</value></data>
-  <data name="Preferences_Language_Deutsch.Content" xml:space="preserve"><value>Deutsch</value></data>
-  <data name="Preferences_Language_RestartNote.Text" xml:space="preserve"><value>Tritt nach dem Neustart der App in Kraft.</value></data>
   <data name="Preferences_OkButton.Content" xml:space="preserve"><value>OK</value></data>
   <data name="Preferences_CancelButton.Content" xml:space="preserve"><value>Abbrechen</value></data>
 

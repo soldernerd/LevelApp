@@ -16,7 +16,6 @@ public sealed class SettingsService : ISettingsService
         Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
 
     private ElementTheme? _appTheme;
-    private string?       _appLanguage;
 
     public string DefaultProjectFolder
     {
@@ -28,12 +27,6 @@ public sealed class SettingsService : ISettingsService
     {
         get => _appTheme ?? ElementTheme.Default;
         set => _appTheme = value;
-    }
-
-    public string? AppLanguage
-    {
-        get => _appLanguage;
-        set => _appLanguage = value;
     }
 
     public void Load()
@@ -50,8 +43,6 @@ public sealed class SettingsService : ISettingsService
             if (data?.AppTheme is { Length: > 0 } ts
                 && Enum.TryParse<ElementTheme>(ts, out var t))
                 _appTheme = t;
-            if (data?.AppLanguage is { Length: > 0 } lang)
-                _appLanguage = lang;
         }
         catch { /* ignore corrupt or missing settings file */ }
     }
@@ -64,8 +55,7 @@ public sealed class SettingsService : ISettingsService
             var data = new SettingsData
             {
                 DefaultProjectFolder = _defaultProjectFolder,
-                AppTheme             = _appTheme?.ToString(),
-                AppLanguage          = _appLanguage
+                AppTheme             = _appTheme?.ToString()
             };
             File.WriteAllText(path, JsonSerializer.Serialize(data, JsonOptions));
         }
@@ -85,6 +75,5 @@ public sealed class SettingsService : ISettingsService
     {
         public string? DefaultProjectFolder { get; set; }
         public string? AppTheme             { get; set; }
-        public string? AppLanguage          { get; set; }
     }
 }
