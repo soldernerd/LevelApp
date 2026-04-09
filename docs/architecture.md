@@ -4,7 +4,7 @@
 
 > Living document. Update as the project evolves.
 
-> Last updated: 2026-04-09 *(revised to reflect WP0.07: Parallel Ways geometry module)*
+> Last updated: 2026-04-09 *(revised to reflect WP0.08: theme architecture)*
 
 
 
@@ -97,8 +97,12 @@ LevelApp/
 │       ├── ObjectValueConverter.cs
 │       └── OrientationConverter.cs   ← reads/writes Orientation as string enum
 ├── LevelApp.App/                  ← WinUI 3 application
-│   ├── App.xaml / App.xaml.cs     ← DI container setup
-│   ├── MainWindow.xaml / .cs      ← Attaches NavigationService; initial navigation
+│   ├── App.xaml / App.xaml.cs     ← DI container setup; merges resource dictionaries
+│   ├── MainWindow.xaml / .cs      ← Menu bar (File, Edit, Help); ApplyTheme(); ApplyPersistedTheme()
+│   ├── Styles/
+│   │   ├── ThemeColors.xaml       ← ThemeDictionaries: all colour tokens (Light + Default/Dark)
+│   │   ├── TextStyles.xaml        ← Named TextBlock styles keyed to ThemeResource tokens
+│   │   └── ControlStyles.xaml     ← Implicit Button style; CardStyle; CompactCardStyle
 │   ├── Navigation/
 │   │   ├── PageKey.cs             ← Enum: ProjectSetup, Measurement, Results, Correction
 │   │   ├── INavigationService.cs
@@ -109,7 +113,7 @@ LevelApp/
 │   ├── Services/
 │   │   ├── IProjectFileService.cs ← interface for file I/O (testable)
 │   │   ├── ProjectFileService.cs  ← Win32 IFileOpenDialog/IFileSaveDialog + JSON I/O
-│   │   ├── ISettingsService.cs
+│   │   ├── ISettingsService.cs    ← DefaultProjectFolder, AppTheme (ElementTheme)
 │   │   └── SettingsService.cs     ← persists settings to %LOCALAPPDATA%\LevelApp\settings.json
 │   ├── Views/
 │   │   ├── ProjectSetupView.xaml
@@ -117,7 +121,7 @@ LevelApp/
 │   │   ├── ResultsView.xaml
 │   │   ├── CorrectionView.xaml
 │   │   └── Dialogs/
-│   │       ├── PreferencesDialog.xaml   ← default project folder setting
+│   │       ├── PreferencesDialog.xaml   ← default project folder + Light/Dark/System theme selector
 │   │       ├── NewMeasurementDialog.xaml
 │   │       ├── RecalculateDialog.xaml   ← recalculation parameters + save option
 │   │       └── AboutDialog.xaml         ← version, copyright, license, GitHub link
@@ -480,7 +484,7 @@ Serialisation is handled by `LevelApp.Core/Serialization/ProjectSerializer` (usi
 
 #### Application settings
 
-User preferences (currently: default project folder) are persisted to `%LOCALAPPDATA%\LevelApp\settings.json` by `SettingsService`. This location is reliable for unpackaged Win32/WinUI 3 apps; `ApplicationData.Current.LocalFolder` was not used because it requires packaging infrastructure.
+User preferences (default project folder and app theme) are persisted to `%LOCALAPPDATA%\LevelApp\settings.json` by `SettingsService`. This location is reliable for unpackaged Win32/WinUI 3 apps; `ApplicationData.Current.LocalFolder` was not used because it requires packaging infrastructure.
 
 ```json
 {
@@ -624,6 +628,8 @@ The vertical exaggeration (`maxZPixels`) is computed per render as `max(10, (col
 | Win32 COM file dialogs instead of WinRT pickers | WinRT pickers create the underlying COM dialog lazily; `SetFolder` on the wrapper targets a discarded object. Driving `IFileOpenDialog`/`IFileSaveDialog` directly via `CoCreateInstance` gives reliable control over the initial folder |
 | Settings in `%LOCALAPPDATA%\LevelApp\settings.json` | `ApplicationData.Current.LocalFolder` throws for unpackaged apps; `Environment.SpecialFolder.LocalApplicationData` works unconditionally |
 | `OrientationConverter` reads string enum only | No users exist, so legacy integer format support was removed (WP0.06) |
+| Theme colours in `ResourceDictionary.ThemeDictionaries` | All canvas renderers call `Application.Current.Resources.TryGetValue()` at render time; on theme change views subscribe to `ActualThemeChanged` and re-render, so the full colour ramp is always correct for the active theme |
+| Plot canvas rebuild on theme change | `ResultsViewModel.RebuildPlotCanvas()` reconstructs the `Canvas` from cached session/result data; `ResultsView.OnActualThemeChanged` swaps `PlotContainer.Content` — avoids storing mutable brushes on a live canvas |
 
 
 
@@ -664,6 +670,18 @@ The vertical exaggeration (`maxZPixels`) is computed per render as `max(10, (col
 - `Help > About LevelApp...` menu item and `AboutDialog`
 - Assembly/file version metadata in `.csproj`
 - Commit message convention: `[vX.Y.Z] description`
+
+### WP0.08 — Theme architecture ✓ Complete (v0.8.1)
+- `LevelApp.App/Styles/` folder with three `ResourceDictionary` XAML files merged in `App.xaml`:
+  - `ThemeColors.xaml` — all colour tokens in `ThemeDictionaries` (`Light` + `Default`/Dark); covers plot ramp (5 stops), grid canvas colours, loop-closure brushes
+  - `TextStyles.xaml` — named `TextBlock` styles (`PageTitleStyle`, `SectionHeaderStyle`, `MetricValueStyle`, etc.) using `{ThemeResource}` tokens
+  - `ControlStyles.xaml` — implicit `Button` style; `CardStyle`; `CompactCardStyle`
+- `ISettingsService.AppTheme` (`ElementTheme`) persisted as string in `settings.json`
+- `MainWindow`: `ApplyPersistedTheme()` on startup; `ApplyTheme(ElementTheme)` public method; menu bar with `File`, `Edit` (→ Preferences…), `Help` (→ About LevelApp…)
+- `PreferencesDialog`: Theme `RadioButtons` (Follow system / Light / Dark); live preview on selection change; reverts to original on Cancel
+- All four canvas renderers (`SurfacePlot3DDisplay`, `MeasurementsGridRenderer`, `StrategyPreviewRenderer`, `ParallelWaysDisplay`) resolve colours from theme resources at render time via `Application.Current.Resources.TryGetValue()`
+- All four views subscribe to `ActualThemeChanged` for live theme-switch re-render; `ResultsViewModel.RebuildPlotCanvas()` reconstructs plot canvases with updated colours
+- No hardcoded colours, font sizes, or font weights in any View XAML
 
 ### WP0.07 — Parallel Ways geometry module ✓ Complete (v0.7.0)
 - New Core models: `RailDefinition`, `ParallelWaysParameters`, `ParallelWaysTask`, `ParallelWaysStrategyParameters`, `ParallelWaysResult` (with `RailProfile` and `ParallelismProfile`)
@@ -716,8 +734,8 @@ The vertical exaggeration (`maxZPixels`) is computed per render as `max(10, (col
 public static class AppVersion
 {
     public const int Major = 0;
-    public const int Minor = 7;
-    public const int Patch = 0;
+    public const int Minor = 8;
+    public const int Patch = 1;
 
     public static string Full    => $"{Major}.{Minor}.{Patch}";
     public static string Display => $"v{Full}";

@@ -24,7 +24,7 @@ The software guides the operator through a defined measurement procedure, acquir
 - **Flatness / straightness result** — peak-to-valley value and residual RMS displayed alongside the plot
 - **Project persistence** — projects are saved as `.levelproj` files (JSON), human-readable and version-control friendly
 - **Open existing project** — load a `.levelproj` file at any time; if the file contains all readings but no computed result the solver runs automatically on load
-- **Preferences** — configurable default project folder, remembered across sessions
+- **Preferences** — configurable default project folder and Light / Dark / Follow system theme, both remembered across sessions
 - **About dialog** — Help → About LevelApp shows the current version, copyright, license, and links to the license text and GitHub repository
 - **Extensible architecture** — geometry modules, measurement strategies, instrument providers and display modules are all plugin-style interfaces; new object types and instruments can be added without touching existing code
 
@@ -115,6 +115,7 @@ LevelApp/
 │   │                            # ResultsView, CorrectionView, Dialogs/
 │   ├── ViewModels/              # MVVM view models
 │   ├── Services/                # ProjectFileService, SettingsService
+│   ├── Styles/                  # ThemeColors.xaml, TextStyles.xaml, ControlStyles.xaml
 │   └── DisplayModules/          # SurfacePlot3DDisplay, MeasurementsGridRenderer,
 │                                # StrategyPreviewRenderer, ParallelWaysDisplay
 ├── LevelApp.Tests/              # xUnit unit tests (Core only)
@@ -129,6 +130,7 @@ LevelApp/
 
 - [x] Union Jack measurement strategy
 - [x] Parallel Ways geometry module (straightness + parallelism for rails/slideways)
+- [x] Light / Dark / Follow system theme with live preview and persistence
 - [ ] Parallel Ways correction workflow
 - [ ] Heat map display module
 - [ ] Numerical table display module
