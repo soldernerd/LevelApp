@@ -4,7 +4,12 @@ namespace LevelApp.App.Services;
 
 public sealed class LocalisationService : ILocalisationService
 {
-    private readonly ResourceLoader _loader = new ResourceLoader();
+    private readonly ResourceMap _map;
 
-    public string Get(string key) => _loader.GetString(key);
+    public LocalisationService()
+    {
+        _map = new ResourceManager().MainResourceMap.GetSubtree("Resources");
+    }
+
+    public string Get(string key) => _map.GetValue(key)?.ValueAsString ?? key;
 }
