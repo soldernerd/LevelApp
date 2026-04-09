@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using LevelApp.App.Helpers;
 using LevelApp.App.Navigation;
 using LevelApp.App.ViewModels;
 using LevelApp.Core.Models;
@@ -80,10 +81,10 @@ public sealed partial class CorrectionView : Page
         if (step is null) return;
 
         // Resolve theme colours at draw time
-        Color activeColor    = GetThemeColor("GridCurrentStepBrush");
-        Color completedColor = GetThemeColor("GridCompletedStepBrush");
-        Color flaggedColor   = GetThemeColor("GridFlaggedStepBrush");
-        Color pendingColor   = GetThemeColor("GridPendingStepBrush");
+        Color activeColor    = ThemeHelper.GetColor(GridCanvas, "GridCurrentStepBrush");
+        Color completedColor = ThemeHelper.GetColor(GridCanvas, "GridCompletedStepBrush");
+        Color flaggedColor   = ThemeHelper.GetColor(GridCanvas, "GridFlaggedStepBrush");
+        Color pendingColor   = ThemeHelper.GetColor(GridCanvas, "GridPendingStepBrush");
 
         int cols = ViewModel.GridColumns;
         int rows = ViewModel.GridRows;
@@ -159,19 +160,4 @@ public sealed partial class CorrectionView : Page
         GridCanvas.Height = (rows - 1) * NodeSpacing + NodeRadius * 2;
     }
 
-    // ── Theme helper ──────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Resolves a named theme colour using GridCanvas (in the visual tree) first,
-    /// then falls back to application resources.
-    /// </summary>
-    private Color GetThemeColor(string resourceKey)
-    {
-        if (GridCanvas.Resources.TryGetValue(resourceKey, out var res)
-            || Application.Current.Resources.TryGetValue(resourceKey, out res))
-        {
-            return res is SolidColorBrush brush ? brush.Color : Colors.Gray;
-        }
-        return Colors.Gray;
-    }
 }

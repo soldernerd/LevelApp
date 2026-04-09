@@ -45,7 +45,7 @@
       <SolidColorBrush x:Key="GridPendingStepBrush"      Color="#555555"/>
       <SolidColorBrush x:Key="GridFlaggedStepBrush"      Color="#E74C3C"/>
 
-      <SolidColorBrush x:Key="LoopOkBrush"    Color="#202ECC7120"/>
+      <SolidColorBrush x:Key="LoopOkBrush"    Color="#202ECC71"/>
       <SolidColorBrush x:Key="LoopWarnBrush"  Color="#20EB984E"/>
       <SolidColorBrush x:Key="LoopErrorBrush" Color="#20E74C3C"/>
     </ResourceDictionary>

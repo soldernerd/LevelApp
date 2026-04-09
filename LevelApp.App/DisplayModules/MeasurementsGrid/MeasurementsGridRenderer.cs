@@ -1,8 +1,8 @@
+using LevelApp.App.Helpers;
 using LevelApp.Core.Geometry.SurfacePlate.Strategies;
 using LevelApp.Core.Models;
 using Microsoft.UI;
 using Microsoft.UI.Text;
-using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
@@ -110,6 +110,16 @@ public static class MeasurementsGridRenderer
              r * ySpacing + CanvasPad);
 
         // ── Build edge lookup maps ─────────────────────────────────────────────
+        //
+        // hEdge[(c, r)] = (stepListIndex, isEast)
+        //   covers the horizontal edge between node (c, r) and node (c+1, r).
+        //   isEast = true  → step goes East  (from-node is (c, r))
+        //   isEast = false → step goes West  (from-node is (c+1, r))
+        //
+        // vEdge[(c, r)] = (stepListIndex, isSouth)
+        //   covers the vertical edge between node (c, r) and node (c, r+1).
+        //   isSouth = true  → step goes South (from-node is (c, r))
+        //   isSouth = false → step goes North (from-node is (c, r+1))
         var hEdge = new Dictionary<(int, int), (int idx, bool isEast)>();
         var vEdge = new Dictionary<(int, int), (int idx, bool isSouth)>();
 
@@ -122,12 +132,14 @@ public static class MeasurementsGridRenderer
                     hEdge[(s.GridCol,     s.GridRow)] = (i, true);
                     break;
                 case Orientation.West:
+                    // From-node is the right node; canonical key uses left node
                     hEdge[(s.GridCol - 1, s.GridRow)] = (i, false);
                     break;
                 case Orientation.South:
                     vEdge[(s.GridCol, s.GridRow)]     = (i, true);
                     break;
                 case Orientation.North:
+                    // From-node is the bottom node; canonical key uses top node
                     vEdge[(s.GridCol, s.GridRow - 1)] = (i, false);
                     break;
             }
@@ -144,6 +156,16 @@ public static class MeasurementsGridRenderer
         }
 
         // ── Compute loop closure errors (always µm) ───────────────────────────
+        //
+        // For the cell bounded by (c, r) and (c+1, r+1), traversed clockwise:
+        //   top    edge → East  is positive
+        //   right  edge → South is positive
+        //   bottom edge → East  is negative  (clockwise goes West)
+        //   left   edge → South is negative  (clockwise goes North)
+        //
+        // loop_error = top_norm - bottom_norm + right_norm - left_norm   (µm)
+        //
+        // where _norm means "normalised to East / South direction" in µm.
         int numCellsX = cols - 1;
         int numCellsY = rows - 1;
         var loopErrors = new double[numCellsX * numCellsY];
@@ -181,14 +203,14 @@ public static class MeasurementsGridRenderer
         if (errSigma < 1e-9) errSigma = 1.0;
 
         // ── Resolve theme brushes ─────────────────────────────────────────────
-        var loopOkBrush    = GetThemeBrush(canvas, "LoopOkBrush");
-        var loopWarnBrush  = GetThemeBrush(canvas, "LoopWarnBrush");
-        var loopErrorBrush = GetThemeBrush(canvas, "LoopErrorBrush");
-        var normalBrush    = new SolidColorBrush(GetThemeColor(canvas, "GridStepArrowBrush"));
-        var flaggedBrush   = new SolidColorBrush(GetThemeColor(canvas, "GridFlaggedStepBrush"));
-        var labelFg        = new SolidColorBrush(GetThemeColor(canvas, "GridStepArrowBrush"));
-        var errorFg        = new SolidColorBrush(GetThemeColor(canvas, "GridStepArrowBrush"));
-        var nodeBrush      = new SolidColorBrush(GetThemeColor(canvas, "GridPendingStepBrush"));
+        var loopOkBrush    = ThemeHelper.GetBrush(canvas, "LoopOkBrush");
+        var loopWarnBrush  = ThemeHelper.GetBrush(canvas, "LoopWarnBrush");
+        var loopErrorBrush = ThemeHelper.GetBrush(canvas, "LoopErrorBrush");
+        var normalBrush    = new SolidColorBrush(ThemeHelper.GetColor(canvas, "GridStepArrowBrush"));
+        var flaggedBrush   = new SolidColorBrush(ThemeHelper.GetColor(canvas, "GridFlaggedStepBrush"));
+        var labelFg        = new SolidColorBrush(ThemeHelper.GetColor(canvas, "GridStepArrowBrush"));
+        var errorFg        = new SolidColorBrush(ThemeHelper.GetColor(canvas, "GridStepArrowBrush"));
+        var nodeBrush      = new SolidColorBrush(ThemeHelper.GetColor(canvas, "GridPendingStepBrush"));
 
         // ── Cell background fills ─────────────────────────────────────────────
         for (int cr = 0; cr < numCellsY; cr++)
@@ -395,20 +417,20 @@ public static class MeasurementsGridRenderer
             Fill = new SolidColorBrush(Color.FromArgb(1, 0, 0, 0)) });
 
         var flaggedSet   = result.FlaggedStepIndices.ToHashSet();
-        var normalBrush  = new SolidColorBrush(GetThemeColor(canvas, "GridStepArrowBrush"));
-        var flaggedBrush = new SolidColorBrush(GetThemeColor(canvas, "GridFlaggedStepBrush"));
-        var labelFg      = new SolidColorBrush(GetThemeColor(canvas, "GridStepArrowBrush"));
+        var normalBrush  = new SolidColorBrush(ThemeHelper.GetColor(canvas, "GridStepArrowBrush"));
+        var flaggedBrush = new SolidColorBrush(ThemeHelper.GetColor(canvas, "GridFlaggedStepBrush"));
+        var labelFg      = new SolidColorBrush(ThemeHelper.GetColor(canvas, "GridStepArrowBrush"));
 
         // ── Loop closure polygons ─────────────────────────────────────────────
         if (result.PrimitiveLoops.Length > 0)
         {
             double loopSigmaUm = result.ClosureErrorRms * 1000.0;
             if (loopSigmaUm < 1e-9) loopSigmaUm = 1.0;
-            var errorFg = new SolidColorBrush(GetThemeColor(canvas, "GridStepArrowBrush"));
+            var errorFg = new SolidColorBrush(ThemeHelper.GetColor(canvas, "GridStepArrowBrush"));
 
-            var loopOkBrush    = GetThemeBrush(canvas, "LoopOkBrush");
-            var loopWarnBrush  = GetThemeBrush(canvas, "LoopWarnBrush");
-            var loopErrorBrush = GetThemeBrush(canvas, "LoopErrorBrush");
+            var loopOkBrush    = ThemeHelper.GetBrush(canvas, "LoopOkBrush");
+            var loopWarnBrush  = ThemeHelper.GetBrush(canvas, "LoopWarnBrush");
+            var loopErrorBrush = ThemeHelper.GetBrush(canvas, "LoopErrorBrush");
 
             foreach (var loop in result.PrimitiveLoops)
             {
@@ -501,7 +523,7 @@ public static class MeasurementsGridRenderer
         }
 
         // ── Node dots ─────────────────────────────────────────────────────────
-        var nodeBrush = new SolidColorBrush(GetThemeColor(canvas, "GridPendingStepBrush"));
+        var nodeBrush = new SolidColorBrush(ThemeHelper.GetColor(canvas, "GridPendingStepBrush"));
         var nodeIds   = steps
             .SelectMany(s => new[] { s.NodeId, s.ToNodeId })
             .Where(id => !string.IsNullOrEmpty(id))
@@ -523,36 +545,6 @@ public static class MeasurementsGridRenderer
 
         canvas.Width  = canvasW;
         canvas.Height = canvasH;
-    }
-
-    // ── Theme helpers ─────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Resolves a named theme brush colour from the resource dictionary.
-    /// Checks the element's own resources first, then the application resources.
-    /// </summary>
-    private static Color GetThemeColor(FrameworkElement element, string resourceKey)
-    {
-        if (element.Resources.TryGetValue(resourceKey, out var res)
-            || Application.Current.Resources.TryGetValue(resourceKey, out res))
-        {
-            return res is SolidColorBrush brush ? brush.Color : Colors.Gray;
-        }
-        return Colors.Gray;
-    }
-
-    /// <summary>
-    /// Resolves a named theme brush from the resource dictionary, preserving any
-    /// alpha channel baked into the brush colour (e.g. semi-transparent loop fills).
-    /// </summary>
-    private static SolidColorBrush GetThemeBrush(FrameworkElement element, string resourceKey)
-    {
-        if (element.Resources.TryGetValue(resourceKey, out var res)
-            || Application.Current.Resources.TryGetValue(resourceKey, out res))
-        {
-            return res is SolidColorBrush brush ? brush : new SolidColorBrush(Colors.Gray);
-        }
-        return new SolidColorBrush(Colors.Gray);
     }
 
     // ── Shared arrow helper ───────────────────────────────────────────────────

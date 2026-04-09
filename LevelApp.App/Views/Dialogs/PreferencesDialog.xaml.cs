@@ -8,10 +8,10 @@ namespace LevelApp.App.Views.Dialogs;
 
 public sealed partial class PreferencesDialog : ContentDialog
 {
-    private readonly ISettingsService   _settings;
-    private readonly nint               _hwnd;
-    private readonly Action<ElementTheme> _applyTheme;
-    private readonly ElementTheme       _originalTheme;
+    private readonly ISettingsService _settings;
+    private readonly nint             _hwnd;
+    private readonly IThemeService    _theme;
+    private readonly ElementTheme     _originalTheme;
 
     // ── ThemeIndex ────────────────────────────────────────────────────────────
     // 0 = Follow system (ElementTheme.Default)
@@ -22,7 +22,7 @@ public sealed partial class PreferencesDialog : ContentDialog
 
     /// <summary>
     /// Bound two-way to the RadioButtons in XAML. Each change applies a live
-    /// theme preview via the callback from MainWindow.
+    /// theme preview via <see cref="IThemeService"/>.
     /// </summary>
     public int ThemeIndex
     {
@@ -31,15 +31,15 @@ public sealed partial class PreferencesDialog : ContentDialog
         {
             if (_themeIndex == value) return;
             _themeIndex = value;
-            _applyTheme(IndexToTheme(value));
+            _theme.Apply(IndexToTheme(value));
         }
     }
 
-    public PreferencesDialog(ISettingsService settings, nint hwnd, Action<ElementTheme> applyTheme)
+    public PreferencesDialog(ISettingsService settings, nint hwnd, IThemeService theme)
     {
         _settings      = settings;
         _hwnd          = hwnd;
-        _applyTheme    = applyTheme;
+        _theme         = theme;
         _originalTheme = settings.AppTheme;
         _themeIndex    = ThemeToIndex(settings.AppTheme);
 
@@ -58,7 +58,7 @@ public sealed partial class PreferencesDialog : ContentDialog
     private void OnCancelClicked(ContentDialog sender, ContentDialogButtonClickEventArgs args)
     {
         // Revert any live theme preview change.
-        _applyTheme(_originalTheme);
+        _theme.Apply(_originalTheme);
     }
 
     private async void OnBrowseClicked(object sender, RoutedEventArgs e)

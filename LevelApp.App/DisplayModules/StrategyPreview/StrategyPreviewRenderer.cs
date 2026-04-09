@@ -1,7 +1,6 @@
+using LevelApp.App.Helpers;
 using LevelApp.Core.Interfaces;
 using LevelApp.Core.Models;
-using Microsoft.UI;
-using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
@@ -73,14 +72,14 @@ public static class StrategyPreviewRenderer
         // Semi-transparent pass colours — chosen for visibility in both Light and Dark themes
         var passColors = new[]
         {
-            Windows.UI.Color.FromArgb(180, 70,  130, 220),
-            Windows.UI.Color.FromArgb(180, 220, 80,  80),
-            Windows.UI.Color.FromArgb(180, 60,  180, 100),
-            Windows.UI.Color.FromArgb(180, 200, 150, 30),
-            Windows.UI.Color.FromArgb(180, 160, 80,  200),
-            Windows.UI.Color.FromArgb(180, 30,  180, 200),
-            Windows.UI.Color.FromArgb(180, 200, 100, 150),
-            Windows.UI.Color.FromArgb(180, 120, 140, 60),
+            Color.FromArgb(180, 70,  130, 220),
+            Color.FromArgb(180, 220, 80,  80),
+            Color.FromArgb(180, 60,  180, 100),
+            Color.FromArgb(180, 200, 150, 30),
+            Color.FromArgb(180, 160, 80,  200),
+            Color.FromArgb(180, 30,  180, 200),
+            Color.FromArgb(180, 200, 100, 150),
+            Color.FromArgb(180, 120, 140, 60),
         };
 
         int passColorIdx = 0;
@@ -110,10 +109,8 @@ public static class StrategyPreviewRenderer
         // ── Nodes ─────────────────────────────────────────────────────────────
         // Node fill uses the canvas background colour so they contrast with lines;
         // stroke uses the current step accent colour.
-        var nodeFillColor   = GetThemeColor(canvas, "GridCanvasBackgroundBrush");
-        var nodeStrokeColor = GetThemeColor(canvas, "GridCurrentStepBrush");
-        var nodeFill        = new SolidColorBrush(nodeFillColor);
-        var nodeStroke      = new SolidColorBrush(nodeStrokeColor);
+        var nodeFill   = new SolidColorBrush(ThemeHelper.GetColor(canvas, "GridCanvasBackgroundBrush"));
+        var nodeStroke = new SolidColorBrush(ThemeHelper.GetColor(canvas, "GridCurrentStepBrush"));
 
         foreach (var (nodeId, (px, py)) in nodePos)
         {
@@ -136,21 +133,5 @@ public static class StrategyPreviewRenderer
         canvas.Height = innerH + Margin * 2;
 
         return canvas;
-    }
-
-    // ── Theme helper ──────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Resolves a named theme brush colour from the resource dictionary.
-    /// Checks the element's own resources first, then the application resources.
-    /// </summary>
-    private static Color GetThemeColor(FrameworkElement element, string resourceKey)
-    {
-        if (element.Resources.TryGetValue(resourceKey, out var res)
-            || Application.Current.Resources.TryGetValue(resourceKey, out res))
-        {
-            return res is SolidColorBrush brush ? brush.Color : Colors.Gray;
-        }
-        return Colors.Gray;
     }
 }

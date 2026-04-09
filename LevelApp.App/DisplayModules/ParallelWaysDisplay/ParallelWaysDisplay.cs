@@ -1,10 +1,8 @@
+using LevelApp.App.Helpers;
 using LevelApp.Core.Models;
-using Microsoft.UI;
-using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
-using Windows.UI;
 
 namespace LevelApp.App.DisplayModules.ParallelWaysDisplay;
 
@@ -64,13 +62,16 @@ public sealed class ParallelWaysDisplay
         double hRange = hMax > hMin ? hMax - hMin : 1.0;
 
         // ── Resolve theme colours ─────────────────────────────────────────────
-        var railLineBrush = new SolidColorBrush(GetThemeColor(canvas, "GridPendingStepBrush"))
+        var railLineBrush  = new SolidColorBrush(ThemeHelper.GetColor(canvas, "GridPendingStepBrush"))
             { Opacity = 0.5 };
-        var railLabelBrush = new SolidColorBrush(GetThemeColor(canvas, "GridStepArrowBrush"));
-        var alBrush = new SolidColorBrush(GetThemeColor(canvas, "GridCurrentStepBrush"))
+        var railLabelBrush = new SolidColorBrush(ThemeHelper.GetColor(canvas, "GridStepArrowBrush"));
+        var alBrush        = new SolidColorBrush(ThemeHelper.GetColor(canvas, "GridCurrentStepBrush"))
             { Opacity = 0.6 };
-        var brBrush = new SolidColorBrush(GetThemeColor(canvas, "GridFlaggedStepBrush"))
+        var brBrush        = new SolidColorBrush(ThemeHelper.GetColor(canvas, "GridFlaggedStepBrush"))
             { Opacity = 0.7 };
+
+        // Resolve the plot ramp once — avoids five resource lookups per station dot.
+        var ramp = ThemeHelper.GetPlotRamp(canvas);
 
         // ── Skeleton rail lines ───────────────────────────────────────────────
         for (int r = 0; r < numRails; r++)
@@ -153,13 +154,12 @@ public sealed class ParallelWaysDisplay
                 double x = xOf(profile.StationPositionsMm[s]);
                 double h = profile.HeightProfileMm[s];
                 double t = (h - hMin) / hRange;
-                var    c = HeightColor(t, canvas);
 
                 var dot = new Ellipse
                 {
                     Width  = NodeRadius * 2,
                     Height = NodeRadius * 2,
-                    Fill   = new SolidColorBrush(c)
+                    Fill   = new SolidColorBrush(ThemeHelper.InterpolateRamp(ramp, t))
                 };
                 Canvas.SetLeft(dot, x - NodeRadius);
                 Canvas.SetTop(dot,  y - NodeRadius);
@@ -182,47 +182,6 @@ public sealed class ParallelWaysDisplay
             .ParseNodeId(step.ToNodeId);
         return rFrom == rTo;
     }
-
-    /// <summary>
-    /// Maps a normalised height [0,1] to a colour using the five-stop themed ramp.
-    /// </summary>
-    private static Color HeightColor(double t, FrameworkElement owner)
-    {
-        t = Math.Clamp(t, 0.0, 1.0);
-        Color low     = GetThemeColor(owner, "PlotLowBrush");
-        Color midLow  = GetThemeColor(owner, "PlotMidLowBrush");
-        Color mid     = GetThemeColor(owner, "PlotMidBrush");
-        Color midHigh = GetThemeColor(owner, "PlotMidHighBrush");
-        Color high    = GetThemeColor(owner, "PlotHighBrush");
-
-        return t switch
-        {
-            <= 0.25 => Lerp(low,     midLow,  t / 0.25),
-            <= 0.50 => Lerp(midLow,  mid,     (t - 0.25) / 0.25),
-            <= 0.75 => Lerp(mid,     midHigh, (t - 0.50) / 0.25),
-            _       => Lerp(midHigh, high,    (t - 0.75) / 0.25)
-        };
-    }
-
-    /// <summary>
-    /// Resolves a named theme brush colour from the resource dictionary.
-    /// Checks the element's own resources first, then the application resources.
-    /// </summary>
-    private static Color GetThemeColor(FrameworkElement element, string resourceKey)
-    {
-        if (element.Resources.TryGetValue(resourceKey, out var res)
-            || Application.Current.Resources.TryGetValue(resourceKey, out res))
-        {
-            return res is SolidColorBrush brush ? brush.Color : Colors.Gray;
-        }
-        return Colors.Gray;
-    }
-
-    private static Color Lerp(Color a, Color b, double t) =>
-        Color.FromArgb(255,
-            (byte)(a.R + (b.R - a.R) * t),
-            (byte)(a.G + (b.G - a.G) * t),
-            (byte)(a.B + (b.B - a.B) * t));
 }
 
 /// <summary>Extension to position a TextBlock on a Canvas.</summary>

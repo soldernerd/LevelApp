@@ -18,6 +18,9 @@ public partial class App : Application
         // Settings
         services.AddSingleton<ISettingsService, SettingsService>();
 
+        // Theme
+        services.AddSingleton<IThemeService, ThemeService>();
+
         // Navigation
         services.AddSingleton<INavigationService, NavigationService>();
 
