@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LevelApp.App.Navigation;
 using LevelApp.App.Services;
+using LevelApp.Core.Geometry;
 using LevelApp.Core.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -120,6 +121,12 @@ public sealed partial class MainViewModel : ObservableObject
 
         SetActiveProject(result.project, result.path);
 
+        try
+        {
+            await RecalculateMissingResultsAsync(result.project);
+        }
+        catch { /* proceed without calculated results; user can start a new measurement */ }
+
         var completedSession = result.project.Measurements
             .LastOrDefault(m => m.InitialRound.Result is not null
                              || m.Corrections.Any(c => c.Result is not null));
@@ -201,6 +208,52 @@ public sealed partial class MainViewModel : ObservableObject
             ContentDialogResult.Secondary => true,
             _                             => false
         };
+    }
+
+    // ── Post-load calculation ─────────────────────────────────────────────────
+
+    /// <summary>
+    /// Runs the calculator for any round whose steps are fully populated but
+    /// whose result is missing — supports files saved before result serialisation
+    /// was enforced and externally produced files.
+    /// </summary>
+    private static async Task RecalculateMissingResultsAsync(Project project)
+    {
+        foreach (var session in project.Measurements)
+        {
+            try { await RecalculateSessionAsync(session, project.ObjectDefinition); }
+            catch { /* a bad session must not block the rest */ }
+        }
+    }
+
+    private static async Task RecalculateSessionAsync(MeasurementSession session, ObjectDefinition def)
+    {
+        var initialRound = session.InitialRound;
+        var strategy     = StrategyFactory.Create(session.StrategyId);
+        var parameters   = initialRound.CalculationParameters ?? new CalculationParameters();
+        var calculator   = CalculatorFactory.Create(parameters.MethodId, strategy);
+
+        if (initialRound.Result is null &&
+            initialRound.Steps.Count > 0 &&
+            initialRound.Steps.All(s => s.Reading.HasValue))
+        {
+            initialRound.Result = await Task.Run(() =>
+                calculator.Calculate(initialRound.Steps, def, parameters));
+        }
+
+        if (!initialRound.Steps.All(s => s.Reading.HasValue)) return;
+
+        foreach (var correction in session.Corrections)
+        {
+            if (correction.Result is not null) continue;
+            if (correction.ReplacedSteps.Count == 0) continue;
+
+            var mergedSteps = MeasurementRound.MergeWithReplacements(
+                initialRound.Steps, correction.ReplacedSteps);
+
+            correction.Result = await Task.Run(() =>
+                calculator.Calculate(mergedSteps, def, parameters));
+        }
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
