@@ -116,6 +116,7 @@ LevelApp/
 │   ├── Views/                   # ProjectSetupView, MeasurementView,
 │   │                            # ResultsView, CorrectionView, Dialogs/
 │   ├── ViewModels/              # MVVM view models
+│   ├── Controls/                # HelpButton, HelpLabel (reusable UserControls)
 │   ├── Services/                # ProjectFileService, SettingsService, ThemeService,
 │   │                            # LocalisationService
 │   ├── Helpers/                 # ThemeHelper (shared colour resolution for all renderers)
@@ -146,7 +147,6 @@ LevelApp/
 - [ ] USB HID instrument provider
 - [ ] Additional geometry modules (squareness, lathe bed, …)
 - [ ] PDF report export
-- [x] German / English localisation
 
 ---
 
