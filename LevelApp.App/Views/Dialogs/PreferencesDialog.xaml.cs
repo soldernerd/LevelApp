@@ -1,5 +1,4 @@
 using LevelApp.App.Services;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Windows.Storage.Pickers;
@@ -45,11 +44,6 @@ public sealed partial class PreferencesDialog : ContentDialog
         _themeIndex    = ThemeToIndex(settings.AppTheme);
 
         InitializeComponent();
-
-        var loc = App.Services.GetRequiredService<ILocalisationService>();
-        Title             = loc.Get("Preferences_Title.Text");
-        PrimaryButtonText = loc.Get("Preferences_OkButton.Content");
-        CloseButtonText   = loc.Get("Preferences_CancelButton.Content");
 
         FolderPathBox.Text = _settings.DefaultProjectFolder;
     }

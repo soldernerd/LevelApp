@@ -1,15 +1,17 @@
-using Microsoft.Windows.ApplicationModel.Resources;
+using Windows.ApplicationModel.Resources.Core;
 
 namespace LevelApp.App.Services;
 
 public sealed class LocalisationService : ILocalisationService
 {
-    private readonly ResourceMap _map;
+    // Use ResourceManager.Current — the singleton that WinUI 3 initialises for x:Uid.
+    // This is the only resource-loading mechanism that works for unpackaged apps.
+    private readonly ResourceMap _map =
+        ResourceManager.Current.MainResourceMap.GetSubtree("Resources");
 
-    public LocalisationService()
+    public string Get(string key)
     {
-        _map = new ResourceManager().MainResourceMap.GetSubtree("Resources");
+        try   { return _map.GetValue(key)?.ValueAsString ?? key; }
+        catch { return key; }
     }
-
-    public string Get(string key) => _map.GetValue(key)?.ValueAsString ?? key;
 }

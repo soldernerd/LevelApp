@@ -183,14 +183,20 @@
                         <StackPanel Spacing="4">
                             <!-- Label row with tooltip and ⓘ flyout -->
                             <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                <TextBlock Text="{x:Bind ViewModel.FlatnessLabel, Mode=OneWay}"
+                                <TextBlock x:Uid="Flatness_Label"
                                            Style="{StaticResource CaptionTextBlockStyle}"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                           VerticalAlignment="Center">
+                                           VerticalAlignment="Center"
+                                           Visibility="{x:Bind ViewModel.SurfacePlateOnlyVisibility, Mode=OneWay}">
                                     <ToolTipService.ToolTip>
                                         <ToolTip x:Uid="Flatness_Label_Tooltip"/>
                                     </ToolTipService.ToolTip>
                                 </TextBlock>
+                                <TextBlock x:Uid="PW_BestStraightness_Label"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           VerticalAlignment="Center"
+                                           Visibility="{x:Bind ViewModel.ParallelWaysOnlyVisibility, Mode=OneWay}"/>
                                 <Button Style="{StaticResource HelpButtonStyle}">
                                     <Button.Flyout>
                                         <Flyout Placement="Bottom">

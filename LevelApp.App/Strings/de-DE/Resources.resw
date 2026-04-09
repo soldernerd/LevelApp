@@ -142,6 +142,26 @@
   <data name="Preferences_OkButton.Content" xml:space="preserve"><value>OK</value></data>
   <data name="Preferences_CancelButton.Content" xml:space="preserve"><value>Abbrechen</value></data>
 
+  <!-- AboutDialog ContentDialog properties (x:Uid="AboutDlg") -->
+  <data name="AboutDlg.Title" xml:space="preserve"><value>Über LevelApp</value></data>
+  <data name="AboutDlg.CloseButtonText" xml:space="preserve"><value>Schließen</value></data>
+
+  <!-- PreferencesDialog ContentDialog properties (x:Uid="PrefsDlg") -->
+  <data name="PrefsDlg.Title" xml:space="preserve"><value>Einstellungen</value></data>
+  <data name="PrefsDlg.PrimaryButtonText" xml:space="preserve"><value>OK</value></data>
+  <data name="PrefsDlg.CloseButtonText" xml:space="preserve"><value>Abbrechen</value></data>
+
+  <!-- RecalculateDialog ContentDialog properties (x:Uid="RecalcDlg") -->
+  <data name="RecalcDlg.Title" xml:space="preserve"><value>Neuberechnung</value></data>
+  <data name="RecalcDlg.PrimaryButtonText" xml:space="preserve"><value>Neu berechnen</value></data>
+  <data name="RecalcDlg.SecondaryButtonText" xml:space="preserve"><value>Ergebnis im Projekt speichern</value></data>
+  <data name="RecalcDlg.CloseButtonText" xml:space="preserve"><value>Abbrechen</value></data>
+
+  <!-- NewMeasurementDialog ContentDialog properties (x:Uid="NewMeasDlg") -->
+  <data name="NewMeasDlg.Title" xml:space="preserve"><value>Neue Messung</value></data>
+  <data name="NewMeasDlg.PrimaryButtonText" xml:space="preserve"><value>Starten</value></data>
+  <data name="NewMeasDlg.CloseButtonText" xml:space="preserve"><value>Abbrechen</value></data>
+
   <!-- AboutDialog -->
   <data name="About_Title.Text" xml:space="preserve"><value>Über LevelApp</value></data>
   <data name="About_Description.Text" xml:space="preserve"><value>Auswertung präziser elektronischer Nivelliermessungen für die Maschinengeometriemessung und Tuschierplattenqualifizierung.</value></data>

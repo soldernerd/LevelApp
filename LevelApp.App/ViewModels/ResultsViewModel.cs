@@ -2,7 +2,6 @@ using CommunityToolkit.Mvvm.Input;
 using LevelApp.App.DisplayModules.ParallelWaysDisplay;
 using LevelApp.App.DisplayModules.SurfacePlot3D;
 using LevelApp.App.Navigation;
-using LevelApp.App.Services;
 using LevelApp.Core.Geometry;
 using LevelApp.Core.Geometry.SurfacePlate.Strategies;
 using LevelApp.Core.Models;
@@ -14,17 +13,15 @@ public sealed partial class ResultsViewModel : ViewModelBase
 {
     private readonly INavigationService  _navigation;
     private readonly MainViewModel       _mainViewModel;
-    private readonly ILocalisationService _loc;
 
     private Project            _project = null!;
     private MeasurementSession _session = null!;
     private SurfaceResult?     _currentResult;
 
-    public ResultsViewModel(INavigationService navigation, MainViewModel mainViewModel, ILocalisationService loc)
+    public ResultsViewModel(INavigationService navigation, MainViewModel mainViewModel)
     {
         _navigation    = navigation;
         _mainViewModel = mainViewModel;
-        _loc           = loc;
     }
 
     // ── Initialisation ────────────────────────────────────────────────────────
@@ -68,7 +65,6 @@ public sealed partial class ResultsViewModel : ViewModelBase
     {
         _currentResult = result;
         IsParallelWays = false;
-        FlatnessLabel  = _loc.Get("Flatness_Label.Text");
         var strategy   = StrategyFactory.Create(_session.StrategyId);
         var definition = _project.ObjectDefinition;
 
@@ -183,7 +179,6 @@ public sealed partial class ResultsViewModel : ViewModelBase
 
     // ── Parallel Ways-specific result properties ──────────────────────────────
 
-    public string FlatnessLabel        { get; private set; } = string.Empty;
     public string ParallelismText      { get; private set; } = string.Empty;
 
     // ── Data exposed to the Measurements canvas renderer ─────────────────────
@@ -270,7 +265,6 @@ public sealed partial class ResultsViewModel : ViewModelBase
         ParallelWaysStrategyParameters strat)
     {
         IsParallelWays = true;
-        FlatnessLabel  = _loc.Get("PW_BestStraightness_Label.Text");
 
         ProjectName    = _project.Name;
         ObjectTypeText = "Parallel Ways";

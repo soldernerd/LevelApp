@@ -1,5 +1,4 @@
 using LevelApp.Core.Models;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml.Controls;
 
 namespace LevelApp.App.Views.Dialogs;
@@ -19,11 +18,6 @@ public sealed partial class NewMeasurementDialog : ContentDialog
     public NewMeasurementDialog(ObjectDefinition definition, string defaultOperator)
     {
         InitializeComponent();
-
-        var loc = App.Services.GetRequiredService<LevelApp.App.Services.ILocalisationService>();
-        Title             = loc.Get("NewMeasurement_Title.Text");
-        PrimaryButtonText = loc.Get("NewMeasurement_OkButton.Content");
-        CloseButtonText   = loc.Get("NewMeasurement_CancelButton.Content");
 
         GeometrySummaryText.Text = BuildGeometrySummary(definition);
         OperatorBox.Text         = defaultOperator;

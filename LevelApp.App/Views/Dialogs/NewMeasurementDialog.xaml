@@ -2,6 +2,7 @@
     x:Class="LevelApp.App.Views.Dialogs.NewMeasurementDialog"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    x:Uid="NewMeasDlg"
     DefaultButton="Primary">
 
     <StackPanel Spacing="16" MinWidth="400">
