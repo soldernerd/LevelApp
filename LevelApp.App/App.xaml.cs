@@ -51,21 +51,21 @@ public partial class App : Application
         Services = BuildServiceProvider();
 
         // Load persisted settings before any UI is created
-        var settings = Services.GetRequiredService<ISettingsService>();
-        settings.Load();
-
-        // Apply language override before XAML is parsed so x:Uid strings use the right language.
-        // ApplicationLanguages.PrimaryLanguageOverride requires package identity and throws for
-        // unpackaged apps. ResourceContext.SetGlobalQualifierValue works unconditionally.
-        if (!string.IsNullOrEmpty(settings.AppLanguage))
-            Windows.ApplicationModel.Resources.Core.ResourceContext
-                .SetGlobalQualifierValue("Language", settings.AppLanguage);
+        Services.GetRequiredService<ISettingsService>().Load();
 
         this.InitializeComponent();
     }
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
+        // Apply language qualifier before any page XAML is parsed.
+        // Must run after InitializeComponent() so WinRT is fully initialised.
+        // Page XAMLs are lazy-loaded on first navigation, so this still takes effect.
+        var lang = Services.GetRequiredService<ISettingsService>().AppLanguage;
+        if (!string.IsNullOrEmpty(lang))
+            Windows.ApplicationModel.Resources.Core.ResourceContext
+                .SetGlobalQualifierValue("Language", lang);
+
         _window = new MainWindow();
         _window.Activate();
     }
