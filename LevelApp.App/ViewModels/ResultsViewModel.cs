@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.Input;
+using LevelApp.App.DisplayModules.ParallelWaysDisplay;
 using LevelApp.App.DisplayModules.SurfacePlot3D;
 using LevelApp.App.Navigation;
 using LevelApp.Core.Geometry;
@@ -30,17 +31,32 @@ public sealed partial class ResultsViewModel : ViewModelBase
         _project = args.Project;
         _session = args.Session;
 
-        SurfaceResult result =
-            _session.Corrections.Count > 0 && _session.Corrections.Last().Result is { } cr
-                ? cr
-                : _session.InitialRound.Result
-                  ?? throw new InvalidOperationException("Session has no result to display.");
+        if (_project.ObjectDefinition.GeometryModuleId == "ParallelWays")
+        {
+            var pwResult = _session.InitialRound.ParallelWaysResult
+                ?? throw new InvalidOperationException("Session has no Parallel Ways result to display.");
 
-        var strategy   = StrategyFactory.Create(_session.StrategyId);
-        var definition = _project.ObjectDefinition;
+            var pwp   = ParallelWaysParameters.From(_project.ObjectDefinition.Parameters);
+            var strat = ParallelWaysStrategyParameters.From(_project.ObjectDefinition.Parameters);
 
-        UpdateDisplay(result, GetCurrentCalculationParameters(result));
-        PlotContent = new SurfacePlot3DDisplay().Render(result, strategy, definition, _session.InitialRound.Steps);
+            UpdateParallelWaysDisplay(pwResult, pwp, strat);
+            PlotContent = new ParallelWaysDisplay().Render(
+                pwResult, pwp, strat, _session.InitialRound.Steps);
+        }
+        else
+        {
+            SurfaceResult result =
+                _session.Corrections.Count > 0 && _session.Corrections.Last().Result is { } cr
+                    ? cr
+                    : _session.InitialRound.Result
+                      ?? throw new InvalidOperationException("Session has no result to display.");
+
+            var strategy   = StrategyFactory.Create(_session.StrategyId);
+            var definition = _project.ObjectDefinition;
+
+            UpdateDisplay(result, GetCurrentCalculationParameters(result));
+            PlotContent = new SurfacePlot3DDisplay().Render(result, strategy, definition, _session.InitialRound.Steps);
+        }
 
         OnPropertyChanged(string.Empty);
     }
@@ -48,6 +64,8 @@ public sealed partial class ResultsViewModel : ViewModelBase
     private void UpdateDisplay(SurfaceResult result, CalculationParameters parameters)
     {
         _currentResult = result;
+        IsParallelWays = false;
+        FlatnessLabel  = "Flatness (peak-to-valley)";
         var strategy   = StrategyFactory.Create(_session.StrategyId);
         var definition = _project.ObjectDefinition;
 
@@ -151,6 +169,18 @@ public sealed partial class ResultsViewModel : ViewModelBase
 
     public object? PlotContent { get; private set; }
 
+    // ── Geometry-type visibility ──────────────────────────────────────────────
+
+    public bool       IsParallelWays              { get; private set; }
+    public bool       IsSurfacePlate              => !IsParallelWays;
+    public Visibility SurfacePlateOnlyVisibility  => IsParallelWays ? Visibility.Collapsed : Visibility.Visible;
+    public Visibility ParallelWaysOnlyVisibility  => IsParallelWays ? Visibility.Visible   : Visibility.Collapsed;
+
+    // ── Parallel Ways-specific result properties ──────────────────────────────
+
+    public string FlatnessLabel        { get; private set; } = "Flatness (peak-to-valley)";
+    public string ParallelismText      { get; private set; } = string.Empty;
+
     // ── Data exposed to the Measurements canvas renderer ─────────────────────
 
     public SurfaceResult?                 ActiveResult     { get; private set; }
@@ -227,6 +257,69 @@ public sealed partial class ResultsViewModel : ViewModelBase
             _project.ModifiedAt = DateTime.UtcNow;
             _mainViewModel.MarkDirty();
         }
+    }
+
+    private void UpdateParallelWaysDisplay(
+        ParallelWaysResult            pwResult,
+        ParallelWaysParameters        pwp,
+        ParallelWaysStrategyParameters strat)
+    {
+        IsParallelWays = true;
+        FlatnessLabel  = "Best Rail Straightness";
+
+        ProjectName    = _project.Name;
+        ObjectTypeText = "Parallel Ways";
+        DimensionsText = pwp.Rails.Count > 0
+            ? $"{pwp.Rails.Count} rails, {pwp.Rails.Max(r => r.LengthMm):G} mm"
+            : string.Empty;
+        StrategyText       = "Parallel Ways";
+        StrategyParamsText = $"{pwp.Orientation}, {strat.Tasks.Count} task(s)";
+        CalcMethodText     = strat.SolverMode.ToString();
+        SigmaThresholdText = $"{pwResult.SigmaThreshold:G}\u03c3";
+        ExcludedStepsText  = pwResult.FlaggedStepIndices.Length > 0
+            ? $"{pwResult.FlaggedStepIndices.Length} auto"
+            : "None";
+
+        // Best (worst-case) straightness across all rails
+        double bestStraightness = pwResult.RailProfiles.Count > 0
+            ? pwResult.RailProfiles.Max(p => p.StraightnessValueMm)
+            : 0.0;
+        FlatnessText     = $"{bestStraightness * 1000.0:F3} \u00b5m";
+        SigmaText        = $"\u03c3 = {pwResult.ResidualRms * 1000.0:F3} \u00b5m";
+        FlaggedCountText = pwResult.FlaggedStepIndices.Length == 0
+            ? "No flagged steps"
+            : $"{pwResult.FlaggedStepIndices.Length} flagged step(s)";
+
+        HasFlaggedSteps         = pwResult.FlaggedStepIndices.Length > 0;
+        CorrectButtonVisibility = Visibility.Collapsed;
+        FlaggedSteps            = [];
+        FlaggedListVisibility   = Visibility.Collapsed;
+        ClosureStatsVisibility  = Visibility.Collapsed;
+
+        // Per-rail straightness + per-pair parallelism
+        var railLines = pwResult.RailProfiles
+            .Select(p =>
+            {
+                string label = pwp.Rails.Count > p.RailIndex
+                    ? pwp.Rails[p.RailIndex].Label
+                    : $"Rail {p.RailIndex + 1}";
+                return $"{label}: {p.StraightnessValueMm * 1000.0:F3} \u00b5m";
+            });
+
+        var pairLines = pwResult.ParallelismProfiles
+            .Select(pp =>
+            {
+                string la = pwp.Rails.Count > pp.RailIndexA ? pwp.Rails[pp.RailIndexA].Label : $"R{pp.RailIndexA}";
+                string lb = pwp.Rails.Count > pp.RailIndexB ? pwp.Rails[pp.RailIndexB].Label : $"R{pp.RailIndexB}";
+                return $"{la}\u2013{lb}: {pp.ParallelismValueMm * 1000.0:F3} \u00b5m";
+            });
+
+        var allLines = railLines.Concat(new[] { "Parallelism:" }).Concat(pairLines);
+        ParallelismText = string.Join("\n", allLines);
+
+        ActiveResult     = null;
+        ActiveSteps      = _session.InitialRound.Steps;
+        ActiveDefinition = _project.ObjectDefinition;
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

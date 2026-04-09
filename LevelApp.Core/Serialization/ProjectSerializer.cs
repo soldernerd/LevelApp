@@ -10,7 +10,13 @@ namespace LevelApp.Core.Serialization;
 /// </summary>
 public static class ProjectSerializer
 {
-    public const string CurrentSchemaVersion = "1.0";
+    /// <summary>
+    /// Current schema version written to every new file.
+    /// v1.1 adds MeasurementRound.ParallelWaysResult and MeasurementStep.PassPhase.
+    /// v1.0 files are accepted on load — PassPhase defaults to NotApplicable
+    /// and ParallelWaysResult defaults to null, so no migration is required.
+    /// </summary>
+    public const string CurrentSchemaVersion = "1.1";
 
     private static readonly JsonSerializerOptions Options = new()
     {
@@ -40,10 +46,12 @@ public static class ProjectSerializer
         var file = JsonSerializer.Deserialize<LevelProjectFile>(json, Options)
             ?? throw new JsonException("Root object is null.");
 
-        if (file.SchemaVersion != CurrentSchemaVersion)
+        // Accept both the current version and the previous v1.0 format.
+        // New fields (PassPhase, ParallelWaysResult) default correctly via JSON binding.
+        if (file.SchemaVersion is not ("1.0" or "1.1"))
             throw new NotSupportedException(
                 $"Unsupported schema version '{file.SchemaVersion}'. " +
-                $"Expected '{CurrentSchemaVersion}'.");
+                $"Expected '1.0' or '1.1'.");
 
         return file.Project ?? throw new JsonException("'project' field is missing or null.");
     }

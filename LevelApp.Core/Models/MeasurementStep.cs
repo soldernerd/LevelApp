@@ -10,6 +10,12 @@ public enum Orientation
     NorthEast, NorthWest, SouthEast, SouthWest
 }
 
+/// <summary>
+/// Indicates whether a step belongs to the forward or return sweep of a
+/// forward-and-return pass.  <see cref="NotApplicable"/> for all Surface Plate steps.
+/// </summary>
+public enum PassPhase { NotApplicable, Forward, Return }
+
 public class MeasurementStep
 {
     public int Index { get; set; }
@@ -24,6 +30,7 @@ public class MeasurementStep
     /// <summary>
     /// Identity of the from-node. Full Grid: "col{c}_row{r}".
     /// Union Jack: "arm{Dir}_seg{k}" or "center".
+    /// Parallel Ways: "rail{r}_sta{s}".
     /// </summary>
     public string NodeId { get; set; } = string.Empty;
 
@@ -36,4 +43,11 @@ public class MeasurementStep
     /// </summary>
     [JsonIgnore]
     public int PassId { get; set; }
+
+    /// <summary>
+    /// Forward / Return phase for Parallel Ways ForwardAndReturn tasks.
+    /// Always <see cref="PassPhase.NotApplicable"/> for Surface Plate steps.
+    /// Serialized so that the calculator can distinguish passes when loading a saved project.
+    /// </summary>
+    public PassPhase PassPhase { get; set; } = PassPhase.NotApplicable;
 }

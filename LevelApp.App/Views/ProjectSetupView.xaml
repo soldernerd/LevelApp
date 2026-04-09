@@ -2,6 +2,7 @@
     x:Class="LevelApp.App.Views.ProjectSetupView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:LevelApp.App.ViewModels"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
     <Grid ColumnDefinitions="*,Auto">
@@ -47,13 +48,18 @@
                            Margin="0,0,0,12"/>
 
                 <ComboBox Header="Geometry type"
-                          SelectedIndex="0"
+                          SelectedIndex="{x:Bind ViewModel.SelectedGeometryIndex, Mode=TwoWay}"
                           HorizontalAlignment="Stretch"
-                          Margin="0,0,0,8">
+                          Margin="0,0,0,8"
+                          SelectionChanged="OnGeometryChanged">
                     <ComboBoxItem>Surface Plate</ComboBoxItem>
+                    <ComboBoxItem>Parallel Ways</ComboBoxItem>
                 </ComboBox>
 
-                <Grid ColumnSpacing="12" Margin="0,0,0,32">
+                <!-- Surface Plate: width/height -->
+                <Grid ColumnSpacing="12"
+                      Margin="0,0,0,32"
+                      Visibility="{x:Bind ViewModel.IsSurfacePlate, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="*"/>
@@ -72,74 +78,305 @@
                                ValueChanged="OnParameterChanged"/>
                 </Grid>
 
+                <!-- Parallel Ways: orientation + rails -->
+                <StackPanel Margin="0,0,0,32"
+                            Spacing="8"
+                            Visibility="{x:Bind ViewModel.IsParallelWays, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+
+                    <ComboBox Header="Orientation"
+                              SelectedIndex="{x:Bind ViewModel.WaysOrientationIndex, Mode=TwoWay}"
+                              HorizontalAlignment="Stretch"
+                              SelectionChanged="OnParallelWaysComboChanged">
+                        <ComboBoxItem>Horizontal</ComboBoxItem>
+                        <ComboBoxItem>Vertical</ComboBoxItem>
+                    </ComboBox>
+
+                    <TextBlock Text="Rails"
+                               Style="{StaticResource BodyStrongTextBlockStyle}"
+                               Margin="0,8,0,0"/>
+
+                    <ItemsControl ItemsSource="{x:Bind ViewModel.RailItems, Mode=OneWay}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:RailViewModel">
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="4"
+                                        Padding="10,8"
+                                        Margin="0,0,0,6">
+                                    <StackPanel Spacing="6">
+                                        <!-- Label, IsReference, Remove -->
+                                        <Grid ColumnSpacing="6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox Grid.Column="0"
+                                                     PlaceholderText="Rail label"
+                                                     Text="{x:Bind Label, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                            <CheckBox Grid.Column="1"
+                                                      Content="Ref"
+                                                      IsChecked="{x:Bind IsReference, Mode=OneWay}"
+                                                      VerticalAlignment="Center"
+                                                      Click="OnRailIsReferenceClick"/>
+                                            <Button Grid.Column="2"
+                                                    VerticalAlignment="Center"
+                                                    Click="OnRemoveRailClick">
+                                                <FontIcon Glyph="&#xE711;" FontSize="12"/>
+                                            </Button>
+                                        </Grid>
+                                        <!-- Length, Lateral Sep -->
+                                        <Grid ColumnSpacing="8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <NumberBox Grid.Column="0"
+                                                       Header="Length (mm)"
+                                                       Value="{x:Bind LengthMm, Mode=TwoWay}"
+                                                       Minimum="1" SmallChange="100" LargeChange="500"
+                                                       SpinButtonPlacementMode="Compact"
+                                                       ValueChanged="OnParallelWaysNumberChanged"/>
+                                            <NumberBox Grid.Column="1"
+                                                       Header="Lateral sep. (mm)"
+                                                       Value="{x:Bind LateralSeparationMm, Mode=TwoWay}"
+                                                       Minimum="0" SmallChange="50" LargeChange="200"
+                                                       SpinButtonPlacementMode="Compact"
+                                                       ValueChanged="OnParallelWaysNumberChanged"/>
+                                        </Grid>
+                                        <!-- Vert Offset, Axial Offset -->
+                                        <Grid ColumnSpacing="8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <NumberBox Grid.Column="0"
+                                                       Header="Vert. offset (mm)"
+                                                       Value="{x:Bind VerticalOffsetMm, Mode=TwoWay}"
+                                                       SmallChange="10" LargeChange="50"
+                                                       SpinButtonPlacementMode="Compact"
+                                                       ValueChanged="OnParallelWaysNumberChanged"/>
+                                            <NumberBox Grid.Column="1"
+                                                       Header="Axial offset (mm)"
+                                                       Value="{x:Bind AxialOffsetMm, Mode=TwoWay}"
+                                                       SmallChange="10" LargeChange="50"
+                                                       SpinButtonPlacementMode="Compact"
+                                                       ValueChanged="OnParallelWaysNumberChanged"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Button Content="Add Rail"
+                            Command="{x:Bind ViewModel.AddRailCommand}"
+                            HorizontalAlignment="Left"/>
+
+                </StackPanel>
+
                 <!-- ── Strategy ──────────────────────────────────────────── -->
                 <TextBlock Text="Measurement Strategy"
                            Style="{StaticResource SubtitleTextBlockStyle}"
                            Margin="0,0,0,12"/>
 
-                <ComboBox Header="Strategy"
-                          SelectedIndex="{x:Bind ViewModel.SelectedStrategyIndex, Mode=TwoWay}"
-                          HorizontalAlignment="Stretch"
-                          Margin="0,0,0,12"
-                          SelectionChanged="OnStrategyChanged">
-                    <ComboBoxItem>Full Grid (boustrophedon)</ComboBoxItem>
-                    <ComboBoxItem>Union Jack</ComboBoxItem>
-                </ComboBox>
+                <!-- Surface Plate strategy selector + params -->
+                <StackPanel Spacing="0"
+                            Visibility="{x:Bind ViewModel.IsSurfacePlate, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
 
-                <!-- Full Grid parameters -->
-                <Grid ColumnSpacing="12"
-                      Margin="0,0,0,12"
-                      Visibility="{x:Bind ViewModel.IsFullGrid, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <NumberBox Grid.Column="0"
-                               Header="Columns"
-                               Value="{x:Bind ViewModel.ColumnsCount, Mode=TwoWay}"
-                               Minimum="2" Maximum="50"
-                               SmallChange="1" LargeChange="5"
-                               SpinButtonPlacementMode="Compact"
-                               ValueChanged="OnParameterChanged"/>
-                    <NumberBox Grid.Column="1"
-                               Header="Rows"
-                               Value="{x:Bind ViewModel.RowsCount, Mode=TwoWay}"
-                               Minimum="2" Maximum="50"
-                               SmallChange="1" LargeChange="5"
-                               SpinButtonPlacementMode="Compact"
-                               ValueChanged="OnParameterChanged"/>
-                </Grid>
-
-                <!-- Union Jack parameters -->
-                <Grid ColumnSpacing="12"
-                      Margin="0,0,0,12"
-                      Visibility="{x:Bind ViewModel.IsUnionJack, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <NumberBox Grid.Column="0"
-                               Header="Segments"
-                               Value="{x:Bind ViewModel.Segments, Mode=TwoWay}"
-                               Minimum="1" Maximum="20"
-                               SmallChange="1" LargeChange="2"
-                               SpinButtonPlacementMode="Compact"
-                               ValueChanged="OnParameterChanged"/>
-                    <ComboBox Grid.Column="1"
-                              Header="Rings"
-                              SelectedIndex="{x:Bind ViewModel.UnionJackRingsIndex, Mode=TwoWay}"
+                    <ComboBox Header="Strategy"
+                              SelectedIndex="{x:Bind ViewModel.SelectedStrategyIndex, Mode=TwoWay}"
                               HorizontalAlignment="Stretch"
-                              SelectionChanged="OnRingsOptionChanged">
-                        <ComboBoxItem>None</ComboBoxItem>
-                        <ComboBoxItem>Circumference</ComboBoxItem>
-                        <ComboBoxItem>Full</ComboBoxItem>
+                              Margin="0,0,0,12"
+                              SelectionChanged="OnStrategyChanged">
+                        <ComboBoxItem>Full Grid (boustrophedon)</ComboBoxItem>
+                        <ComboBoxItem>Union Jack</ComboBoxItem>
                     </ComboBox>
-                </Grid>
+
+                    <!-- Full Grid parameters -->
+                    <Grid ColumnSpacing="12"
+                          Margin="0,0,0,12"
+                          Visibility="{x:Bind ViewModel.IsFullGrid, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <NumberBox Grid.Column="0"
+                                   Header="Columns"
+                                   Value="{x:Bind ViewModel.ColumnsCount, Mode=TwoWay}"
+                                   Minimum="2" Maximum="50"
+                                   SmallChange="1" LargeChange="5"
+                                   SpinButtonPlacementMode="Compact"
+                                   ValueChanged="OnParameterChanged"/>
+                        <NumberBox Grid.Column="1"
+                                   Header="Rows"
+                                   Value="{x:Bind ViewModel.RowsCount, Mode=TwoWay}"
+                                   Minimum="2" Maximum="50"
+                                   SmallChange="1" LargeChange="5"
+                                   SpinButtonPlacementMode="Compact"
+                                   ValueChanged="OnParameterChanged"/>
+                    </Grid>
+
+                    <!-- Union Jack parameters -->
+                    <Grid ColumnSpacing="12"
+                          Margin="0,0,0,12"
+                          Visibility="{x:Bind ViewModel.IsUnionJack, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <NumberBox Grid.Column="0"
+                                   Header="Segments"
+                                   Value="{x:Bind ViewModel.Segments, Mode=TwoWay}"
+                                   Minimum="1" Maximum="20"
+                                   SmallChange="1" LargeChange="2"
+                                   SpinButtonPlacementMode="Compact"
+                                   ValueChanged="OnParameterChanged"/>
+                        <ComboBox Grid.Column="1"
+                                  Header="Rings"
+                                  SelectedIndex="{x:Bind ViewModel.UnionJackRingsIndex, Mode=TwoWay}"
+                                  HorizontalAlignment="Stretch"
+                                  SelectionChanged="OnRingsOptionChanged">
+                            <ComboBoxItem>None</ComboBoxItem>
+                            <ComboBoxItem>Circumference</ComboBoxItem>
+                            <ComboBoxItem>Full</ComboBoxItem>
+                        </ComboBox>
+                    </Grid>
+
+                </StackPanel>
+
+                <!-- Parallel Ways strategy: tasks + algorithm settings -->
+                <StackPanel Spacing="8"
+                            Visibility="{x:Bind ViewModel.IsParallelWays, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+
+                    <TextBlock Text="Tasks"
+                               Style="{StaticResource BodyStrongTextBlockStyle}"/>
+
+                    <ItemsControl ItemsSource="{x:Bind ViewModel.TaskItems, Mode=OneWay}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:TaskViewModel">
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="4"
+                                        Padding="10,8"
+                                        Margin="0,0,0,6">
+                                    <StackPanel Spacing="6">
+                                        <!-- Type, Pass, Up/Down/Remove -->
+                                        <Grid ColumnSpacing="6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <ComboBox Grid.Column="0"
+                                                      Header="Type"
+                                                      SelectedIndex="{x:Bind TaskTypeIndex, Mode=TwoWay}"
+                                                      HorizontalAlignment="Stretch"
+                                                      SelectionChanged="OnTaskTypeChanged">
+                                                <ComboBoxItem>Along Rail</ComboBoxItem>
+                                                <ComboBoxItem>Bridge</ComboBoxItem>
+                                            </ComboBox>
+                                            <ComboBox Grid.Column="1"
+                                                      Header="Pass"
+                                                      SelectedIndex="{x:Bind PassDirectionIndex, Mode=TwoWay}"
+                                                      HorizontalAlignment="Stretch"
+                                                      SelectionChanged="OnParallelWaysComboChanged">
+                                                <ComboBoxItem>Single</ComboBoxItem>
+                                                <ComboBoxItem>Fwd + Return</ComboBoxItem>
+                                            </ComboBox>
+                                            <StackPanel Grid.Column="2"
+                                                        Orientation="Horizontal"
+                                                        Spacing="2"
+                                                        VerticalAlignment="Bottom">
+                                                <Button Click="OnMoveTaskUpClick" Padding="6,4">
+                                                    <FontIcon Glyph="&#xE74A;" FontSize="11"/>
+                                                </Button>
+                                                <Button Click="OnMoveTaskDownClick" Padding="6,4">
+                                                    <FontIcon Glyph="&#xE74B;" FontSize="11"/>
+                                                </Button>
+                                                <Button Click="OnRemoveTaskClick" Padding="6,4">
+                                                    <FontIcon Glyph="&#xE711;" FontSize="11"/>
+                                                </Button>
+                                            </StackPanel>
+                                        </Grid>
+                                        <!-- Step distance (all tasks) -->
+                                        <NumberBox Header="Step distance (mm)"
+                                                   Value="{x:Bind StepDistanceMm, Mode=TwoWay}"
+                                                   Minimum="1" SmallChange="50" LargeChange="200"
+                                                   SpinButtonPlacementMode="Compact"
+                                                   ValueChanged="OnParallelWaysNumberChanged"/>
+                                        <!-- Rail index (Along Rail) -->
+                                        <NumberBox Header="Rail index"
+                                                   Value="{x:Bind RailIndexA, Mode=TwoWay}"
+                                                   Minimum="0" Maximum="99"
+                                                   SmallChange="1" LargeChange="1"
+                                                   SpinButtonPlacementMode="Compact"
+                                                   ValueChanged="OnParallelWaysNumberChanged"
+                                                   Visibility="{x:Bind IsAlongRail, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                        <!-- Rail indices (Bridge only) -->
+                                        <Grid ColumnSpacing="8"
+                                              Visibility="{x:Bind IsBridge, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <NumberBox Grid.Column="0"
+                                                       Header="Rail A index"
+                                                       Value="{x:Bind RailIndexA, Mode=TwoWay}"
+                                                       Minimum="0" Maximum="99"
+                                                       SmallChange="1" LargeChange="1"
+                                                       SpinButtonPlacementMode="Compact"
+                                                       ValueChanged="OnParallelWaysNumberChanged"/>
+                                            <NumberBox Grid.Column="1"
+                                                       Header="Rail B index"
+                                                       Value="{x:Bind RailIndexB, Mode=TwoWay}"
+                                                       Minimum="0" Maximum="99"
+                                                       SmallChange="1" LargeChange="1"
+                                                       SpinButtonPlacementMode="Compact"
+                                                       ValueChanged="OnParallelWaysNumberChanged"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Button Content="Add Task"
+                            Command="{x:Bind ViewModel.AddTaskCommand}"
+                            HorizontalAlignment="Left"/>
+
+                    <Grid ColumnSpacing="12" Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <ComboBox Grid.Column="0"
+                                  Header="Drift correction"
+                                  SelectedIndex="{x:Bind ViewModel.DriftCorrectionIndex, Mode=TwoWay}"
+                                  HorizontalAlignment="Stretch"
+                                  SelectionChanged="OnParallelWaysComboChanged">
+                            <ComboBoxItem>First Station Anchor</ComboBoxItem>
+                            <ComboBoxItem>Linear Drift Correction</ComboBoxItem>
+                            <ComboBoxItem>Least Squares</ComboBoxItem>
+                        </ComboBox>
+                        <ComboBox Grid.Column="1"
+                                  Header="Solver mode"
+                                  SelectedIndex="{x:Bind ViewModel.SolverModeIndex, Mode=TwoWay}"
+                                  HorizontalAlignment="Stretch"
+                                  SelectionChanged="OnParallelWaysComboChanged">
+                            <ComboBoxItem>Independent + Reconcile</ComboBoxItem>
+                            <ComboBoxItem>Global Least Squares</ComboBoxItem>
+                        </ComboBox>
+                    </Grid>
+
+                </StackPanel>
 
                 <!-- Step-count preview -->
                 <StackPanel Orientation="Horizontal"
                             Spacing="8"
-                            Margin="0,0,0,32">
+                            Margin="0,16,0,32">
                     <FontIcon Glyph="&#xE895;"
                               FontSize="14"
                               VerticalAlignment="Center"

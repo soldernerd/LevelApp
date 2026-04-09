@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LevelApp.App.Navigation;
 using LevelApp.Core.Geometry;
+using LevelApp.Core.Geometry.ParallelWays;
 using LevelApp.Core.Models;
 using Microsoft.UI.Xaml;
 
@@ -36,10 +37,22 @@ public sealed partial class MeasurementViewModel : ViewModelBase
         _steps      = _session.InitialRound.Steps;
         _definition = _project.ObjectDefinition;
 
-        GridColumns = _definition.Parameters.TryGetValue("columnsCount", out var c) ? Convert.ToInt32(c) : 0;
-        GridRows    = _definition.Parameters.TryGetValue("rowsCount",    out var r) ? Convert.ToInt32(r) : 0;
-        WidthMm     = _definition.Parameters.TryGetValue("widthMm",      out var w) ? Convert.ToDouble(w) : 0.0;
-        HeightMm    = _definition.Parameters.TryGetValue("heightMm",     out var h) ? Convert.ToDouble(h) : 0.0;
+        IsParallelWays = _definition.GeometryModuleId == "ParallelWays";
+
+        if (IsParallelWays)
+        {
+            GridColumns = 0;
+            GridRows    = 0;
+            WidthMm     = 0.0;
+            HeightMm    = 0.0;
+        }
+        else
+        {
+            GridColumns = _definition.Parameters.TryGetValue("columnsCount", out var c) ? Convert.ToInt32(c) : 0;
+            GridRows    = _definition.Parameters.TryGetValue("rowsCount",    out var r) ? Convert.ToInt32(r) : 0;
+            WidthMm     = _definition.Parameters.TryGetValue("widthMm",      out var w) ? Convert.ToDouble(w) : 0.0;
+            HeightMm    = _definition.Parameters.TryGetValue("heightMm",     out var h) ? Convert.ToDouble(h) : 0.0;
+        }
 
         CurrentStepIndex = 0;
         Reading          = double.NaN;
@@ -50,11 +63,12 @@ public sealed partial class MeasurementViewModel : ViewModelBase
 
     // ── Grid geometry (set during Initialise) ─────────────────────────────────
 
-    public int              GridColumns { get; private set; }
-    public int              GridRows    { get; private set; }
-    public double           WidthMm     { get; private set; }
-    public double           HeightMm    { get; private set; }
-    public ObjectDefinition Definition  => _definition;
+    public bool             IsParallelWays { get; private set; }
+    public int              GridColumns    { get; private set; }
+    public int              GridRows       { get; private set; }
+    public double           WidthMm        { get; private set; }
+    public double           HeightMm       { get; private set; }
+    public ObjectDefinition Definition     => _definition;
 
     // ── Observable state ──────────────────────────────────────────────────────
 
@@ -136,14 +150,27 @@ public sealed partial class MeasurementViewModel : ViewModelBase
 
             var definition = _definition;
             var round      = _session.InitialRound;
-            var strategy   = StrategyFactory.Create(_session.StrategyId);
-            var calculator = CalculatorFactory.Create("LeastSquares", strategy);
-            var parameters = round.CalculationParameters ?? new CalculationParameters();
 
-            var result = await Task.Run(() => calculator.Calculate(round.Steps, definition, parameters));
+            if (IsParallelWays)
+            {
+                var pwCalc     = new ParallelWaysCalculator();
+                var pwParams   = new CalculationParameters();
 
-            round.Result      = result;
-            round.CompletedAt = DateTime.UtcNow;
+                var pwResult = await Task.Run(
+                    () => pwCalc.Calculate(round.Steps, definition, pwParams));
+                round.ParallelWaysResult = pwResult;
+            }
+            else
+            {
+                var strategy   = StrategyFactory.Create(_session.StrategyId);
+                var calculator = CalculatorFactory.Create("LeastSquares", strategy);
+                var parameters = round.CalculationParameters ?? new CalculationParameters();
+
+                var result = await Task.Run(() => calculator.Calculate(round.Steps, definition, parameters));
+                round.Result = result;
+            }
+
+            round.CompletedAt   = DateTime.UtcNow;
             _project.ModifiedAt = DateTime.UtcNow;
 
             IsCalculating = false;

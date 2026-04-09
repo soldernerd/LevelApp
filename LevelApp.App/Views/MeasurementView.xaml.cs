@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using LevelApp.App.Navigation;
 using LevelApp.App.ViewModels;
+using LevelApp.Core.Geometry.ParallelWays.Strategies;
 using LevelApp.Core.Geometry.SurfacePlate.Strategies;
 using LevelApp.Core.Models;
 using Orientation = LevelApp.Core.Models.Orientation;
@@ -95,6 +96,13 @@ public sealed partial class MeasurementView : Page
         double widthMm   = ViewModel.WidthMm;
         double heightMm  = ViewModel.HeightMm;
 
+        // Parallel Ways sessions use a dedicated rail-line renderer
+        if (ViewModel.IsParallelWays)
+        {
+            DrawParallelWaysMap(currentStep, curIdx, steps);
+            return;
+        }
+
         // Union Jack (and other non-grid strategies) don't use GridColumns/GridRows
         if (cols <= 0 || rows <= 0)
         {
@@ -180,6 +188,98 @@ public sealed partial class MeasurementView : Page
         // Canvas size: last node centre + padding to avoid clipping
         GridCanvas.Width  = (cols - 1) * xSpacing + (CanvasPad + HighlightR) * 2;
         GridCanvas.Height = (rows - 1) * ySpacing + (CanvasPad + HighlightR) * 2;
+    }
+
+    /// <summary>
+    /// Draws the Parallel Ways step map: each rail is a horizontal line of
+    /// station dots.  Step edges run along-rail or as vertical bridge connectors.
+    /// Colour states: pending grey → current orange → completed green.
+    /// </summary>
+    private void DrawParallelWaysMap(
+        MeasurementStep               currentStep,
+        int                           curIdx,
+        IReadOnlyList<MeasurementStep> steps)
+    {
+        var definition = ViewModel.Definition;
+
+        const double railSpacingPx = 60.0;
+        const double pad           = 20.0;
+
+        // Collect all unique node IDs and figure out the rail/station extent
+        var allNodeIds = steps
+            .SelectMany(s => new[] { s.NodeId, s.ToNodeId })
+            .Where(id => !string.IsNullOrEmpty(id))
+            .Distinct()
+            .ToList();
+
+        int maxRail = 0, maxSta = 0;
+        foreach (var id in allNodeIds)
+        {
+            var (r, s) = ParallelWaysStrategy.ParseNodeId(id);
+            if (r > maxRail) maxRail = r;
+            if (s > maxSta)  maxSta  = s;
+        }
+
+        int numRails = maxRail + 1;
+        int numSta   = maxSta  + 1;
+
+        double stationSpacingPx = numSta > 1
+            ? Math.Max(MinSpacingPx, (TargetMaxPx - pad * 2) / (numSta - 1))
+            : TargetMaxPx / 2;
+
+        (double x, double y) NodePos(string nodeId)
+        {
+            var (r, s) = ParallelWaysStrategy.ParseNodeId(nodeId);
+            return (pad + s * stationSpacingPx, pad + r * railSpacingPx);
+        }
+
+        // ── Draw edges ────────────────────────────────────────────────────────
+        for (int i = 0; i < steps.Count; i++)
+        {
+            var s = steps[i];
+            if (string.IsNullOrEmpty(s.NodeId) || string.IsNullOrEmpty(s.ToNodeId)) continue;
+
+            var (fx, fy) = NodePos(s.NodeId);
+            var (tx, ty) = NodePos(s.ToNodeId);
+
+            if (i == curIdx)
+            {
+                AddArrow(fx, fy, tx, ty, ActiveColor, 2.5);
+            }
+            else
+            {
+                Color  edgeColor = i < curIdx ? GreenColor : PendingColor;
+                double thickness = i < curIdx ? 2.0 : 1.0;
+                GridCanvas.Children.Add(new Line
+                {
+                    X1 = fx, Y1 = fy, X2 = tx, Y2 = ty,
+                    Stroke          = new SolidColorBrush(edgeColor),
+                    StrokeThickness = thickness
+                });
+            }
+        }
+
+        // ── Draw nodes ────────────────────────────────────────────────────────
+        foreach (var nodeId in allNodeIds)
+        {
+            bool isEndpoint = nodeId == currentStep.NodeId || nodeId == currentStep.ToNodeId;
+            Color  color  = isEndpoint ? ActiveColor : GreyColor;
+            double radius = isEndpoint ? HighlightR  : NodeRadius;
+
+            var (cx, cy) = NodePos(nodeId);
+            var ellipse = new Ellipse
+            {
+                Width  = radius * 2,
+                Height = radius * 2,
+                Fill   = new SolidColorBrush(color)
+            };
+            Canvas.SetLeft(ellipse, cx - radius);
+            Canvas.SetTop(ellipse,  cy - radius);
+            GridCanvas.Children.Add(ellipse);
+        }
+
+        GridCanvas.Width  = pad * 2 + (numSta - 1) * stationSpacingPx;
+        GridCanvas.Height = pad * 2 + (numRails - 1) * railSpacingPx;
     }
 
     /// <summary>

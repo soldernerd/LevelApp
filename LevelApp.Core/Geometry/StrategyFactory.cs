@@ -1,3 +1,4 @@
+using LevelApp.Core.Geometry.ParallelWays.Strategies;
 using LevelApp.Core.Geometry.SurfacePlate.Strategies;
 using LevelApp.Core.Interfaces;
 
@@ -9,8 +10,10 @@ namespace LevelApp.Core.Geometry;
 /// </summary>
 public static class StrategyFactory
 {
-    public static IMeasurementStrategy Create(string strategyId) =>
-        strategyId == "UnionJack"
-            ? new UnionJackStrategy()
-            : new FullGridStrategy();
+    public static IMeasurementStrategy Create(string strategyId) => strategyId switch
+    {
+        "UnionJack"    => new UnionJackStrategy(),
+        "ParallelWays" => new ParallelWaysStrategy(),
+        _              => new FullGridStrategy()
+    };
 }

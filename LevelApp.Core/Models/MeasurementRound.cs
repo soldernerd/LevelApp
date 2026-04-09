@@ -8,13 +8,19 @@ public class MeasurementRound
 {
     public DateTime? CompletedAt { get; set; }
     public List<MeasurementStep> Steps { get; set; } = [];
+
+    /// <summary>Surface Plate result (null for Parallel Ways sessions).</summary>
     public SurfaceResult? Result { get; set; }
+
+    /// <summary>Parallel Ways result (null for Surface Plate sessions).</summary>
+    public ParallelWaysResult? ParallelWaysResult { get; set; }
+
     public CalculationParameters? CalculationParameters { get; set; }
 
     /// <summary>
     /// Returns <paramref name="originalSteps"/> with readings replaced where a
     /// matching <see cref="ReplacedStep"/> exists. All other step fields are copied
-    /// verbatim, including NodeId, ToNodeId, and PassId.
+    /// verbatim, including NodeId, ToNodeId, PassId, and PassPhase.
     /// </summary>
     public static List<MeasurementStep> MergeWithReplacements(
         IReadOnlyList<MeasurementStep> originalSteps,
@@ -35,6 +41,7 @@ public class MeasurementRound
                 NodeId          = s.NodeId,
                 ToNodeId        = s.ToNodeId,
                 PassId          = s.PassId,
+                PassPhase       = s.PassPhase,
                 Reading         = replacedMap.TryGetValue(s.Index, out double nr) ? nr : s.Reading
             })
             .ToList();

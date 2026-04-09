@@ -18,6 +18,7 @@
             <Button Grid.Column="1"
                     Content="Recalculate"
                     Click="OnRecalculateClicked"
+                    Visibility="{x:Bind ViewModel.SurfacePlateOnlyVisibility, Mode=OneWay}"
                     VerticalAlignment="Center"
                     Margin="0,0,8,0"/>
 
@@ -175,12 +176,12 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Flatness card -->
+                    <!-- Flatness / Best Straightness card -->
                     <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                             CornerRadius="8"
                             Padding="16">
                         <StackPanel Spacing="4">
-                            <TextBlock Text="Flatness (peak-to-valley)"
+                            <TextBlock Text="{x:Bind ViewModel.FlatnessLabel, Mode=OneWay}"
                                        Style="{StaticResource CaptionTextBlockStyle}"
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                             <TextBlock Text="{x:Bind ViewModel.FlatnessText, Mode=OneWay}"
@@ -198,6 +199,21 @@
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                             <TextBlock Text="{x:Bind ViewModel.SigmaText, Mode=OneWay}"
                                        Style="{StaticResource SubtitleTextBlockStyle}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Parallel Ways: per-rail and parallelism card -->
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            CornerRadius="8"
+                            Padding="16"
+                            Visibility="{x:Bind ViewModel.ParallelWaysOnlyVisibility, Mode=OneWay}">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Straightness &amp; Parallelism"
+                                       Style="{StaticResource BodyStrongTextBlockStyle}"
+                                       Margin="0,0,0,4"/>
+                            <TextBlock Text="{x:Bind ViewModel.ParallelismText, Mode=OneWay}"
+                                       Style="{StaticResource CaptionTextBlockStyle}"
+                                       TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>
 
@@ -266,7 +282,7 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Start Correction Session button -->
+                    <!-- Start Correction Session button (Surface Plate only) -->
                     <Button Content="Start Correction Session"
                             Command="{x:Bind ViewModel.StartCorrectionSessionCommand}"
                             Visibility="{x:Bind ViewModel.CorrectButtonVisibility, Mode=OneWay}"
