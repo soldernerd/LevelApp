@@ -59,12 +59,14 @@ public partial class App : Application
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         // Apply language qualifier before any page XAML is parsed.
-        // Must run after InitializeComponent() so WinRT is fully initialised.
-        // Page XAMLs are lazy-loaded on first navigation, so this still takes effect.
+        // ResourceQualifierPersistence.None keeps the override in-memory only;
+        // the default (LocalMachine) tries to write to the package data store and
+        // crashes with no call stack in unpackaged apps.
         var lang = Services.GetRequiredService<ISettingsService>().AppLanguage;
         if (!string.IsNullOrEmpty(lang))
             Windows.ApplicationModel.Resources.Core.ResourceContext
-                .SetGlobalQualifierValue("Language", lang);
+                .SetGlobalQualifierValue("Language", lang,
+                    Windows.ApplicationModel.Resources.Core.ResourceQualifierPersistence.None);
 
         _window = new MainWindow();
         _window.Activate();
