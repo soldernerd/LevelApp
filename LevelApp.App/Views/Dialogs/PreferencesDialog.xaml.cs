@@ -44,6 +44,12 @@ public sealed partial class PreferencesDialog : ContentDialog
         _themeIndex    = ThemeToIndex(settings.AppTheme);
 
         InitializeComponent();
+
+        var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
+        Title           = loader.GetString("Preferences_Title.Text");
+        PrimaryButtonText = loader.GetString("Preferences_OkButton.Content");
+        CloseButtonText = loader.GetString("Preferences_CancelButton.Content");
+
         FolderPathBox.Text = _settings.DefaultProjectFolder;
     }
 

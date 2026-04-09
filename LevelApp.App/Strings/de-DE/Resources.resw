@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- General / Shell -->
+  <data name="AppTitle.Text" xml:space="preserve"><value>LevelApp</value></data>
+  <data name="Menu_File.Title" xml:space="preserve"><value>Datei</value></data>
+  <data name="Menu_File_OpenProject.Text" xml:space="preserve"><value>Projekt öffnen…</value></data>
+  <data name="Menu_File_SaveProject.Text" xml:space="preserve"><value>Projekt speichern</value></data>
+  <data name="Menu_File_SaveProjectAs.Text" xml:space="preserve"><value>Projekt speichern unter…</value></data>
+  <data name="Menu_Edit.Title" xml:space="preserve"><value>Bearbeiten</value></data>
+  <data name="Menu_Edit_Preferences.Text" xml:space="preserve"><value>Einstellungen…</value></data>
+  <data name="Menu_Help.Title" xml:space="preserve"><value>Hilfe</value></data>
+  <data name="Menu_Help_About.Text" xml:space="preserve"><value>Über LevelApp…</value></data>
+
+  <!-- ProjectSetupView -->
+  <data name="ProjectSetup_PageTitle.Text" xml:space="preserve"><value>Projekt</value></data>
+  <data name="ProjectSetup_OpenProject.Content" xml:space="preserve"><value>Projekt öffnen…</value></data>
+  <data name="ProjectInfo_SectionHeader.Text" xml:space="preserve"><value>Projektinformationen</value></data>
+  <data name="ProjectName_Label.Text" xml:space="preserve"><value>Projektname</value></data>
+  <data name="ProjectName_Label_Tooltip.Content" xml:space="preserve"><value>Ein lesbarer Name für dieses Projekt. Wird in der .levelproj-Datei gespeichert.</value></data>
+  <data name="Operator_Label.Text" xml:space="preserve"><value>Bediener</value></data>
+  <data name="Operator_Label_Tooltip.Content" xml:space="preserve"><value>Name der Person, die die Messung durchführt. Wird für die Rückverfolgbarkeit gespeichert.</value></data>
+  <data name="Notes_Label.Text" xml:space="preserve"><value>Anmerkungen</value></data>
+  <data name="Notes_Label_Tooltip.Content" xml:space="preserve"><value>Freitext-Anmerkungen zu dieser Messung oder dem Messobjekt.</value></data>
+  <data name="Object_SectionHeader.Text" xml:space="preserve"><value>Objekt</value></data>
+  <data name="GeometryType_Label.Text" xml:space="preserve"><value>Geometrietyp</value></data>
+  <data name="GeometryType_Label_Tooltip.Content" xml:space="preserve"><value>Der Typ des Messobjekts. Jeder Geometrietyp verwendet eine andere Messstrategie und Berechnungsmethode.</value></data>
+  <data name="GeometryType_SurfacePlate.Text" xml:space="preserve"><value>Tuschierplatte</value></data>
+  <data name="GeometryType_ParallelWays.Text" xml:space="preserve"><value>Parallele Führungsbahnen</value></data>
+  <data name="Width_Label.Text" xml:space="preserve"><value>Breite (mm)</value></data>
+  <data name="Width_Label_Tooltip.Content" xml:space="preserve"><value>Physische Breite der Tuschierplatte in Millimetern. Wird zur Berechnung der Schrittweite zwischen Gitterpunkten verwendet.</value></data>
+  <data name="Height_Label.Text" xml:space="preserve"><value>Höhe (mm)</value></data>
+  <data name="Height_Label_Tooltip.Content" xml:space="preserve"><value>Physische Tiefe (Höhe) der Tuschierplatte in Millimetern.</value></data>
+  <data name="Columns_Label.Text" xml:space="preserve"><value>Spalten</value></data>
+  <data name="Columns_Label_Tooltip.Content" xml:space="preserve"><value>Anzahl der Gitterspalten (Knoten in X-Richtung). Mehr Spalten erhöhen die Redundanz und Auflösung, aber auch die Gesamtzahl der Schritte.</value></data>
+  <data name="Rows_Label.Text" xml:space="preserve"><value>Zeilen</value></data>
+  <data name="Rows_Label_Tooltip.Content" xml:space="preserve"><value>Anzahl der Gitterzeilen (Knoten in Y-Richtung).</value></data>
+  <data name="Strategy_SectionHeader.Text" xml:space="preserve"><value>Messstrategie</value></data>
+  <data name="Strategy_Label.Text" xml:space="preserve"><value>Strategie</value></data>
+  <data name="Strategy_Label_Tooltip.Content" xml:space="preserve"><value>Das Traversierungsmuster, das verwendet wird, um alle Messpunkte zu besuchen. Verschiedene Strategien bieten unterschiedliche Redundanzniveaus.</value></data>
+  <data name="Strategy_FullGrid.Text" xml:space="preserve"><value>Vollraster (Boustrophedon)</value></data>
+  <data name="Strategy_UnionJack.Text" xml:space="preserve"><value>Union Jack</value></data>
+  <data name="Strategy_ParallelWays.Text" xml:space="preserve"><value>Parallele Führungsbahnen</value></data>
+  <data name="StepCount_Label.Text" xml:space="preserve"><value>Schritte</value></data>
+  <data name="StepCount_Label_Tooltip.Content" xml:space="preserve"><value>Gesamtzahl der für diese Konfiguration erforderlichen Einzelmessungen.</value></data>
+  <data name="StartMeasurement_Button.Content" xml:space="preserve"><value>Messung starten</value></data>
+  <data name="Strategy_Help_Title.Text" xml:space="preserve"><value>Messstrategie</value></data>
+  <data name="Strategy_Help_Body.Text" xml:space="preserve"><value>Eine Messstrategie legt fest, in welcher Reihenfolge und Richtung das Instrument jeden Gitterpunkt ansteuert. Bei der Vollrasterstrategie werden zunächst alle Zeilen, dann alle Spalten traversiert, sodass jeder innere Knoten zweimal aus unabhängigen Richtungen besucht wird. Diese Redundanz ermöglicht die Kleinste-Quadrate-Berechnung. Die Union-Jack-Strategie fügt diagonale Traversierungen für höhere Redundanz hinzu.</value></data>
+  <data name="FullGrid_Help_Title.Text" xml:space="preserve"><value>Vollraster (Boustrophedon)</value></data>
+  <data name="FullGrid_Help_Body.Text" xml:space="preserve"><value>Das Instrument traversiert alle Zeilen in wechselnden Richtungen (Boustrophedon = „wie der Ochse pflügt"), dann alle Spalten in wechselnden Richtungen. Jeder innere Gitterpunkt wird einmal während des Zeilendurchlaufs und einmal während des Spaltendurchlaufs besucht. Die beiden Messwerte an jedem Kreuzungspunkt sollten übereinstimmen – jede Abweichung ist ein Schließungsfehler, der vom Solver verteilt wird.</value></data>
+  <data name="UnionJack_Help_Title.Text" xml:space="preserve"><value>Union Jack</value></data>
+  <data name="UnionJack_Help_Body.Text" xml:space="preserve"><value>Acht Arme strahlen vom Mittelpunkt in die vier Hauptrichtungen (N, S, O, W) und vier Diagonalrichtungen (NO, SO, SW, NW) aus. Die Vollvariante fügt einen Umfangsring hinzu, der alle Armspitzen verbindet und geschlossene Schleifen erzeugt, die der Solver zur Erkennung und Verteilung von Schließungsfehlern nutzt. Höhere Redundanz als Vollraster, aber mehr Schritte erforderlich.</value></data>
+
+  <!-- MeasurementView -->
+  <data name="Measurement_ProgressTitle.Text" xml:space="preserve"><value>Schritt {0} von {1}</value></data>
+  <data name="Measurement_OrientationLabel.Text" xml:space="preserve"><value>Instrumentenausrichtung</value></data>
+  <data name="Measurement_ReadingLabel.Text" xml:space="preserve"><value>Messwert (mm/m)</value></data>
+  <data name="Measurement_AcceptButton.Content" xml:space="preserve"><value>Messwert übernehmen</value></data>
+  <data name="Measurement_SkipButton.Content" xml:space="preserve"><value>Überspringen</value></data>
+  <data name="Measurement_CancelButton.Content" xml:space="preserve"><value>Abbrechen</value></data>
+  <data name="Measurement_Calculating.Text" xml:space="preserve"><value>Berechnung läuft…</value></data>
+  <data name="Reading_Help_Title.Text" xml:space="preserve"><value>Messwert (mm/m)</value></data>
+  <data name="Reading_Help_Body.Text" xml:space="preserve"><value>Geben Sie den auf dem elektronischen Nivellierdisplay angezeigten Wert ein. Die Einheit ist Millimeter pro Meter (mm/m), auch als mm/1000 mm geschrieben. Ein positiver Wert bedeutet, dass das Instrument so geneigt ist, dass das hohe Ende in Fahrtrichtung zeigt. Ein Nullwert bedeutet, dass das Instrument auf dieser Strecke vollkommen waagerecht ist.</value></data>
+  <data name="Orientation_Help_Title.Text" xml:space="preserve"><value>Instrumentenausrichtung</value></data>
+  <data name="Orientation_Help_Body.Text" xml:space="preserve"><value>Der Pfeil zeigt die Richtung, in die das Instrument während dieses Schritts zeigen muss. „Ost" bedeutet, dass das Instrumentengehäuse nach rechts zeigt; „Nord" zeigt auf der Gittertafel auf dem Bildschirm nach oben. Die Ausrichtung ist entscheidend – eine Umkehrung um 180° kehrt das Vorzeichen des Messwerts um und führt zu einem systematischen Fehler.</value></data>
+
+  <!-- ResultsView -->
+  <data name="Results_PageTitle.Text" xml:space="preserve"><value>Ergebnisse</value></data>
+  <data name="Results_SaveProject.Content" xml:space="preserve"><value>Projekt speichern</value></data>
+  <data name="Results_NewMeasurement.Content" xml:space="preserve"><value>Neue Messung</value></data>
+  <data name="Results_StartCorrection.Content" xml:space="preserve"><value>Korrektursitzung starten</value></data>
+  <data name="Results_NoFlaggedSteps.Text" xml:space="preserve"><value>Keine markierten Schritte</value></data>
+  <data name="Results_FlaggedSteps_Header.Text" xml:space="preserve"><value>Markierte Schritte</value></data>
+  <data name="Flatness_Label.Text" xml:space="preserve"><value>Ebenheit (Spanne)</value></data>
+  <data name="Flatness_Label_Tooltip.Content" xml:space="preserve"><value>Die Spanne der Höhenabweichungen über alle Gitterknoten: der Bereich vom tiefsten zum höchsten Punkt auf der ausgeglichenen Fläche. Dies ist die primäre Ebenheitskennzahl für die Tuschierplattenqualifizierung.</value></data>
+  <data name="FlatnessValue_Tooltip.Content" xml:space="preserve"><value>Ebenheit in Mikrometern (µm).</value></data>
+  <data name="ResidualRMS_Label.Text" xml:space="preserve"><value>Residuals-RMS</value></data>
+  <data name="ResidualRMS_Label_Tooltip.Content" xml:space="preserve"><value>Quadratischer Mittelwert aller Schrittresiduen nach dem Kleinste-Quadrate-Ausgleich. Gibt das allgemeine Messrauschenniveau an.</value></data>
+  <data name="SigmaValue_Tooltip.Content" xml:space="preserve"><value>σ = Residuals-RMS in Mikrometern. Kleinere Werte sind besser; Werte über ~50 µm können auf Probleme mit der Einschwingzeit des Instruments oder eine sehr raue Oberfläche hinweisen.</value></data>
+  <data name="Flatness_Help_Title.Text" xml:space="preserve"><value>Ebenheit (Spanne)</value></data>
+  <data name="Flatness_Help_Body.Text" xml:space="preserve"><value>Nach der Lösung des überbestimmten Gleichungssystems hat jeder Gitterknoten eine berechnete Höhe. Die Ebenheit ist einfach die Spanne: maximale Knotenhöhe minus minimale Knotenhöhe, ausgedrückt in Mikrometern. Dies ist die Standardgröße, die in Kalibrierzertifikaten für Tuschierplatten angegeben wird (z. B. DIN EN ISO 8512).</value></data>
+  <data name="ResidualRMS_Help_Title.Text" xml:space="preserve"><value>Residuals-RMS (σ)</value></data>
+  <data name="ResidualRMS_Help_Body.Text" xml:space="preserve"><value>Jeder Messschritt trägt eine Gleichung zum Kleinste-Quadrate-System bei. Nach der Lösung ist das Residuum eines Schritts die Differenz zwischen dem Messwert und der durch die ausgeglichene Fläche implizierten Höhendifferenz. σ ist der quadratische Mittelwert aller Residuen, korrigiert für Freiheitsgrade (FG = Schritte − Knoten + 1). Ein großes σ deutet auf verrauschte Messwerte oder ein thermisch nicht eingeschwungenes Instrument hin.</value></data>
+  <data name="LeastSquares_Help_Title.Text" xml:space="preserve"><value>Kleinste-Quadrate-Ausgleich</value></data>
+  <data name="LeastSquares_Help_Body.Text" xml:space="preserve"><value>Bei einem Vollraster erscheint jeder innere Knoten in zwei unabhängigen Messlinien: einem Zeilendurchlauf und einem Spaltendurchlauf. Theoretisch müssen die berechneten Höhen an jedem Kreuzungspunkt übereinstimmen; in der Praxis weichen sie leicht ab, bedingt durch Messrauschen und thermische Drift. Einfache sequentielle Integration lässt diese Schließungsfehler akkumulieren. Die Kleinste-Quadrate-Methode verteilt sie optimal über alle Schritte gleichzeitig und liefert die statistisch beste Schätzung der wahren Oberflächenform.</value></data>
+  <data name="FlaggedSteps_Help_Title.Text" xml:space="preserve"><value>Markierte Schritte</value></data>
+  <data name="FlaggedSteps_Help_Body.Text" xml:space="preserve"><value>Nach dem Kleinste-Quadrate-Ausgleich wird das Residuum jedes Schritts mit σ verglichen. Jeder Schritt, dessen Residuum k × σ überschreitet (Standard k = 2,5, in den Neuberechnungseinstellungen einstellbar), wird als verdächtiger Messwert markiert. Mögliche Ursachen: Instrument nicht vollständig eingeschwungen, versehentlicher Stoß, Libelle nicht zentriert oder die Plattenoberfläche hat einen echten lokalen Defekt. Eine Korrektursitzung ermöglicht die erneute Messung nur der markierten Schritte und eine Neuberechnung des Ergebnisses.</value></data>
+  <data name="SigmaThreshold_Help_Title.Text" xml:space="preserve"><value>Sigma-Schwellenwert (k)</value></data>
+  <data name="SigmaThreshold_Help_Body.Text" xml:space="preserve"><value>Der Ausreißer-Erkennungsschwellenwert, ausgedrückt als Vielfaches von σ. Ein Schritt wird markiert, wenn |Residuum| &gt; k × σ. Der Standardwert von 2,5 ist eine übliche Wahl, die in einer Normalverteilung ungefähr das schlechteste 1 % der Messwerte markiert. Ein niedrigeres k markiert mehr Schritte; ein höheres markiert weniger.</value></data>
+  <data name="CorrectionRound_Help_Title.Text" xml:space="preserve"><value>Korrekturschritt</value></data>
+  <data name="CorrectionRound_Help_Body.Text" xml:space="preserve"><value>Ein Korrekturschritt misst nur die markierten Schritte erneut und speichert die neuen Messwerte neben den ursprünglichen – Originale werden nie überschrieben. Nach der erneuten Messung aller markierten Schritte wird der vollständige Kleinste-Quadrate-Ausgleich auf dem zusammengeführten Datensatz wiederholt. Der Vorgang kann so oft wiederholt werden, bis keine Schritte mehr markiert sind oder der Bediener das Ergebnis akzeptiert. Die vollständige Historie aller Schritte wird in der Projektdatei gespeichert.</value></data>
+
+  <!-- CorrectionView -->
+  <data name="Correction_PageTitle.Text" xml:space="preserve"><value>Korrektur</value></data>
+  <data name="Correction_ProgressTitle.Text" xml:space="preserve"><value>Markierter Schritt {0} von {1}</value></data>
+  <data name="Correction_OriginalReading_Label.Text" xml:space="preserve"><value>Ursprünglicher Messwert</value></data>
+  <data name="Correction_OriginalReading_Tooltip.Content" xml:space="preserve"><value>Der während der ersten Messrunde aufgezeichnete Messwert. Vergleichen Sie diesen mit Ihrem neuen Messwert – eine große Abweichung bestätigt, dass der ursprüngliche Wert verdächtig war.</value></data>
+  <data name="Correction_ReadingLabel.Text" xml:space="preserve"><value>Neuer Messwert (mm/m)</value></data>
+  <data name="Correction_AcceptButton.Content" xml:space="preserve"><value>Messwert übernehmen</value></data>
+  <data name="Correction_CancelButton.Content" xml:space="preserve"><value>Korrektur abbrechen</value></data>
+
+  <!-- RecalculateDialog -->
+  <data name="Recalculate_Title.Text" xml:space="preserve"><value>Neuberechnung</value></data>
+  <data name="Recalculate_Method_Label.Text" xml:space="preserve"><value>Berechnungsmethode</value></data>
+  <data name="Recalculate_Method_Tooltip.Content" xml:space="preserve"><value>Wählen Sie den Algorithmus, der zur Berechnung der Knotenhöhen aus den Messschritten verwendet wird.</value></data>
+  <data name="Recalculate_Method_LeastSquares.Text" xml:space="preserve"><value>Kleinste Quadrate (empfohlen)</value></data>
+  <data name="Recalculate_Method_Sequential.Text" xml:space="preserve"><value>Sequentielle Integration</value></data>
+  <data name="Recalculate_SigmaThreshold_Label.Text" xml:space="preserve"><value>Sigma-Schwellenwert (k)</value></data>
+  <data name="Recalculate_AutoExclude_Label.Text" xml:space="preserve"><value>Ausreißer automatisch ausschließen</value></data>
+  <data name="Recalculate_AutoExclude_Tooltip.Content" xml:space="preserve"><value>Wenn aktiviert, werden markierte Schritte automatisch aus dem Kleinste-Quadrate-System ausgeschlossen und beeinflussen die berechnete Fläche nicht. Wenn deaktiviert, verbleiben sie im System, werden aber dennoch gemeldet.</value></data>
+  <data name="Recalculate_SaveResult_Label.Text" xml:space="preserve"><value>Ergebnis im Projekt speichern</value></data>
+  <data name="Recalculate_OkButton.Content" xml:space="preserve"><value>Neu berechnen</value></data>
+  <data name="Recalculate_CancelButton.Content" xml:space="preserve"><value>Abbrechen</value></data>
+  <data name="CalcMethod_Help_Title.Text" xml:space="preserve"><value>Berechnungsmethode</value></data>
+  <data name="CalcMethod_Help_Body.Text" xml:space="preserve"><value>Kleinste Quadrate ist die empfohlene Methode. Sie löst das überbestimmte Schrittegleichungssystem gleichzeitig und verteilt Schließungsfehler optimal. Sequentielle Integration ist eine einfachere Methode, die jede Traversierungslinie unabhängig integriert und an jedem Kreuzungspunkt eine proportionale Korrektur anwendet – leichter nachvollziehbar, aber bei signifikantem Messrauschen weniger genau.</value></data>
+  <data name="SeqIntegration_Help_Title.Text" xml:space="preserve"><value>Sequentielle Integration</value></data>
+  <data name="SeqIntegration_Help_Body.Text" xml:space="preserve"><value>Jede Zeilen- und Spaltendurchquerung wird unabhängig integriert, um ein Höhenprofil zu erzeugen. Wo sich ein Zeilenprofil und ein Spaltenprofil an einem inneren Knoten kreuzen, weichen die beiden Höhen durch einen Schließungsfehler voneinander ab. Die sequentielle Integration verteilt diesen Fehler proportional entlang beider Durchquerungen. Die Methode ist unkompliziert, erlaubt aber die Fehlerakkumulation, besonders bei größeren Rastern. Kleinste Quadrate wird für Produktionsmessungen bevorzugt.</value></data>
+  <data name="LinearDrift_Help_Title.Text" xml:space="preserve"><value>Lineare Driftkorrektur</value></data>
+  <data name="LinearDrift_Help_Body.Text" xml:space="preserve"><value>Elektronische Libellen können während einer langen Messsitzung aufgrund thermischer Änderungen im Instrument langsam driften. Die lineare Driftkorrektur nimmt an, dass jede systematische Änderung der Messwerte während einer einzelnen Durchquerung linear mit der Zeit (oder der Schrittzahl) zunimmt, und subtrahiert diesen Trend vor der Berechnung der Knotenhöhen. Aktivieren Sie diese Option, wenn Sie feststellen, dass die Residuen gegen Ende jeder Durchquerung tendenziell zunehmen.</value></data>
+
+  <!-- PreferencesDialog -->
+  <data name="Preferences_Title.Text" xml:space="preserve"><value>Einstellungen</value></data>
+  <data name="Preferences_Theme_Label.Text" xml:space="preserve"><value>Erscheinungsbild</value></data>
+  <data name="Preferences_Theme_System.Content" xml:space="preserve"><value>Systemeinstellung folgen</value></data>
+  <data name="Preferences_Theme_Light.Content" xml:space="preserve"><value>Hell</value></data>
+  <data name="Preferences_Theme_Dark.Content" xml:space="preserve"><value>Dunkel</value></data>
+  <data name="Preferences_DefaultFolder_Label.Text" xml:space="preserve"><value>Standard-Projektordner</value></data>
+  <data name="Preferences_DefaultFolder_Tooltip.Content" xml:space="preserve"><value>Der Ordner, den die Öffnen- und Speichern-Dialoge standardmäßig öffnen.</value></data>
+  <data name="Preferences_BrowseFolder.Content" xml:space="preserve"><value>Durchsuchen…</value></data>
+  <data name="Preferences_OkButton.Content" xml:space="preserve"><value>OK</value></data>
+  <data name="Preferences_CancelButton.Content" xml:space="preserve"><value>Abbrechen</value></data>
+
+  <!-- AboutDialog -->
+  <data name="About_Title.Text" xml:space="preserve"><value>Über LevelApp</value></data>
+  <data name="About_Description.Text" xml:space="preserve"><value>Auswertung präziser elektronischer Nivelliermessungen für die Maschinengeometriemessung und Tuschierplattenqualifizierung.</value></data>
+  <data name="About_License.Text" xml:space="preserve"><value>GNU General Public License v3.0</value></data>
+  <data name="About_GitHub.Content" xml:space="preserve"><value>Auf GitHub ansehen</value></data>
+  <data name="About_CloseButton.Content" xml:space="preserve"><value>Schließen</value></data>
+
+  <!-- NewMeasurementDialog -->
+  <data name="NewMeasurement_Title.Text" xml:space="preserve"><value>Neue Messung</value></data>
+  <data name="NewMeasurement_Label_Label.Text" xml:space="preserve"><value>Bezeichnung</value></data>
+  <data name="NewMeasurement_Operator_Label.Text" xml:space="preserve"><value>Bediener</value></data>
+  <data name="NewMeasurement_Notes_Label.Text" xml:space="preserve"><value>Anmerkungen</value></data>
+  <data name="NewMeasurement_OkButton.Content" xml:space="preserve"><value>Starten</value></data>
+  <data name="NewMeasurement_CancelButton.Content" xml:space="preserve"><value>Abbrechen</value></data>
+
+  <!-- Parallel Ways specific -->
+  <data name="PW_Rails_SectionHeader.Text" xml:space="preserve"><value>Führungsbahnen</value></data>
+  <data name="PW_AddRail_Button.Content" xml:space="preserve"><value>Führungsbahn hinzufügen</value></data>
+  <data name="PW_RailLabel_Label.Text" xml:space="preserve"><value>Bezeichnung</value></data>
+  <data name="PW_RailLength_Label.Text" xml:space="preserve"><value>Länge (mm)</value></data>
+  <data name="PW_RailLength_Tooltip.Content" xml:space="preserve"><value>Physische Länge dieser Führungsbahn in Millimetern. Wird zur Berechnung des Stationsabstands verwendet.</value></data>
+  <data name="PW_RailSeparation_Label.Text" xml:space="preserve"><value>Seitlicher Abstand (mm)</value></data>
+  <data name="PW_RailSeparation_Tooltip.Content" xml:space="preserve"><value>Abstand zwischen dieser Führungsbahn und der Referenzführungsbahn, gemessen senkrecht zur Fahrtrichtung.</value></data>
+  <data name="PW_Tasks_SectionHeader.Text" xml:space="preserve"><value>Aufgaben</value></data>
+  <data name="PW_AddTask_Button.Content" xml:space="preserve"><value>Aufgabe hinzufügen</value></data>
+  <data name="PW_TaskType_AlongRail.Text" xml:space="preserve"><value>Entlang der Bahn</value></data>
+  <data name="PW_TaskType_Bridge.Text" xml:space="preserve"><value>Querbrücke</value></data>
+  <data name="PW_Orientation_Label.Text" xml:space="preserve"><value>Ausrichtung</value></data>
+  <data name="PW_Orientation_Tooltip.Content" xml:space="preserve"><value>Die physische Richtung, in der die Führungsbahnen verlaufen. Wird für Anzeigezwecke und zur Beschriftung von Schrittanweisungen verwendet.</value></data>
+  <data name="PW_DriftCorrection_Label.Text" xml:space="preserve"><value>Driftkorrektur</value></data>
+  <data name="PW_DriftCorrection_Tooltip.Content" xml:space="preserve"><value>Wendet eine lineare Korrektur an, um langsame Instrumentendrift während einer langen Durchquerung zu kompensieren.</value></data>
+  <data name="PW_SolverMode_Label.Text" xml:space="preserve"><value>Solver-Modus</value></data>
+  <data name="PW_ReferenceRail_Label.Text" xml:space="preserve"><value>Referenzbahn</value></data>
+  <data name="PW_ReferenceRail_Tooltip.Content" xml:space="preserve"><value>Die Führungsbahn, deren erste Station als Höhendatum verwendet wird (Höhe = 0). Alle anderen Höhen werden relativ zu diesem Punkt ausgedrückt.</value></data>
+  <data name="PW_Straightness_Label.Text" xml:space="preserve"><value>Geradheit (Spanne)</value></data>
+  <data name="PW_Straightness_Tooltip.Content" xml:space="preserve"><value>Spanne der Höhenabweichungen dieser Führungsbahn nach Subtraktion der Ausgleichsgeraden. Dies ist die Standardkennzahl für Geradheit.</value></data>
+  <data name="PW_Parallelism_Label.Text" xml:space="preserve"><value>Parallelität (Spanne)</value></data>
+  <data name="PW_Parallelism_Tooltip.Content" xml:space="preserve"><value>Spanne der Höhendifferenzvariation zwischen zwei Führungsbahnen entlang ihrer gemeinsamen Stationen. Ein perfekt paralleles Bahnpaar hat einen Parallelitätswert von null.</value></data>
+  <data name="PW_Straightness_Help_Title.Text" xml:space="preserve"><value>Geradheit</value></data>
+  <data name="PW_Straightness_Help_Body.Text" xml:space="preserve"><value>Geradheit misst, wie stark eine Führungsbahn von einer perfekten Geraden abweicht. Zunächst werden alle Stationshöhen durch Integration der Nivelliermesswerte entlang der Bahn berechnet. Dann wird die Ausgleichsgerade durch alle Stationshöhen subtrahiert. Die verbleibenden Abweichungen bilden das Geradheitsprofil; die Spanne dieses Profils ist der gemeldete Geradheitswert.</value></data>
+  <data name="PW_Parallelism_Help_Title.Text" xml:space="preserve"><value>Parallelität</value></data>
+  <data name="PW_Parallelism_Help_Body.Text" xml:space="preserve"><value>Parallelität ist die Variation der Höhendifferenz zwischen zwei Führungsbahnen an ihren gemeinsamen Stationspositionen. An jeder Station wird die Höhe von Bahn B minus der Höhe von Bahn A berechnet. Wären die Bahnen perfekt parallel, wäre diese Differenz entlang der gesamten Länge konstant. Die Spanne dieser Differenzen ist der Parallelitätswert.</value></data>
+  <data name="PW_SolverMode_Help_Title.Text" xml:space="preserve"><value>Solver-Modus</value></data>
+  <data name="PW_SolverMode_Help_Body.Text" xml:space="preserve"><value>Globale Kleinste Quadrate löst alle Bahn- und Brückenmesswerte gleichzeitig in einem gemeinsamen System, was bei verfügbaren Brückenmesswerten das statistisch optimale Ergebnis liefert. Unabhängig dann Abstimmen löst zunächst jede Bahn unabhängig, dann werden in einem zweiten Schritt die unabhängigen Bahnhöhen mithilfe der Brückenmesswerte auf ein gemeinsames Datum gebracht. Beide Modi liefern dasselbe Ergebnis bei rauschfreien Brückenmesswerten; Globale Kleinste Quadrate behandelt verrauschte Brückenmesswerte robuster.</value></data>
+  <data name="Menu_File_Exit.Text" xml:space="preserve"><value>Beenden</value></data>
+  <data name="Menu_File_NewProject.Text" xml:space="preserve"><value>Neues Projekt</value></data>
+  <data name="Results_Recalculate.Content" xml:space="preserve"><value>Neu berechnen</value></data>
+  <data name="PW_BestStraightness_Label.Text" xml:space="preserve"><value>Beste Bahngeradheit</value></data>
+
+</root>

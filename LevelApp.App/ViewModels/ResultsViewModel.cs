@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.Input;
 using LevelApp.App.DisplayModules.ParallelWaysDisplay;
 using LevelApp.App.DisplayModules.SurfacePlot3D;
 using LevelApp.App.Navigation;
+using LevelApp.App.Services;
 using LevelApp.Core.Geometry;
 using LevelApp.Core.Geometry.SurfacePlate.Strategies;
 using LevelApp.Core.Models;
@@ -11,17 +12,19 @@ namespace LevelApp.App.ViewModels;
 
 public sealed partial class ResultsViewModel : ViewModelBase
 {
-    private readonly INavigationService _navigation;
-    private readonly MainViewModel      _mainViewModel;
+    private readonly INavigationService  _navigation;
+    private readonly MainViewModel       _mainViewModel;
+    private readonly ILocalisationService _loc;
 
     private Project            _project = null!;
     private MeasurementSession _session = null!;
     private SurfaceResult?     _currentResult;
 
-    public ResultsViewModel(INavigationService navigation, MainViewModel mainViewModel)
+    public ResultsViewModel(INavigationService navigation, MainViewModel mainViewModel, ILocalisationService loc)
     {
         _navigation    = navigation;
         _mainViewModel = mainViewModel;
+        _loc           = loc;
     }
 
     // ── Initialisation ────────────────────────────────────────────────────────
@@ -65,7 +68,7 @@ public sealed partial class ResultsViewModel : ViewModelBase
     {
         _currentResult = result;
         IsParallelWays = false;
-        FlatnessLabel  = "Flatness (peak-to-valley)";
+        FlatnessLabel  = _loc.Get("Flatness_Label.Text");
         var strategy   = StrategyFactory.Create(_session.StrategyId);
         var definition = _project.ObjectDefinition;
 
@@ -115,7 +118,8 @@ public sealed partial class ResultsViewModel : ViewModelBase
             })
             .ToList();
 
-        FlaggedListVisibility = FlaggedSteps.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        FlaggedListVisibility    = FlaggedSteps.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        NoFlaggedStepsVisibility = FlaggedSteps.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
         // ── Closure error stats ───────────────────────────────────────────────
         if (result.PrimitiveLoops.Length > 0)
@@ -156,8 +160,9 @@ public sealed partial class ResultsViewModel : ViewModelBase
     public bool       HasFlaggedSteps         { get; private set; }
     public Visibility CorrectButtonVisibility { get; private set; } = Visibility.Collapsed;
 
-    public List<FlaggedStepItem> FlaggedSteps         { get; private set; } = [];
-    public Visibility            FlaggedListVisibility { get; private set; } = Visibility.Collapsed;
+    public List<FlaggedStepItem> FlaggedSteps             { get; private set; } = [];
+    public Visibility            FlaggedListVisibility    { get; private set; } = Visibility.Collapsed;
+    public Visibility            NoFlaggedStepsVisibility { get; private set; } = Visibility.Visible;
 
     // ── Closure error stats properties ────────────────────────────────────────
 
@@ -178,7 +183,7 @@ public sealed partial class ResultsViewModel : ViewModelBase
 
     // ── Parallel Ways-specific result properties ──────────────────────────────
 
-    public string FlatnessLabel        { get; private set; } = "Flatness (peak-to-valley)";
+    public string FlatnessLabel        { get; private set; } = string.Empty;
     public string ParallelismText      { get; private set; } = string.Empty;
 
     // ── Data exposed to the Measurements canvas renderer ─────────────────────
@@ -265,7 +270,7 @@ public sealed partial class ResultsViewModel : ViewModelBase
         ParallelWaysStrategyParameters strat)
     {
         IsParallelWays = true;
-        FlatnessLabel  = "Best Rail Straightness";
+        FlatnessLabel  = _loc.Get("PW_BestStraightness_Label.Text");
 
         ProjectName    = _project.Name;
         ObjectTypeText = "Parallel Ways";
@@ -290,11 +295,12 @@ public sealed partial class ResultsViewModel : ViewModelBase
             ? "No flagged steps"
             : $"{pwResult.FlaggedStepIndices.Length} flagged step(s)";
 
-        HasFlaggedSteps         = pwResult.FlaggedStepIndices.Length > 0;
-        CorrectButtonVisibility = Visibility.Collapsed;
-        FlaggedSteps            = [];
-        FlaggedListVisibility   = Visibility.Collapsed;
-        ClosureStatsVisibility  = Visibility.Collapsed;
+        HasFlaggedSteps          = pwResult.FlaggedStepIndices.Length > 0;
+        CorrectButtonVisibility  = Visibility.Collapsed;
+        FlaggedSteps             = [];
+        FlaggedListVisibility    = Visibility.Collapsed;
+        NoFlaggedStepsVisibility = Visibility.Visible;
+        ClosureStatsVisibility   = Visibility.Collapsed;
 
         // Per-rail straightness + per-pair parallelism
         var railLines = pwResult.RailProfiles

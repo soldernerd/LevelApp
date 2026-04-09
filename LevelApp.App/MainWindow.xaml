@@ -8,27 +8,27 @@
         <!-- ── Menu bar ──────────────────────────────────────────────────────── -->
         <MenuBar Grid.Row="0">
 
-            <MenuBarItem Title="File">
-                <MenuFlyoutItem Text="New Project"
+            <MenuBarItem x:Uid="Menu_File">
+                <MenuFlyoutItem x:Uid="Menu_File_NewProject"
                                 Command="{x:Bind ViewModel.NewProjectCommand}"/>
-                <MenuFlyoutItem Text="Open Project..."
+                <MenuFlyoutItem x:Uid="Menu_File_OpenProject"
                                 Command="{x:Bind ViewModel.OpenProjectCommand}"/>
-                <MenuFlyoutItem Text="Save Project"
+                <MenuFlyoutItem x:Uid="Menu_File_SaveProject"
                                 Command="{x:Bind ViewModel.SaveProjectCommand}"/>
-                <MenuFlyoutItem Text="Save Project As..."
+                <MenuFlyoutItem x:Uid="Menu_File_SaveProjectAs"
                                 Command="{x:Bind ViewModel.SaveProjectAsCommand}"/>
                 <MenuFlyoutSeparator/>
-                <MenuFlyoutItem Text="Exit"
+                <MenuFlyoutItem x:Uid="Menu_File_Exit"
                                 Command="{x:Bind ViewModel.ExitCommand}"/>
             </MenuBarItem>
 
-            <MenuBarItem Title="Edit">
-                <MenuFlyoutItem Text="Preferences..."
+            <MenuBarItem x:Uid="Menu_Edit">
+                <MenuFlyoutItem x:Uid="Menu_Edit_Preferences"
                                 Click="OnPreferencesClicked"/>
             </MenuBarItem>
 
-            <MenuBarItem Title="Help">
-                <MenuFlyoutItem Text="About LevelApp..."
+            <MenuBarItem x:Uid="Menu_Help">
+                <MenuFlyoutItem x:Uid="Menu_Help_About"
                                 Click="OnAboutClicked"/>
             </MenuBarItem>
 

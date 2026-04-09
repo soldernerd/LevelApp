@@ -19,6 +19,12 @@ public sealed partial class RecalculateDialog : ContentDialog
     {
         InitializeComponent();
 
+        var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
+        Title               = loader.GetString("Recalculate_Title.Text");
+        PrimaryButtonText   = loader.GetString("Recalculate_OkButton.Content");
+        SecondaryButtonText = loader.GetString("Recalculate_SaveResult_Label.Text");
+        CloseButtonText     = loader.GetString("Recalculate_CancelButton.Content");
+
         MethodCombo.SelectedIndex = currentParams.MethodId == "SequentialIntegration" ? 1 : 0;
         AutoExcludeToggle.IsOn    = currentParams.AutoExcludeOutliers;
         SigmaBox.Value            = currentParams.SigmaThreshold;

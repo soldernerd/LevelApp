@@ -15,46 +15,74 @@
                         Spacing="0">
 
                 <!-- ── Title ─────────────────────────────────────────────── -->
-                <TextBlock Text="New Measurement Project"
+                <TextBlock x:Uid="ProjectSetup_PageTitle"
                            Style="{StaticResource TitleTextBlockStyle}"
                            Margin="0,0,0,32"/>
 
                 <!-- ── Project Information ───────────────────────────────── -->
-                <TextBlock Text="Project Information"
+                <TextBlock x:Uid="ProjectInfo_SectionHeader"
                            Style="{StaticResource SubtitleTextBlockStyle}"
                            Margin="0,0,0,12"/>
 
-                <TextBox Header="Project name"
-                         PlaceholderText="e.g. Granite plate workshop 3"
-                         Text="{x:Bind ViewModel.ProjectName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                         Margin="0,0,0,8"/>
+                <StackPanel Spacing="4" Margin="0,0,0,8">
+                    <TextBlock x:Uid="ProjectName_Label"
+                               Style="{StaticResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                        <ToolTipService.ToolTip>
+                            <ToolTip x:Uid="ProjectName_Label_Tooltip"/>
+                        </ToolTipService.ToolTip>
+                    </TextBlock>
+                    <TextBox PlaceholderText="e.g. Granite plate workshop 3"
+                             Text="{x:Bind ViewModel.ProjectName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
 
-                <TextBox Header="Operator"
-                         PlaceholderText="Your name"
-                         Text="{x:Bind ViewModel.OperatorName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                         Margin="0,0,0,8"/>
+                <StackPanel Spacing="4" Margin="0,0,0,8">
+                    <TextBlock x:Uid="Operator_Label"
+                               Style="{StaticResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                        <ToolTipService.ToolTip>
+                            <ToolTip x:Uid="Operator_Label_Tooltip"/>
+                        </ToolTipService.ToolTip>
+                    </TextBlock>
+                    <TextBox PlaceholderText="Your name"
+                             Text="{x:Bind ViewModel.OperatorName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
 
-                <TextBox Header="Notes"
-                         PlaceholderText="Optional"
-                         Text="{x:Bind ViewModel.Notes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                         AcceptsReturn="True"
-                         Height="72"
-                         TextWrapping="Wrap"
-                         Margin="0,0,0,32"/>
+                <StackPanel Spacing="4" Margin="0,0,0,32">
+                    <TextBlock x:Uid="Notes_Label"
+                               Style="{StaticResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                        <ToolTipService.ToolTip>
+                            <ToolTip x:Uid="Notes_Label_Tooltip"/>
+                        </ToolTipService.ToolTip>
+                    </TextBlock>
+                    <TextBox PlaceholderText="Optional"
+                             Text="{x:Bind ViewModel.Notes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             AcceptsReturn="True"
+                             Height="72"
+                             TextWrapping="Wrap"/>
+                </StackPanel>
 
                 <!-- ── Object ─────────────────────────────────────────────── -->
-                <TextBlock Text="Object"
+                <TextBlock x:Uid="Object_SectionHeader"
                            Style="{StaticResource SubtitleTextBlockStyle}"
                            Margin="0,0,0,12"/>
 
-                <ComboBox Header="Geometry type"
-                          SelectedIndex="{x:Bind ViewModel.SelectedGeometryIndex, Mode=TwoWay}"
-                          HorizontalAlignment="Stretch"
-                          Margin="0,0,0,8"
-                          SelectionChanged="OnGeometryChanged">
-                    <ComboBoxItem>Surface Plate</ComboBoxItem>
-                    <ComboBoxItem>Parallel Ways</ComboBoxItem>
-                </ComboBox>
+                <StackPanel Spacing="4" Margin="0,0,0,8">
+                    <TextBlock x:Uid="GeometryType_Label"
+                               Style="{StaticResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                        <ToolTipService.ToolTip>
+                            <ToolTip x:Uid="GeometryType_Label_Tooltip"/>
+                        </ToolTipService.ToolTip>
+                    </TextBlock>
+                    <ComboBox SelectedIndex="{x:Bind ViewModel.SelectedGeometryIndex, Mode=TwoWay}"
+                              HorizontalAlignment="Stretch"
+                              SelectionChanged="OnGeometryChanged">
+                        <ComboBoxItem x:Uid="GeometryType_SurfacePlate"/>
+                        <ComboBoxItem x:Uid="GeometryType_ParallelWays"/>
+                    </ComboBox>
+                </StackPanel>
 
                 <!-- Surface Plate: width/height -->
                 <Grid ColumnSpacing="12"
@@ -64,18 +92,32 @@
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <NumberBox Grid.Column="0"
-                               Header="Width (mm)"
-                               Value="{x:Bind ViewModel.WidthMm, Mode=TwoWay}"
-                               Minimum="10" SmallChange="10" LargeChange="100"
-                               SpinButtonPlacementMode="Compact"
-                               ValueChanged="OnParameterChanged"/>
-                    <NumberBox Grid.Column="1"
-                               Header="Height (mm)"
-                               Value="{x:Bind ViewModel.HeightMm, Mode=TwoWay}"
-                               Minimum="10" SmallChange="10" LargeChange="100"
-                               SpinButtonPlacementMode="Compact"
-                               ValueChanged="OnParameterChanged"/>
+                    <StackPanel Grid.Column="0" Spacing="4">
+                        <TextBlock x:Uid="Width_Label"
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                            <ToolTipService.ToolTip>
+                                <ToolTip x:Uid="Width_Label_Tooltip"/>
+                            </ToolTipService.ToolTip>
+                        </TextBlock>
+                        <NumberBox Value="{x:Bind ViewModel.WidthMm, Mode=TwoWay}"
+                                   Minimum="10" SmallChange="10" LargeChange="100"
+                                   SpinButtonPlacementMode="Compact"
+                                   ValueChanged="OnParameterChanged"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4">
+                        <TextBlock x:Uid="Height_Label"
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                            <ToolTipService.ToolTip>
+                                <ToolTip x:Uid="Height_Label_Tooltip"/>
+                            </ToolTipService.ToolTip>
+                        </TextBlock>
+                        <NumberBox Value="{x:Bind ViewModel.HeightMm, Mode=TwoWay}"
+                                   Minimum="10" SmallChange="10" LargeChange="100"
+                                   SpinButtonPlacementMode="Compact"
+                                   ValueChanged="OnParameterChanged"/>
+                    </StackPanel>
                 </Grid>
 
                 <!-- Parallel Ways: orientation + rails -->
@@ -83,15 +125,23 @@
                             Spacing="8"
                             Visibility="{x:Bind ViewModel.IsParallelWays, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
 
-                    <ComboBox Header="Orientation"
-                              SelectedIndex="{x:Bind ViewModel.WaysOrientationIndex, Mode=TwoWay}"
-                              HorizontalAlignment="Stretch"
-                              SelectionChanged="OnParallelWaysComboChanged">
-                        <ComboBoxItem>Horizontal</ComboBoxItem>
-                        <ComboBoxItem>Vertical</ComboBoxItem>
-                    </ComboBox>
+                    <StackPanel Spacing="4">
+                        <TextBlock x:Uid="PW_Orientation_Label"
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                            <ToolTipService.ToolTip>
+                                <ToolTip x:Uid="PW_Orientation_Tooltip"/>
+                            </ToolTipService.ToolTip>
+                        </TextBlock>
+                        <ComboBox SelectedIndex="{x:Bind ViewModel.WaysOrientationIndex, Mode=TwoWay}"
+                                  HorizontalAlignment="Stretch"
+                                  SelectionChanged="OnParallelWaysComboChanged">
+                            <ComboBoxItem>Horizontal</ComboBoxItem>
+                            <ComboBoxItem>Vertical</ComboBoxItem>
+                        </ComboBox>
+                    </StackPanel>
 
-                    <TextBlock Text="Rails"
+                    <TextBlock x:Uid="PW_Rails_SectionHeader"
                                Style="{StaticResource BodyStrongTextBlockStyle}"
                                Margin="0,8,0,0"/>
 
@@ -132,18 +182,32 @@
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
-                                            <NumberBox Grid.Column="0"
-                                                       Header="Length (mm)"
-                                                       Value="{x:Bind LengthMm, Mode=TwoWay}"
-                                                       Minimum="1" SmallChange="100" LargeChange="500"
-                                                       SpinButtonPlacementMode="Compact"
-                                                       ValueChanged="OnParallelWaysNumberChanged"/>
-                                            <NumberBox Grid.Column="1"
-                                                       Header="Lateral sep. (mm)"
-                                                       Value="{x:Bind LateralSeparationMm, Mode=TwoWay}"
-                                                       Minimum="0" SmallChange="50" LargeChange="200"
-                                                       SpinButtonPlacementMode="Compact"
-                                                       ValueChanged="OnParallelWaysNumberChanged"/>
+                                            <StackPanel Grid.Column="0" Spacing="4">
+                                                <TextBlock x:Uid="PW_RailLength_Label"
+                                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                                                    <ToolTipService.ToolTip>
+                                                        <ToolTip x:Uid="PW_RailLength_Tooltip"/>
+                                                    </ToolTipService.ToolTip>
+                                                </TextBlock>
+                                                <NumberBox Value="{x:Bind LengthMm, Mode=TwoWay}"
+                                                           Minimum="1" SmallChange="100" LargeChange="500"
+                                                           SpinButtonPlacementMode="Compact"
+                                                           ValueChanged="OnParallelWaysNumberChanged"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Spacing="4">
+                                                <TextBlock x:Uid="PW_RailSeparation_Label"
+                                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                                                    <ToolTipService.ToolTip>
+                                                        <ToolTip x:Uid="PW_RailSeparation_Tooltip"/>
+                                                    </ToolTipService.ToolTip>
+                                                </TextBlock>
+                                                <NumberBox Value="{x:Bind LateralSeparationMm, Mode=TwoWay}"
+                                                           Minimum="0" SmallChange="50" LargeChange="200"
+                                                           SpinButtonPlacementMode="Compact"
+                                                           ValueChanged="OnParallelWaysNumberChanged"/>
+                                            </StackPanel>
                                         </Grid>
                                         <!-- Vert Offset, Axial Offset -->
                                         <Grid ColumnSpacing="8">
@@ -170,29 +234,71 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <Button Content="Add Rail"
+                    <Button x:Uid="PW_AddRail_Button"
                             Command="{x:Bind ViewModel.AddRailCommand}"
                             HorizontalAlignment="Left"/>
 
                 </StackPanel>
 
                 <!-- ── Strategy ──────────────────────────────────────────── -->
-                <TextBlock Text="Measurement Strategy"
-                           Style="{StaticResource SubtitleTextBlockStyle}"
-                           Margin="0,0,0,12"/>
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+                    <TextBlock x:Uid="Strategy_SectionHeader"
+                               Style="{StaticResource SubtitleTextBlockStyle}"/>
+                    <Button Style="{StaticResource HelpButtonStyle}">
+                        <Button.Flyout>
+                            <Flyout Placement="Bottom">
+                                <StackPanel MaxWidth="340" Spacing="8">
+                                    <TextBlock x:Uid="Strategy_Help_Title" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                                    <TextBlock x:Uid="Strategy_Help_Body" TextWrapping="Wrap" Style="{StaticResource BodyTextBlockStyle}"/>
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                </StackPanel>
 
                 <!-- Surface Plate strategy selector + params -->
                 <StackPanel Spacing="0"
                             Visibility="{x:Bind ViewModel.IsSurfacePlate, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
 
-                    <ComboBox Header="Strategy"
-                              SelectedIndex="{x:Bind ViewModel.SelectedStrategyIndex, Mode=TwoWay}"
-                              HorizontalAlignment="Stretch"
-                              Margin="0,0,0,12"
-                              SelectionChanged="OnStrategyChanged">
-                        <ComboBoxItem>Full Grid (boustrophedon)</ComboBoxItem>
-                        <ComboBoxItem>Union Jack</ComboBoxItem>
-                    </ComboBox>
+                    <StackPanel Spacing="4" Margin="0,0,0,12">
+                        <TextBlock x:Uid="Strategy_Label"
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                            <ToolTipService.ToolTip>
+                                <ToolTip x:Uid="Strategy_Label_Tooltip"/>
+                            </ToolTipService.ToolTip>
+                        </TextBlock>
+                        <ComboBox SelectedIndex="{x:Bind ViewModel.SelectedStrategyIndex, Mode=TwoWay}"
+                                  HorizontalAlignment="Stretch"
+                                  SelectionChanged="OnStrategyChanged">
+                            <ComboBoxItem x:Uid="Strategy_FullGrid"/>
+                            <ComboBoxItem x:Uid="Strategy_UnionJack"/>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <!-- Strategy ⓘ help buttons -->
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+                        <Button Style="{StaticResource HelpButtonStyle}">
+                            <Button.Flyout>
+                                <Flyout Placement="Bottom">
+                                    <StackPanel MaxWidth="340" Spacing="8">
+                                        <TextBlock x:Uid="FullGrid_Help_Title" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                                        <TextBlock x:Uid="FullGrid_Help_Body" TextWrapping="Wrap" Style="{StaticResource BodyTextBlockStyle}"/>
+                                    </StackPanel>
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
+                        <Button Style="{StaticResource HelpButtonStyle}">
+                            <Button.Flyout>
+                                <Flyout Placement="Bottom">
+                                    <StackPanel MaxWidth="340" Spacing="8">
+                                        <TextBlock x:Uid="UnionJack_Help_Title" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                                        <TextBlock x:Uid="UnionJack_Help_Body" TextWrapping="Wrap" Style="{StaticResource BodyTextBlockStyle}"/>
+                                    </StackPanel>
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
+                    </StackPanel>
 
                     <!-- Full Grid parameters -->
                     <Grid ColumnSpacing="12"
@@ -202,20 +308,34 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <NumberBox Grid.Column="0"
-                                   Header="Columns"
-                                   Value="{x:Bind ViewModel.ColumnsCount, Mode=TwoWay}"
-                                   Minimum="2" Maximum="50"
-                                   SmallChange="1" LargeChange="5"
-                                   SpinButtonPlacementMode="Compact"
-                                   ValueChanged="OnParameterChanged"/>
-                        <NumberBox Grid.Column="1"
-                                   Header="Rows"
-                                   Value="{x:Bind ViewModel.RowsCount, Mode=TwoWay}"
-                                   Minimum="2" Maximum="50"
-                                   SmallChange="1" LargeChange="5"
-                                   SpinButtonPlacementMode="Compact"
-                                   ValueChanged="OnParameterChanged"/>
+                        <StackPanel Grid.Column="0" Spacing="4">
+                            <TextBlock x:Uid="Columns_Label"
+                                       Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                                <ToolTipService.ToolTip>
+                                    <ToolTip x:Uid="Columns_Label_Tooltip"/>
+                                </ToolTipService.ToolTip>
+                            </TextBlock>
+                            <NumberBox Value="{x:Bind ViewModel.ColumnsCount, Mode=TwoWay}"
+                                       Minimum="2" Maximum="50"
+                                       SmallChange="1" LargeChange="5"
+                                       SpinButtonPlacementMode="Compact"
+                                       ValueChanged="OnParameterChanged"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="4">
+                            <TextBlock x:Uid="Rows_Label"
+                                       Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                                <ToolTipService.ToolTip>
+                                    <ToolTip x:Uid="Rows_Label_Tooltip"/>
+                                </ToolTipService.ToolTip>
+                            </TextBlock>
+                            <NumberBox Value="{x:Bind ViewModel.RowsCount, Mode=TwoWay}"
+                                       Minimum="2" Maximum="50"
+                                       SmallChange="1" LargeChange="5"
+                                       SpinButtonPlacementMode="Compact"
+                                       ValueChanged="OnParameterChanged"/>
+                        </StackPanel>
                     </Grid>
 
                     <!-- Union Jack parameters -->
@@ -250,7 +370,7 @@
                 <StackPanel Spacing="8"
                             Visibility="{x:Bind ViewModel.IsParallelWays, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
 
-                    <TextBlock Text="Tasks"
+                    <TextBlock x:Uid="PW_Tasks_SectionHeader"
                                Style="{StaticResource BodyStrongTextBlockStyle}"/>
 
                     <ItemsControl ItemsSource="{x:Bind ViewModel.TaskItems, Mode=OneWay}">
@@ -275,8 +395,8 @@
                                                       SelectedIndex="{x:Bind TaskTypeIndex, Mode=TwoWay}"
                                                       HorizontalAlignment="Stretch"
                                                       SelectionChanged="OnTaskTypeChanged">
-                                                <ComboBoxItem>Along Rail</ComboBoxItem>
-                                                <ComboBoxItem>Bridge</ComboBoxItem>
+                                                <ComboBoxItem x:Uid="PW_TaskType_AlongRail"/>
+                                                <ComboBoxItem x:Uid="PW_TaskType_Bridge"/>
                                             </ComboBox>
                                             <ComboBox Grid.Column="1"
                                                       Header="Pass"
@@ -343,7 +463,7 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <Button Content="Add Task"
+                    <Button x:Uid="PW_AddTask_Button"
                             Command="{x:Bind ViewModel.AddTaskCommand}"
                             HorizontalAlignment="Left"/>
 
@@ -352,23 +472,45 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <ComboBox Grid.Column="0"
-                                  Header="Drift correction"
-                                  SelectedIndex="{x:Bind ViewModel.DriftCorrectionIndex, Mode=TwoWay}"
-                                  HorizontalAlignment="Stretch"
-                                  SelectionChanged="OnParallelWaysComboChanged">
-                            <ComboBoxItem>First Station Anchor</ComboBoxItem>
-                            <ComboBoxItem>Linear Drift Correction</ComboBoxItem>
-                            <ComboBoxItem>Least Squares</ComboBoxItem>
-                        </ComboBox>
-                        <ComboBox Grid.Column="1"
-                                  Header="Solver mode"
-                                  SelectedIndex="{x:Bind ViewModel.SolverModeIndex, Mode=TwoWay}"
-                                  HorizontalAlignment="Stretch"
-                                  SelectionChanged="OnParallelWaysComboChanged">
-                            <ComboBoxItem>Independent + Reconcile</ComboBoxItem>
-                            <ComboBoxItem>Global Least Squares</ComboBoxItem>
-                        </ComboBox>
+                        <StackPanel Grid.Column="0" Spacing="4">
+                            <TextBlock x:Uid="PW_DriftCorrection_Label"
+                                       Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                                <ToolTipService.ToolTip>
+                                    <ToolTip x:Uid="PW_DriftCorrection_Tooltip"/>
+                                </ToolTipService.ToolTip>
+                            </TextBlock>
+                            <ComboBox SelectedIndex="{x:Bind ViewModel.DriftCorrectionIndex, Mode=TwoWay}"
+                                      HorizontalAlignment="Stretch"
+                                      SelectionChanged="OnParallelWaysComboChanged">
+                                <ComboBoxItem>First Station Anchor</ComboBoxItem>
+                                <ComboBoxItem>Linear Drift Correction</ComboBoxItem>
+                                <ComboBoxItem>Least Squares</ComboBoxItem>
+                            </ComboBox>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="4">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <TextBlock x:Uid="PW_SolverMode_Label"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <Button Style="{StaticResource HelpButtonStyle}">
+                                    <Button.Flyout>
+                                        <Flyout Placement="Bottom">
+                                            <StackPanel MaxWidth="340" Spacing="8">
+                                                <TextBlock x:Uid="PW_SolverMode_Help_Title" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                                                <TextBlock x:Uid="PW_SolverMode_Help_Body" TextWrapping="Wrap" Style="{StaticResource BodyTextBlockStyle}"/>
+                                            </StackPanel>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                </Button>
+                            </StackPanel>
+                            <ComboBox SelectedIndex="{x:Bind ViewModel.SolverModeIndex, Mode=TwoWay}"
+                                      HorizontalAlignment="Stretch"
+                                      SelectionChanged="OnParallelWaysComboChanged">
+                                <ComboBoxItem>Independent + Reconcile</ComboBoxItem>
+                                <ComboBoxItem>Global Least Squares</ComboBoxItem>
+                            </ComboBox>
+                        </StackPanel>
                     </Grid>
 
                 </StackPanel>
@@ -387,7 +529,7 @@
                 </StackPanel>
 
                 <!-- ── Action ─────────────────────────────────────────────── -->
-                <Button Content="Start Measurement"
+                <Button x:Uid="StartMeasurement_Button"
                         Command="{x:Bind ViewModel.StartMeasurementCommand}"
                         Style="{StaticResource AccentButtonStyle}"
                         HorizontalAlignment="Right"

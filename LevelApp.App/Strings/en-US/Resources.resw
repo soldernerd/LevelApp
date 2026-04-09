@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- General / Shell -->
+  <data name="AppTitle.Text" xml:space="preserve"><value>LevelApp</value></data>
+  <data name="Menu_File.Title" xml:space="preserve"><value>File</value></data>
+  <data name="Menu_File_OpenProject.Text" xml:space="preserve"><value>Open Project…</value></data>
+  <data name="Menu_File_SaveProject.Text" xml:space="preserve"><value>Save Project</value></data>
+  <data name="Menu_File_SaveProjectAs.Text" xml:space="preserve"><value>Save Project As…</value></data>
+  <data name="Menu_Edit.Title" xml:space="preserve"><value>Edit</value></data>
+  <data name="Menu_Edit_Preferences.Text" xml:space="preserve"><value>Preferences…</value></data>
+  <data name="Menu_Help.Title" xml:space="preserve"><value>Help</value></data>
+  <data name="Menu_Help_About.Text" xml:space="preserve"><value>About LevelApp…</value></data>
+
+  <!-- ProjectSetupView -->
+  <data name="ProjectSetup_PageTitle.Text" xml:space="preserve"><value>Project</value></data>
+  <data name="ProjectSetup_OpenProject.Content" xml:space="preserve"><value>Open Project…</value></data>
+  <data name="ProjectInfo_SectionHeader.Text" xml:space="preserve"><value>Project Information</value></data>
+  <data name="ProjectName_Label.Text" xml:space="preserve"><value>Project name</value></data>
+  <data name="ProjectName_Label_Tooltip.Content" xml:space="preserve"><value>A human-readable name for this project. Stored in the .levelproj file.</value></data>
+  <data name="Operator_Label.Text" xml:space="preserve"><value>Operator</value></data>
+  <data name="Operator_Label_Tooltip.Content" xml:space="preserve"><value>Name of the person performing the measurement. Recorded in the project file for traceability.</value></data>
+  <data name="Notes_Label.Text" xml:space="preserve"><value>Notes</value></data>
+  <data name="Notes_Label_Tooltip.Content" xml:space="preserve"><value>Free-text notes about this measurement or the object under test.</value></data>
+  <data name="Object_SectionHeader.Text" xml:space="preserve"><value>Object</value></data>
+  <data name="GeometryType_Label.Text" xml:space="preserve"><value>Geometry type</value></data>
+  <data name="GeometryType_Label_Tooltip.Content" xml:space="preserve"><value>The type of object being measured. Each geometry type uses a different measurement strategy and calculation method.</value></data>
+  <data name="GeometryType_SurfacePlate.Text" xml:space="preserve"><value>Surface Plate</value></data>
+  <data name="GeometryType_ParallelWays.Text" xml:space="preserve"><value>Parallel Ways</value></data>
+  <data name="Width_Label.Text" xml:space="preserve"><value>Width (mm)</value></data>
+  <data name="Width_Label_Tooltip.Content" xml:space="preserve"><value>Physical width of the surface plate in millimetres. Used to compute the step length between grid nodes.</value></data>
+  <data name="Height_Label.Text" xml:space="preserve"><value>Height (mm)</value></data>
+  <data name="Height_Label_Tooltip.Content" xml:space="preserve"><value>Physical height (depth) of the surface plate in millimetres.</value></data>
+  <data name="Columns_Label.Text" xml:space="preserve"><value>Columns</value></data>
+  <data name="Columns_Label_Tooltip.Content" xml:space="preserve"><value>Number of grid columns (nodes in the X direction). More columns increase measurement redundancy and resolution, but also the total number of steps.</value></data>
+  <data name="Rows_Label.Text" xml:space="preserve"><value>Rows</value></data>
+  <data name="Rows_Label_Tooltip.Content" xml:space="preserve"><value>Number of grid rows (nodes in the Y direction).</value></data>
+  <data name="Strategy_SectionHeader.Text" xml:space="preserve"><value>Measurement Strategy</value></data>
+  <data name="Strategy_Label.Text" xml:space="preserve"><value>Strategy</value></data>
+  <data name="Strategy_Label_Tooltip.Content" xml:space="preserve"><value>The traversal pattern used to visit all measurement points. Different strategies offer different levels of redundancy.</value></data>
+  <data name="Strategy_FullGrid.Text" xml:space="preserve"><value>Full Grid (boustrophedon)</value></data>
+  <data name="Strategy_UnionJack.Text" xml:space="preserve"><value>Union Jack</value></data>
+  <data name="Strategy_ParallelWays.Text" xml:space="preserve"><value>Parallel Ways</value></data>
+  <data name="StepCount_Label.Text" xml:space="preserve"><value>Steps</value></data>
+  <data name="StepCount_Label_Tooltip.Content" xml:space="preserve"><value>Total number of individual level readings required for this configuration.</value></data>
+  <data name="StartMeasurement_Button.Content" xml:space="preserve"><value>Start Measurement</value></data>
+  <data name="Strategy_Help_Title.Text" xml:space="preserve"><value>Measurement Strategy</value></data>
+  <data name="Strategy_Help_Body.Text" xml:space="preserve"><value>A measurement strategy defines the order and direction in which the instrument visits each grid point. The Full Grid strategy traverses all rows first, then all columns, so each interior node is visited twice from independent directions. This redundancy is what makes the least-squares calculation possible. The Union Jack strategy adds diagonal traversals for higher redundancy.</value></data>
+  <data name="FullGrid_Help_Title.Text" xml:space="preserve"><value>Full Grid (boustrophedon)</value></data>
+  <data name="FullGrid_Help_Body.Text" xml:space="preserve"><value>The instrument traverses all rows in alternating directions (boustrophedon = "as the ox ploughs"), then all columns in alternating directions. Every interior grid point is visited once during the row pass and once during the column pass. The two readings at each crossing point should agree — any difference is a closure error distributed by the solver.</value></data>
+  <data name="UnionJack_Help_Title.Text" xml:space="preserve"><value>Union Jack</value></data>
+  <data name="UnionJack_Help_Body.Text" xml:space="preserve"><value>Eight arms radiate from the centre node in the four cardinal (N, S, E, W) and four diagonal (NE, SE, SW, NW) directions. The Full variant adds a circumference ring connecting all arm tips, creating closed loops that the solver uses to detect and distribute closure errors. Higher redundancy than Full Grid, but requires more steps.</value></data>
+
+  <!-- MeasurementView -->
+  <data name="Measurement_ProgressTitle.Text" xml:space="preserve"><value>Step {0} of {1}</value></data>
+  <data name="Measurement_OrientationLabel.Text" xml:space="preserve"><value>Instrument orientation</value></data>
+  <data name="Measurement_ReadingLabel.Text" xml:space="preserve"><value>Reading (mm/m)</value></data>
+  <data name="Measurement_AcceptButton.Content" xml:space="preserve"><value>Accept Reading</value></data>
+  <data name="Measurement_SkipButton.Content" xml:space="preserve"><value>Skip</value></data>
+  <data name="Measurement_CancelButton.Content" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Measurement_Calculating.Text" xml:space="preserve"><value>Calculating…</value></data>
+  <data name="Reading_Help_Title.Text" xml:space="preserve"><value>Reading (mm/m)</value></data>
+  <data name="Reading_Help_Body.Text" xml:space="preserve"><value>Enter the value shown on the electronic level display. The unit is millimetres per metre (mm/m), also written as mm/1000 mm. A positive value means the instrument is tilted so the high end points in the direction of travel. A zero reading means the instrument is perfectly level on that span.</value></data>
+  <data name="Orientation_Help_Title.Text" xml:space="preserve"><value>Instrument Orientation</value></data>
+  <data name="Orientation_Help_Body.Text" xml:space="preserve"><value>The arrow shows which direction the instrument must face during this step. "East" means the instrument body points to the right; "North" points upward on the grid map shown on screen. The orientation is critical — reversing it by 180° inverts the sign of the reading and introduces a systematic error.</value></data>
+
+  <!-- ResultsView -->
+  <data name="Results_PageTitle.Text" xml:space="preserve"><value>Results</value></data>
+  <data name="Results_SaveProject.Content" xml:space="preserve"><value>Save Project</value></data>
+  <data name="Results_NewMeasurement.Content" xml:space="preserve"><value>New Measurement</value></data>
+  <data name="Results_StartCorrection.Content" xml:space="preserve"><value>Start Correction Session</value></data>
+  <data name="Results_NoFlaggedSteps.Text" xml:space="preserve"><value>No flagged steps</value></data>
+  <data name="Results_FlaggedSteps_Header.Text" xml:space="preserve"><value>Flagged Steps</value></data>
+  <data name="Flatness_Label.Text" xml:space="preserve"><value>Flatness (peak-to-valley)</value></data>
+  <data name="Flatness_Label_Tooltip.Content" xml:space="preserve"><value>The peak-to-valley height difference across all grid nodes: the range from the lowest to the highest point on the best-fit surface. This is the primary flatness metric for surface plate qualification.</value></data>
+  <data name="FlatnessValue_Tooltip.Content" xml:space="preserve"><value>Flatness in micrometres (µm).</value></data>
+  <data name="ResidualRMS_Label.Text" xml:space="preserve"><value>Residual RMS</value></data>
+  <data name="ResidualRMS_Label_Tooltip.Content" xml:space="preserve"><value>Root mean square of all per-step residuals after the least-squares fit. Indicates overall measurement noise level.</value></data>
+  <data name="SigmaValue_Tooltip.Content" xml:space="preserve"><value>σ = residual RMS in micrometres. Smaller is better; values over ~50 µm may indicate instrument settle time issues or a very rough surface.</value></data>
+  <data name="Flatness_Help_Title.Text" xml:space="preserve"><value>Flatness (peak-to-valley)</value></data>
+  <data name="Flatness_Help_Body.Text" xml:space="preserve"><value>After solving the overdetermined system of equations, every grid node has a computed height. Flatness is simply the range: maximum node height minus minimum node height, expressed in micrometres. This is the standard quantity reported in surface plate calibration certificates (e.g. DIN EN ISO 8512).</value></data>
+  <data name="ResidualRMS_Help_Title.Text" xml:space="preserve"><value>Residual RMS (σ)</value></data>
+  <data name="ResidualRMS_Help_Body.Text" xml:space="preserve"><value>Each measurement step contributes one equation to the least-squares system. After solving, the residual for a step is the difference between the reading and the height difference implied by the fitted surface. σ is the root mean square of all residuals, corrected for degrees of freedom (DOF = steps − nodes + 1). A large σ suggests noisy readings or an instrument that had not thermally settled.</value></data>
+  <data name="LeastSquares_Help_Title.Text" xml:space="preserve"><value>Least-Squares Adjustment</value></data>
+  <data name="LeastSquares_Help_Body.Text" xml:space="preserve"><value>With a full grid, every interior node appears in two independent measurement lines: one row pass and one column pass. In theory the computed heights at each crossing must agree; in practice they differ slightly due to instrument noise and thermal drift. Simple sequential integration lets these closure errors accumulate. Least-squares distributes them optimally across all steps simultaneously, producing the statistically best estimate of the true surface shape.</value></data>
+  <data name="FlaggedSteps_Help_Title.Text" xml:space="preserve"><value>Flagged Steps</value></data>
+  <data name="FlaggedSteps_Help_Body.Text" xml:space="preserve"><value>After the least-squares fit, each step's residual is compared to σ. Any step whose residual exceeds k × σ (default k = 2.5, adjustable in Recalculate settings) is flagged as a suspect reading. Likely causes: instrument not fully settled, accidental knock, bubble not centred, or the plate surface has a genuine local defect. A correction session lets you re-measure only the flagged steps and recompute the result.</value></data>
+  <data name="SigmaThreshold_Help_Title.Text" xml:space="preserve"><value>Sigma Threshold (k)</value></data>
+  <data name="SigmaThreshold_Help_Body.Text" xml:space="preserve"><value>The outlier detection threshold expressed as a multiple of σ. A step is flagged when |residual| &gt; k × σ. The default value of 2.5 is a standard choice that flags roughly the worst 1 % of readings in a Gaussian noise distribution. Lowering k flags more steps; raising it flags fewer.</value></data>
+  <data name="CorrectionRound_Help_Title.Text" xml:space="preserve"><value>Correction Round</value></data>
+  <data name="CorrectionRound_Help_Body.Text" xml:space="preserve"><value>A correction round re-measures only the flagged steps and stores the new readings alongside the originals — originals are never overwritten. After all flagged steps are re-measured, the full least-squares calculation is repeated on the merged dataset (original readings with the replacements applied). The process can repeat until no steps are flagged or the operator accepts the result. The complete history of all rounds is preserved in the project file.</value></data>
+
+  <!-- CorrectionView -->
+  <data name="Correction_PageTitle.Text" xml:space="preserve"><value>Correction</value></data>
+  <data name="Correction_ProgressTitle.Text" xml:space="preserve"><value>Flagged step {0} of {1}</value></data>
+  <data name="Correction_OriginalReading_Label.Text" xml:space="preserve"><value>Original reading</value></data>
+  <data name="Correction_OriginalReading_Tooltip.Content" xml:space="preserve"><value>The reading recorded during the initial measurement round. Compare this to your new reading — a large difference confirms the original was suspect.</value></data>
+  <data name="Correction_ReadingLabel.Text" xml:space="preserve"><value>New reading (mm/m)</value></data>
+  <data name="Correction_AcceptButton.Content" xml:space="preserve"><value>Accept Reading</value></data>
+  <data name="Correction_CancelButton.Content" xml:space="preserve"><value>Cancel Correction</value></data>
+
+  <!-- RecalculateDialog -->
+  <data name="Recalculate_Title.Text" xml:space="preserve"><value>Recalculate</value></data>
+  <data name="Recalculate_Method_Label.Text" xml:space="preserve"><value>Calculation method</value></data>
+  <data name="Recalculate_Method_Tooltip.Content" xml:space="preserve"><value>Choose the algorithm used to compute node heights from the step readings.</value></data>
+  <data name="Recalculate_Method_LeastSquares.Text" xml:space="preserve"><value>Least-Squares (recommended)</value></data>
+  <data name="Recalculate_Method_Sequential.Text" xml:space="preserve"><value>Sequential Integration</value></data>
+  <data name="Recalculate_SigmaThreshold_Label.Text" xml:space="preserve"><value>Sigma threshold (k)</value></data>
+  <data name="Recalculate_AutoExclude_Label.Text" xml:space="preserve"><value>Auto-exclude outliers</value></data>
+  <data name="Recalculate_AutoExclude_Tooltip.Content" xml:space="preserve"><value>When enabled, flagged steps are automatically excluded from the least-squares system and do not influence the computed surface. When disabled, they remain in the system but are still reported.</value></data>
+  <data name="Recalculate_SaveResult_Label.Text" xml:space="preserve"><value>Save result to project</value></data>
+  <data name="Recalculate_OkButton.Content" xml:space="preserve"><value>Recalculate</value></data>
+  <data name="Recalculate_CancelButton.Content" xml:space="preserve"><value>Cancel</value></data>
+  <data name="CalcMethod_Help_Title.Text" xml:space="preserve"><value>Calculation Method</value></data>
+  <data name="CalcMethod_Help_Body.Text" xml:space="preserve"><value>Least-Squares is the recommended method. It solves the overdetermined system of step equations simultaneously, distributing closure errors optimally. Sequential Integration is a simpler method that integrates each traversal line independently and applies a proportional correction at each crossing point — faster to understand, but less accurate when there is significant instrument noise.</value></data>
+  <data name="SeqIntegration_Help_Title.Text" xml:space="preserve"><value>Sequential Integration</value></data>
+  <data name="SeqIntegration_Help_Body.Text" xml:space="preserve"><value>Each row and column traversal is integrated independently to produce a height profile. Where a row profile and a column profile cross at an interior node, the two heights disagree by a closure error. Sequential integration distributes this error proportionally along both traversals. The method is straightforward but allows errors to accumulate, especially on larger grids. Least-squares is preferred for production measurements.</value></data>
+  <data name="LinearDrift_Help_Title.Text" xml:space="preserve"><value>Linear Drift Correction</value></data>
+  <data name="LinearDrift_Help_Body.Text" xml:space="preserve"><value>Electronic levels can drift slowly during a long measurement session due to thermal changes in the instrument. Linear drift correction assumes that any systematic change in the readings during a single traversal increases linearly with time (or step count) and subtracts this trend before computing node heights. Enable this if you observe that residuals tend to increase toward the end of each traversal pass.</value></data>
+
+  <!-- PreferencesDialog -->
+  <data name="Preferences_Title.Text" xml:space="preserve"><value>Preferences</value></data>
+  <data name="Preferences_Theme_Label.Text" xml:space="preserve"><value>Appearance</value></data>
+  <data name="Preferences_Theme_System.Content" xml:space="preserve"><value>Follow system</value></data>
+  <data name="Preferences_Theme_Light.Content" xml:space="preserve"><value>Light</value></data>
+  <data name="Preferences_Theme_Dark.Content" xml:space="preserve"><value>Dark</value></data>
+  <data name="Preferences_DefaultFolder_Label.Text" xml:space="preserve"><value>Default project folder</value></data>
+  <data name="Preferences_DefaultFolder_Tooltip.Content" xml:space="preserve"><value>The folder that the Open and Save dialogs open to by default.</value></data>
+  <data name="Preferences_BrowseFolder.Content" xml:space="preserve"><value>Browse…</value></data>
+  <data name="Preferences_OkButton.Content" xml:space="preserve"><value>OK</value></data>
+  <data name="Preferences_CancelButton.Content" xml:space="preserve"><value>Cancel</value></data>
+
+  <!-- AboutDialog -->
+  <data name="About_Title.Text" xml:space="preserve"><value>About LevelApp</value></data>
+  <data name="About_Description.Text" xml:space="preserve"><value>Precision electronic level measurement evaluation for machine tool geometry inspection and surface plate qualification.</value></data>
+  <data name="About_License.Text" xml:space="preserve"><value>GNU General Public License v3.0</value></data>
+  <data name="About_GitHub.Content" xml:space="preserve"><value>View on GitHub</value></data>
+  <data name="About_CloseButton.Content" xml:space="preserve"><value>Close</value></data>
+
+  <!-- NewMeasurementDialog -->
+  <data name="NewMeasurement_Title.Text" xml:space="preserve"><value>New Measurement</value></data>
+  <data name="NewMeasurement_Label_Label.Text" xml:space="preserve"><value>Label</value></data>
+  <data name="NewMeasurement_Operator_Label.Text" xml:space="preserve"><value>Operator</value></data>
+  <data name="NewMeasurement_Notes_Label.Text" xml:space="preserve"><value>Notes</value></data>
+  <data name="NewMeasurement_OkButton.Content" xml:space="preserve"><value>Start</value></data>
+  <data name="NewMeasurement_CancelButton.Content" xml:space="preserve"><value>Cancel</value></data>
+
+  <!-- Parallel Ways specific -->
+  <data name="PW_Rails_SectionHeader.Text" xml:space="preserve"><value>Rails</value></data>
+  <data name="PW_AddRail_Button.Content" xml:space="preserve"><value>Add Rail</value></data>
+  <data name="PW_RailLabel_Label.Text" xml:space="preserve"><value>Label</value></data>
+  <data name="PW_RailLength_Label.Text" xml:space="preserve"><value>Length (mm)</value></data>
+  <data name="PW_RailLength_Tooltip.Content" xml:space="preserve"><value>Physical length of this rail in millimetres. Used to compute the station spacing.</value></data>
+  <data name="PW_RailSeparation_Label.Text" xml:space="preserve"><value>Lateral separation (mm)</value></data>
+  <data name="PW_RailSeparation_Tooltip.Content" xml:space="preserve"><value>Distance between this rail and the reference rail, measured perpendicular to the direction of travel.</value></data>
+  <data name="PW_Tasks_SectionHeader.Text" xml:space="preserve"><value>Tasks</value></data>
+  <data name="PW_AddTask_Button.Content" xml:space="preserve"><value>Add Task</value></data>
+  <data name="PW_TaskType_AlongRail.Text" xml:space="preserve"><value>Along Rail</value></data>
+  <data name="PW_TaskType_Bridge.Text" xml:space="preserve"><value>Bridge</value></data>
+  <data name="PW_Orientation_Label.Text" xml:space="preserve"><value>Orientation</value></data>
+  <data name="PW_Orientation_Tooltip.Content" xml:space="preserve"><value>The physical direction in which the rails run. Used for display purposes and to label step instructions.</value></data>
+  <data name="PW_DriftCorrection_Label.Text" xml:space="preserve"><value>Drift correction</value></data>
+  <data name="PW_DriftCorrection_Tooltip.Content" xml:space="preserve"><value>Applies a linear correction to compensate for slow instrument drift during a long traversal.</value></data>
+  <data name="PW_SolverMode_Label.Text" xml:space="preserve"><value>Solver mode</value></data>
+  <data name="PW_ReferenceRail_Label.Text" xml:space="preserve"><value>Reference rail</value></data>
+  <data name="PW_ReferenceRail_Tooltip.Content" xml:space="preserve"><value>The rail whose first station is used as the height datum (height = 0). All other heights are expressed relative to this point.</value></data>
+  <data name="PW_Straightness_Label.Text" xml:space="preserve"><value>Straightness (peak-to-valley)</value></data>
+  <data name="PW_Straightness_Tooltip.Content" xml:space="preserve"><value>Peak-to-valley height deviation of this rail after removing the best-fit straight line. This is the standard straightness metric.</value></data>
+  <data name="PW_Parallelism_Label.Text" xml:space="preserve"><value>Parallelism (peak-to-valley)</value></data>
+  <data name="PW_Parallelism_Tooltip.Content" xml:space="preserve"><value>Peak-to-valley variation of the height difference between two rails along their common stations. A perfectly parallel pair of rails has a parallelism value of zero.</value></data>
+  <data name="PW_Straightness_Help_Title.Text" xml:space="preserve"><value>Straightness</value></data>
+  <data name="PW_Straightness_Help_Body.Text" xml:space="preserve"><value>Straightness measures how much a rail deviates from a perfect straight line. First, all station heights are computed by integrating the level readings along the rail. Then, the best-fit straight line through all station heights is subtracted. The remaining deviations are the straightness profile; the peak-to-valley range of this profile is the reported straightness value.</value></data>
+  <data name="PW_Parallelism_Help_Title.Text" xml:space="preserve"><value>Parallelism</value></data>
+  <data name="PW_Parallelism_Help_Body.Text" xml:space="preserve"><value>Parallelism is the variation in height difference between two rails at their common station positions. At each station the height of rail B minus the height of rail A is computed. If the rails were perfectly parallel, this difference would be constant along the full length. The peak-to-valley range of these differences is the parallelism value.</value></data>
+  <data name="PW_SolverMode_Help_Title.Text" xml:space="preserve"><value>Solver Mode</value></data>
+  <data name="PW_SolverMode_Help_Body.Text" xml:space="preserve"><value>Global Least-Squares solves all rail and bridge readings simultaneously in one joint system, producing the statistically optimal result when bridge readings are available. Independent then Reconcile solves each rail independently first, then uses a secondary step to align the independent rail heights using the bridge readings. Both modes produce the same result when bridge readings are noise-free; Global Least-Squares handles noisy bridge readings more robustly.</value></data>
+  <data name="Menu_File_Exit.Text" xml:space="preserve"><value>Exit</value></data>
+  <data name="Menu_File_NewProject.Text" xml:space="preserve"><value>New Project</value></data>
+  <data name="Results_Recalculate.Content" xml:space="preserve"><value>Recalculate</value></data>
+  <data name="PW_BestStraightness_Label.Text" xml:space="preserve"><value>Best Rail Straightness</value></data>
+
+</root>

@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LevelApp.App.Navigation;
+using LevelApp.App.Services;
 using LevelApp.Core.Geometry;
 using LevelApp.Core.Geometry.ParallelWays;
 using LevelApp.Core.Models;
@@ -13,6 +14,7 @@ public sealed partial class MeasurementViewModel : ViewModelBase
     private readonly INavigationService     _navigation;
     private readonly MainViewModel          _mainViewModel;
     private readonly ParallelWaysCalculator _pwCalculator;
+    private readonly ILocalisationService   _loc;
 
     private Project            _project    = null!;
     private MeasurementSession _session    = null!;
@@ -20,11 +22,12 @@ public sealed partial class MeasurementViewModel : ViewModelBase
     private ObjectDefinition   _definition = null!;
 
     public MeasurementViewModel(INavigationService navigation, MainViewModel mainViewModel,
-                                ParallelWaysCalculator pwCalculator)
+                                ParallelWaysCalculator pwCalculator, ILocalisationService loc)
     {
         _navigation    = navigation;
         _mainViewModel = mainViewModel;
         _pwCalculator  = pwCalculator;
+        _loc           = loc;
     }
 
     // ── Initialisation ────────────────────────────────────────────────────────
@@ -106,7 +109,9 @@ public sealed partial class MeasurementViewModel : ViewModelBase
             ? _steps[CurrentStepIndex] : null;
 
     public int    TotalSteps    => _steps.Count;
-    public string ProgressText  => TotalSteps > 0 ? $"Step {CurrentStepIndex + 1} of {TotalSteps}" : string.Empty;
+    public string ProgressText  => TotalSteps > 0
+        ? string.Format(_loc.Get("Measurement_ProgressTitle.Text"), CurrentStepIndex + 1, TotalSteps)
+        : string.Empty;
     public int    ProgressPercent => TotalSteps > 0 ? CurrentStepIndex * 100 / TotalSteps : 0;
 
     public string OrientationArrow => CurrentStep?.Orientation switch

@@ -4,7 +4,7 @@
 
 > Living document. Update as the project evolves.
 
-> Last updated: 2026-04-09 *(revised to reflect v0.8.4: ThemeHelper, IThemeService, code quality improvements)*
+> Last updated: 2026-04-09 *(revised to reflect v0.9.0: WP0.09 contextual help system and localisation)*
 
 
 
@@ -42,6 +42,7 @@ The industry reference for this domain is **Wyler AG, Winterthur** (wylerag.com)
 | MVVM helpers | CommunityToolkit.Mvvm 8.3.2 | Source-generated `ObservableProperty`, `RelayCommand`, `ObservableObject` |
 | Dependency injection | Microsoft.Extensions.DependencyInjection 8.0.1 | ViewModels and services resolved from `App.Services` container |
 | Persistence | JSON via System.Text.Json | Human-readable, no dependencies, diffable |
+| Localisation | WinUI 3 `.resw` resource files (en-US, de-DE) via `Windows.ApplicationModel.Resources.ResourceLoader` | Platform-native; `x:Uid` mechanism wires keys to XAML properties automatically |
 | Bluetooth (future) | Windows.Devices.Bluetooth (WinRT) | First-class Windows API, no third-party libs needed |
 | USB HID (future) | Windows.Devices.HumanInterfaceDevice (WinRT) | Same rationale |
 
@@ -102,10 +103,14 @@ LevelApp/
 │   ├── MainWindow.xaml / .cs      ← Menu bar (File, Edit, Help); wires IThemeService to RootFrame
 │   ├── Helpers/
 │   │   └── ThemeHelper.cs         ← GetColor, GetBrush, PlotRamp, InterpolateRamp (shared by all renderers)
+│   ├── Strings/
+│   │   ├── en-US/Resources.resw   ← All UI strings in English (195 keys)
+│   │   └── de-DE/Resources.resw   ← All UI strings in German (195 keys)
 │   ├── Styles/
 │   │   ├── ThemeColors.xaml       ← ThemeDictionaries: all colour tokens (Light + Default/Dark)
 │   │   ├── TextStyles.xaml        ← Named TextBlock styles keyed to ThemeResource tokens
-│   │   └── ControlStyles.xaml     ← Implicit Button style; CardStyle; CompactCardStyle
+│   │   ├── ControlStyles.xaml     ← Implicit Button style; CardStyle; CompactCardStyle
+│   │   └── HelpButtonStyle.xaml   ← ⓘ info button (Segoe MDL2 Assets U+E946, 24×24, transparent)
 │   ├── Navigation/
 │   │   ├── PageKey.cs             ← Enum: ProjectSetup, Measurement, Results, Correction
 │   │   ├── INavigationService.cs
@@ -114,12 +119,14 @@ LevelApp/
 │   │   ├── ResultsArgs.cs         ← record(Project, Session)
 │   │   └── CorrectionArgs.cs      ← record(Project, Session)
 │   ├── Services/
-│   │   ├── IProjectFileService.cs ← interface for file I/O (testable)
-│   │   ├── ProjectFileService.cs  ← Win32 IFileOpenDialog/IFileSaveDialog + JSON I/O
-│   │   ├── ISettingsService.cs    ← DefaultProjectFolder, AppTheme (ElementTheme)
-│   │   ├── SettingsService.cs     ← persists settings to %LOCALAPPDATA%\LevelApp\settings.json
-│   │   ├── IThemeService.cs       ← Apply(ElementTheme), SetTarget(FrameworkElement)
-│   │   └── ThemeService.cs        ← singleton; applies RequestedTheme to RootFrame
+│   │   ├── IProjectFileService.cs    ← interface for file I/O (testable)
+│   │   ├── ProjectFileService.cs     ← Win32 IFileOpenDialog/IFileSaveDialog + JSON I/O
+│   │   ├── ISettingsService.cs       ← DefaultProjectFolder, AppTheme (ElementTheme)
+│   │   ├── SettingsService.cs        ← persists settings to %LOCALAPPDATA%\LevelApp\settings.json
+│   │   ├── IThemeService.cs          ← Apply(ElementTheme), SetTarget(FrameworkElement)
+│   │   ├── ThemeService.cs           ← singleton; applies RequestedTheme to RootFrame
+│   │   ├── ILocalisationService.cs   ← Get(key) → string
+│   │   └── LocalisationService.cs    ← wraps ResourceLoader; singleton
 │   ├── Converters/
 │   │   └── BoolToVisibilityConverter.cs
 │   ├── Views/
@@ -682,6 +689,14 @@ The vertical exaggeration (`maxZPixels`) is computed per render as `max(10, (col
 - Assembly/file version metadata in `.csproj`
 - Commit message convention: `[vX.Y.Z] description`
 
+### WP0.09 — Contextual Help System & Localisation ✓ Complete (v0.9.0)
+- `ILocalisationService` / `LocalisationService` wrapping `Windows.ApplicationModel.Resources.ResourceLoader`; registered as singleton in DI
+- `.resw` resource files at `LevelApp.App/Strings/en-US/Resources.resw` and `de-DE/Resources.resw` (195 keys each); referenced as `<PRIResource>` in `LevelApp.App.csproj`
+- All XAML and C# UI strings externalised: `x:Uid` wiring for TextBlock, Button, MenuBarItem, MenuFlyoutItem, ComboBoxItem, and RadioButton; ContentDialog titles and button texts set in code-behind via `ResourceLoader.GetString`
+- `HelpButtonStyle.xaml` — `Style` resource for ⓘ info buttons (Segoe MDL2 Assets glyph U+E946, 24×24, transparent background); merged in `App.xaml`
+- Two-tier help: tooltips (`ToolTipService.ToolTip`) on all metric labels and input fields; ⓘ flyout buttons on section headers and algorithmic concepts (`CalcMethod`, `LeastSquares`, `SeqIntegration`, `LinearDrift`, `FlaggedSteps`, `SigmaThreshold`, `CorrectionRound`, `Flatness`, `ResidualRMS`, `Orientation`, `Reading`, `Strategy`, `FullGrid`, `UnionJack`, `PW_Straightness`, `PW_Parallelism`, `PW_SolverMode`)
+- `ResultsViewModel`, `MeasurementViewModel`, `CorrectionViewModel` inject `ILocalisationService` for `FlatnessLabel`, `ProgressText`, and format strings; `ResultsViewModel` adds `NoFlaggedStepsVisibility` property
+
 ### WP0.08 — Theme architecture ✓ Complete (v0.8.4)
 - `LevelApp.App/Styles/` folder with three `ResourceDictionary` XAML files merged in `App.xaml`:
   - `ThemeColors.xaml` — all colour tokens in `ThemeDictionaries` (`Light` + `Default`/Dark); covers plot ramp (5 stops), grid canvas colours, loop-closure brushes
@@ -791,7 +806,7 @@ Bump `AppVersion.cs` **before** committing so the delivered commit already carri
 
 - Should multiple instrument providers be selectable per measurement session (e.g. two axes simultaneously)?
 - Reporting: what format? PDF export? Print directly?
-- Localisation: German / English from the start, or English only initially?
+- Localisation: en-US and de-DE now complete (WP0.09). Additional locales (fr, it, …) can be added by dropping in a new `.resw` file — no code changes required.
 - Licensing / distribution model for the application?
 - Should the 3D surface plot be interactive (rotate, zoom)?
 

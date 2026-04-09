@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LevelApp.App.Navigation;
+using LevelApp.App.Services;
 using LevelApp.Core.Geometry;
 using LevelApp.Core.Models;
 using Microsoft.UI.Xaml;
@@ -9,8 +10,9 @@ namespace LevelApp.App.ViewModels;
 
 public sealed partial class CorrectionViewModel : ViewModelBase
 {
-    private readonly INavigationService _navigation;
-    private readonly MainViewModel      _mainViewModel;
+    private readonly INavigationService  _navigation;
+    private readonly MainViewModel       _mainViewModel;
+    private readonly ILocalisationService _loc;
 
     private Project            _project    = null!;
     private MeasurementSession _session    = null!;
@@ -19,10 +21,11 @@ public sealed partial class CorrectionViewModel : ViewModelBase
     /// <summary>Flagged steps paired with the new reading collected during this session.</summary>
     private List<(MeasurementStep Step, double? NewReading)> _flagged = [];
 
-    public CorrectionViewModel(INavigationService navigation, MainViewModel mainViewModel)
+    public CorrectionViewModel(INavigationService navigation, MainViewModel mainViewModel, ILocalisationService loc)
     {
         _navigation    = navigation;
         _mainViewModel = mainViewModel;
+        _loc           = loc;
     }
 
     // ── Initialisation ────────────────────────────────────────────────────────
@@ -87,7 +90,8 @@ public sealed partial class CorrectionViewModel : ViewModelBase
 
     public int    TotalFlaggedSteps => _flagged.Count;
     public string ProgressText      => TotalFlaggedSteps > 0
-        ? $"Correction step {CurrentStepIndex + 1} of {TotalFlaggedSteps}" : string.Empty;
+        ? string.Format(_loc.Get("Correction_ProgressTitle.Text"), CurrentStepIndex + 1, TotalFlaggedSteps)
+        : string.Empty;
 
     public string OrientationArrow => CurrentStep?.Orientation switch
     {
@@ -101,7 +105,7 @@ public sealed partial class CorrectionViewModel : ViewModelBase
     public string CurrentInstructionText => CurrentStep?.InstructionText ?? string.Empty;
 
     public string OriginalReadingText => CurrentStep?.Reading is double orig
-        ? $"Original reading: {orig:+0.000;-0.000} mm/m"
+        ? $"{orig:+0.000;-0.000} mm/m"
         : string.Empty;
 
     public bool       IsInputEnabled        => !IsCalculating;

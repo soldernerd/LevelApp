@@ -5,6 +5,7 @@ namespace LevelApp.App.Views.Dialogs;
 
 public sealed partial class NewMeasurementDialog : ContentDialog
 {
+    public string Label        => LabelBox.Text;
     public string OperatorName => OperatorBox.Text;
     public string Notes        => NotesBox.Text;
 
@@ -17,6 +18,12 @@ public sealed partial class NewMeasurementDialog : ContentDialog
     public NewMeasurementDialog(ObjectDefinition definition, string defaultOperator)
     {
         InitializeComponent();
+
+        var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
+        Title             = loader.GetString("NewMeasurement_Title.Text");
+        PrimaryButtonText = loader.GetString("NewMeasurement_OkButton.Content");
+        CloseButtonText   = loader.GetString("NewMeasurement_CancelButton.Content");
+
         GeometrySummaryText.Text = BuildGeometrySummary(definition);
         OperatorBox.Text         = defaultOperator;
     }

@@ -25,6 +25,9 @@ public partial class App : Application
         // Navigation
         services.AddSingleton<INavigationService, NavigationService>();
 
+        // Localisation
+        services.AddSingleton<ILocalisationService, LocalisationService>();
+
         // Services
         services.AddSingleton<IProjectFileService, ProjectFileService>();
 

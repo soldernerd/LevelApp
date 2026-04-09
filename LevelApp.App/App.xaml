@@ -10,6 +10,7 @@
                 <ResourceDictionary Source="Styles/ThemeColors.xaml"/>
                 <ResourceDictionary Source="Styles/TextStyles.xaml"/>
                 <ResourceDictionary Source="Styles/ControlStyles.xaml"/>
+                <ResourceDictionary Source="Styles/HelpButtonStyle.xaml"/>
             </ResourceDictionary.MergedDictionaries>
             <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         </ResourceDictionary>

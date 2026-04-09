@@ -26,6 +26,8 @@ The software guides the operator through a defined measurement procedure, acquir
 - **Open existing project** — load a `.levelproj` file at any time; if the file contains all readings but no computed result the solver runs automatically on load
 - **Preferences** — configurable default project folder and Light / Dark / Follow system theme, both remembered across sessions
 - **About dialog** — Help → About LevelApp shows the current version, copyright, license, and links to the license text and GitHub repository
+- **Contextual help** — ⓘ flyout buttons on all section headers and algorithmic concepts (least-squares, flagged steps, sigma threshold, correction rounds, etc.); tooltips on all metric labels and input fields
+- **Localised UI** — full English (en-US) and German (de-DE) localisation; the OS language setting selects the active locale automatically
 - **Extensible architecture** — geometry modules, measurement strategies, instrument providers and display modules are all plugin-style interfaces; new object types and instruments can be added without touching existing code
 
 ---
@@ -114,9 +116,12 @@ LevelApp/
 │   ├── Views/                   # ProjectSetupView, MeasurementView,
 │   │                            # ResultsView, CorrectionView, Dialogs/
 │   ├── ViewModels/              # MVVM view models
-│   ├── Services/                # ProjectFileService, SettingsService, ThemeService
+│   ├── Services/                # ProjectFileService, SettingsService, ThemeService,
+│   │                            # LocalisationService
 │   ├── Helpers/                 # ThemeHelper (shared colour resolution for all renderers)
-│   ├── Styles/                  # ThemeColors.xaml, TextStyles.xaml, ControlStyles.xaml
+│   ├── Strings/                 # en-US/Resources.resw, de-DE/Resources.resw
+│   ├── Styles/                  # ThemeColors.xaml, TextStyles.xaml, ControlStyles.xaml,
+│   │                            # HelpButtonStyle.xaml
 │   └── DisplayModules/          # SurfacePlot3DDisplay, MeasurementsGridRenderer,
 │                                # StrategyPreviewRenderer, ParallelWaysDisplay
 ├── LevelApp.Tests/              # xUnit unit tests (Core only)
@@ -132,6 +137,7 @@ LevelApp/
 - [x] Union Jack measurement strategy
 - [x] Parallel Ways geometry module (straightness + parallelism for rails/slideways)
 - [x] Light / Dark / Follow system theme with live preview and persistence
+- [x] Contextual help (tooltips + ⓘ flyouts) and en-US / de-DE localisation
 - [ ] Parallel Ways correction workflow
 - [ ] Heat map display module
 - [ ] Numerical table display module
@@ -140,7 +146,7 @@ LevelApp/
 - [ ] USB HID instrument provider
 - [ ] Additional geometry modules (squareness, lathe bed, …)
 - [ ] PDF report export
-- [ ] German / English localisation
+- [x] German / English localisation
 
 ---
 

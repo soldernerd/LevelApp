@@ -16,14 +16,14 @@
                        VerticalAlignment="Center"/>
 
             <Button Grid.Column="1"
-                    Content="Recalculate"
+                    x:Uid="Results_Recalculate"
                     Click="OnRecalculateClicked"
                     Visibility="{x:Bind ViewModel.SurfacePlateOnlyVisibility, Mode=OneWay}"
                     VerticalAlignment="Center"
                     Margin="0,0,8,0"/>
 
             <Button Grid.Column="2"
-                    Content="New Measurement"
+                    x:Uid="Results_NewMeasurement"
                     Click="OnNewMeasurementClicked"
                     VerticalAlignment="Center"/>
         </Grid>
@@ -181,11 +181,34 @@
                             CornerRadius="8"
                             Padding="16">
                         <StackPanel Spacing="4">
-                            <TextBlock Text="{x:Bind ViewModel.FlatnessLabel, Mode=OneWay}"
-                                       Style="{StaticResource CaptionTextBlockStyle}"
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <!-- Label row with tooltip and ⓘ flyout -->
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <TextBlock Text="{x:Bind ViewModel.FlatnessLabel, Mode=OneWay}"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           VerticalAlignment="Center">
+                                    <ToolTipService.ToolTip>
+                                        <ToolTip x:Uid="Flatness_Label_Tooltip"/>
+                                    </ToolTipService.ToolTip>
+                                </TextBlock>
+                                <Button Style="{StaticResource HelpButtonStyle}">
+                                    <Button.Flyout>
+                                        <Flyout Placement="Bottom">
+                                            <StackPanel MaxWidth="340" Spacing="8">
+                                                <TextBlock x:Uid="Flatness_Help_Title" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                                                <TextBlock x:Uid="Flatness_Help_Body" TextWrapping="Wrap" Style="{StaticResource BodyTextBlockStyle}"/>
+                                            </StackPanel>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                </Button>
+                            </StackPanel>
+                            <!-- Value with tooltip -->
                             <TextBlock Text="{x:Bind ViewModel.FlatnessText, Mode=OneWay}"
-                                       Style="{StaticResource SubtitleTextBlockStyle}"/>
+                                       Style="{StaticResource SubtitleTextBlockStyle}">
+                                <ToolTipService.ToolTip>
+                                    <ToolTip x:Uid="FlatnessValue_Tooltip"/>
+                                </ToolTipService.ToolTip>
+                            </TextBlock>
                         </StackPanel>
                     </Border>
 
@@ -194,11 +217,47 @@
                             CornerRadius="8"
                             Padding="16">
                         <StackPanel Spacing="4">
-                            <TextBlock Text="Residual RMS"
-                                       Style="{StaticResource CaptionTextBlockStyle}"
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <!-- Label row with tooltip and ⓘ flyout -->
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <TextBlock x:Uid="ResidualRMS_Label"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           VerticalAlignment="Center">
+                                    <ToolTipService.ToolTip>
+                                        <ToolTip x:Uid="ResidualRMS_Label_Tooltip"/>
+                                    </ToolTipService.ToolTip>
+                                </TextBlock>
+                                <Button Style="{StaticResource HelpButtonStyle}">
+                                    <Button.Flyout>
+                                        <Flyout Placement="Bottom">
+                                            <StackPanel MaxWidth="340" Spacing="8">
+                                                <TextBlock x:Uid="ResidualRMS_Help_Title" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                                                <TextBlock x:Uid="ResidualRMS_Help_Body" TextWrapping="Wrap" Style="{StaticResource BodyTextBlockStyle}"/>
+                                            </StackPanel>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                </Button>
+                            </StackPanel>
+                            <!-- Sigma value with tooltip -->
                             <TextBlock Text="{x:Bind ViewModel.SigmaText, Mode=OneWay}"
-                                       Style="{StaticResource SubtitleTextBlockStyle}"/>
+                                       Style="{StaticResource SubtitleTextBlockStyle}">
+                                <ToolTipService.ToolTip>
+                                    <ToolTip x:Uid="SigmaValue_Tooltip"/>
+                                </ToolTipService.ToolTip>
+                            </TextBlock>
+                            <!-- Least-Squares Adjustment info row -->
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="0,4,0,0">
+                                <Button Style="{StaticResource HelpButtonStyle}">
+                                    <Button.Flyout>
+                                        <Flyout Placement="Bottom">
+                                            <StackPanel MaxWidth="340" Spacing="8">
+                                                <TextBlock x:Uid="LeastSquares_Help_Title" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                                                <TextBlock x:Uid="LeastSquares_Help_Body" TextWrapping="Wrap" Style="{StaticResource BodyTextBlockStyle}"/>
+                                            </StackPanel>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                </Button>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 
@@ -266,8 +325,27 @@
                             CornerRadius="8"
                             Padding="16">
                         <StackPanel Spacing="8">
-                            <TextBlock Text="{x:Bind ViewModel.FlaggedCountText, Mode=OneWay}"
-                                       Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                            <!-- Header row with ⓘ flyout -->
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <TextBlock x:Uid="Results_FlaggedSteps_Header"
+                                           Style="{StaticResource BodyStrongTextBlockStyle}"
+                                           VerticalAlignment="Center"/>
+                                <Button Style="{StaticResource HelpButtonStyle}">
+                                    <Button.Flyout>
+                                        <Flyout Placement="Bottom">
+                                            <StackPanel MaxWidth="340" Spacing="8">
+                                                <TextBlock x:Uid="FlaggedSteps_Help_Title" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                                                <TextBlock x:Uid="FlaggedSteps_Help_Body" TextWrapping="Wrap" Style="{StaticResource BodyTextBlockStyle}"/>
+                                            </StackPanel>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                </Button>
+                            </StackPanel>
+                            <!-- "No flagged steps" message (visible when list is empty) -->
+                            <TextBlock x:Uid="Results_NoFlaggedSteps"
+                                       Style="{StaticResource CaptionTextBlockStyle}"
+                                       Visibility="{x:Bind ViewModel.NoFlaggedStepsVisibility, Mode=OneWay}"/>
+                            <!-- Flagged steps list -->
                             <ItemsControl ItemsSource="{x:Bind ViewModel.FlaggedSteps, Mode=OneWay}"
                                           Visibility="{x:Bind ViewModel.FlaggedListVisibility, Mode=OneWay}">
                                 <ItemsControl.ItemTemplate>
@@ -279,11 +357,34 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+                            <!-- Sigma threshold and correction round info row -->
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+                                <Button Style="{StaticResource HelpButtonStyle}">
+                                    <Button.Flyout>
+                                        <Flyout Placement="Bottom">
+                                            <StackPanel MaxWidth="340" Spacing="8">
+                                                <TextBlock x:Uid="SigmaThreshold_Help_Title" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                                                <TextBlock x:Uid="SigmaThreshold_Help_Body" TextWrapping="Wrap" Style="{StaticResource BodyTextBlockStyle}"/>
+                                            </StackPanel>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                </Button>
+                                <Button Style="{StaticResource HelpButtonStyle}">
+                                    <Button.Flyout>
+                                        <Flyout Placement="Bottom">
+                                            <StackPanel MaxWidth="340" Spacing="8">
+                                                <TextBlock x:Uid="CorrectionRound_Help_Title" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                                                <TextBlock x:Uid="CorrectionRound_Help_Body" TextWrapping="Wrap" Style="{StaticResource BodyTextBlockStyle}"/>
+                                            </StackPanel>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                </Button>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 
                     <!-- Start Correction Session button (Surface Plate only) -->
-                    <Button Content="Start Correction Session"
+                    <Button x:Uid="Results_StartCorrection"
                             Command="{x:Bind ViewModel.StartCorrectionSessionCommand}"
                             Visibility="{x:Bind ViewModel.CorrectButtonVisibility, Mode=OneWay}"
                             Style="{StaticResource AccentButtonStyle}"

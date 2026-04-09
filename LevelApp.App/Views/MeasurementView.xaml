@@ -63,11 +63,26 @@
                                    Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
                     </Border>
 
-                    <TextBlock Grid.Column="1"
-                               Text="Instrument orientation"
-                               VerticalAlignment="Center"
-                               Margin="12,0,0,0"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <!-- Orientation label with ⓘ flyout -->
+                    <StackPanel Grid.Column="1"
+                                Orientation="Horizontal"
+                                Spacing="6"
+                                VerticalAlignment="Center"
+                                Margin="12,0,0,0">
+                        <TextBlock x:Uid="Measurement_OrientationLabel"
+                                   VerticalAlignment="Center"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <Button Style="{StaticResource HelpButtonStyle}">
+                            <Button.Flyout>
+                                <Flyout Placement="Bottom">
+                                    <StackPanel MaxWidth="340" Spacing="8">
+                                        <TextBlock x:Uid="Orientation_Help_Title" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                                        <TextBlock x:Uid="Orientation_Help_Body" TextWrapping="Wrap" Style="{StaticResource BodyTextBlockStyle}"/>
+                                    </StackPanel>
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
+                    </StackPanel>
                 </Grid>
 
                 <!-- Instruction card -->
@@ -79,17 +94,34 @@
                                Style="{StaticResource BodyTextBlockStyle}"/>
                 </Border>
 
-                <!-- Reading entry -->
-                <NumberBox Header="Reading (µm/m)"
-                           PlaceholderText="Enter instrument reading"
-                           Value="{x:Bind ViewModel.Reading, Mode=TwoWay}"
-                           SmallChange="1"
-                           LargeChange="10"
-                           SpinButtonPlacementMode="Compact"
-                           IsEnabled="{x:Bind ViewModel.IsInputEnabled, Mode=OneWay}"/>
+                <!-- Reading entry (label replaced from Header attribute) -->
+                <StackPanel Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <TextBlock x:Uid="Measurement_ReadingLabel"
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   VerticalAlignment="Center"/>
+                        <Button Style="{StaticResource HelpButtonStyle}">
+                            <Button.Flyout>
+                                <Flyout Placement="Bottom">
+                                    <StackPanel MaxWidth="340" Spacing="8">
+                                        <TextBlock x:Uid="Reading_Help_Title" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                                        <TextBlock x:Uid="Reading_Help_Body" TextWrapping="Wrap" Style="{StaticResource BodyTextBlockStyle}"/>
+                                    </StackPanel>
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
+                    </StackPanel>
+                    <NumberBox PlaceholderText="Enter instrument reading"
+                               Value="{x:Bind ViewModel.Reading, Mode=TwoWay}"
+                               SmallChange="1"
+                               LargeChange="10"
+                               SpinButtonPlacementMode="Compact"
+                               IsEnabled="{x:Bind ViewModel.IsInputEnabled, Mode=OneWay}"/>
+                </StackPanel>
 
                 <!-- Accept button -->
-                <Button Content="Accept Reading"
+                <Button x:Uid="Measurement_AcceptButton"
                         Command="{x:Bind ViewModel.AcceptReadingCommand}"
                         Style="{StaticResource AccentButtonStyle}"
                         HorizontalAlignment="Stretch"
@@ -107,7 +139,7 @@
                 Padding="16">
             <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
                 <ProgressRing IsActive="True" Width="24" Height="24"/>
-                <TextBlock Text="Calculating surface map…"
+                <TextBlock x:Uid="Measurement_Calculating"
                            VerticalAlignment="Center"
                            Style="{StaticResource BodyTextBlockStyle}"/>
             </StackPanel>

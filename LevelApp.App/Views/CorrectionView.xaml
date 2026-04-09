@@ -54,11 +54,26 @@
                                    Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
                     </Border>
 
-                    <TextBlock Grid.Column="1"
-                               Text="Instrument orientation"
-                               VerticalAlignment="Center"
-                               Margin="12,0,0,0"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <!-- Orientation label with ⓘ flyout -->
+                    <StackPanel Grid.Column="1"
+                                Orientation="Horizontal"
+                                Spacing="6"
+                                VerticalAlignment="Center"
+                                Margin="12,0,0,0">
+                        <TextBlock x:Uid="Measurement_OrientationLabel"
+                                   VerticalAlignment="Center"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <Button Style="{StaticResource HelpButtonStyle}">
+                            <Button.Flyout>
+                                <Flyout Placement="Bottom">
+                                    <StackPanel MaxWidth="340" Spacing="8">
+                                        <TextBlock x:Uid="Orientation_Help_Title" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                                        <TextBlock x:Uid="Orientation_Help_Body" TextWrapping="Wrap" Style="{StaticResource BodyTextBlockStyle}"/>
+                                    </StackPanel>
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
+                    </StackPanel>
                 </Grid>
 
                 <!-- Instruction card -->
@@ -70,26 +85,52 @@
                                Style="{StaticResource BodyTextBlockStyle}"/>
                 </Border>
 
-                <!-- Original reading -->
-                <Border Background="{ThemeResource SystemFillColorCautionBackgroundBrush}"
-                        CornerRadius="8"
-                        Padding="12">
-                    <TextBlock Text="{x:Bind ViewModel.OriginalReadingText, Mode=OneWay}"
+                <!-- Original reading label + value -->
+                <StackPanel Spacing="4">
+                    <TextBlock x:Uid="Correction_OriginalReading_Label"
                                Style="{StaticResource CaptionTextBlockStyle}"
-                               Foreground="{ThemeResource SystemFillColorCautionBrush}"/>
-                </Border>
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                        <ToolTipService.ToolTip>
+                            <ToolTip x:Uid="Correction_OriginalReading_Tooltip"/>
+                        </ToolTipService.ToolTip>
+                    </TextBlock>
+                    <Border Background="{ThemeResource SystemFillColorCautionBackgroundBrush}"
+                            CornerRadius="8"
+                            Padding="12">
+                        <TextBlock Text="{x:Bind ViewModel.OriginalReadingText, Mode=OneWay}"
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   Foreground="{ThemeResource SystemFillColorCautionBrush}"/>
+                    </Border>
+                </StackPanel>
 
-                <!-- New reading entry -->
-                <NumberBox Header="New reading (mm/m)"
-                           PlaceholderText="Enter corrected reading"
-                           Value="{x:Bind ViewModel.Reading, Mode=TwoWay}"
-                           SmallChange="0.001"
-                           LargeChange="0.01"
-                           SpinButtonPlacementMode="Compact"
-                           IsEnabled="{x:Bind ViewModel.IsInputEnabled, Mode=OneWay}"/>
+                <!-- New reading entry (label replaced from Header attribute) -->
+                <StackPanel Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <TextBlock x:Uid="Correction_ReadingLabel"
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   VerticalAlignment="Center"/>
+                        <Button Style="{StaticResource HelpButtonStyle}">
+                            <Button.Flyout>
+                                <Flyout Placement="Bottom">
+                                    <StackPanel MaxWidth="340" Spacing="8">
+                                        <TextBlock x:Uid="Reading_Help_Title" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                                        <TextBlock x:Uid="Reading_Help_Body" TextWrapping="Wrap" Style="{StaticResource BodyTextBlockStyle}"/>
+                                    </StackPanel>
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
+                    </StackPanel>
+                    <NumberBox PlaceholderText="Enter corrected reading"
+                               Value="{x:Bind ViewModel.Reading, Mode=TwoWay}"
+                               SmallChange="0.001"
+                               LargeChange="0.01"
+                               SpinButtonPlacementMode="Compact"
+                               IsEnabled="{x:Bind ViewModel.IsInputEnabled, Mode=OneWay}"/>
+                </StackPanel>
 
                 <!-- Accept button -->
-                <Button Content="Accept Reading"
+                <Button x:Uid="Correction_AcceptButton"
                         Command="{x:Bind ViewModel.AcceptReadingCommand}"
                         Style="{StaticResource AccentButtonStyle}"
                         HorizontalAlignment="Stretch"
@@ -107,7 +148,7 @@
                 Padding="16">
             <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
                 <ProgressRing IsActive="True" Width="24" Height="24"/>
-                <TextBlock Text="Recalculating surface map…"
+                <TextBlock x:Uid="Measurement_Calculating"
                            VerticalAlignment="Center"
                            Style="{StaticResource BodyTextBlockStyle}"/>
             </StackPanel>
