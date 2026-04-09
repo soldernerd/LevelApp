@@ -4,7 +4,7 @@
 
 > Living document. Update as the project evolves.
 
-> Last updated: 2026-04-08 *(revised to reflect WP0.06: code quality cleanup)*
+> Last updated: 2026-04-09 *(revised to reflect WP0.07: Parallel Ways geometry module)*
 
 
 
@@ -68,9 +68,14 @@ LevelApp/
 │   │   ├── ObjectDefinition.cs
 │   │   ├── MeasurementSession.cs
 │   │   ├── MeasurementRound.cs    ← also contains MergeWithReplacements static helper
-│   │   ├── MeasurementStep.cs
+│   │   ├── MeasurementStep.cs     ← includes PassPhase enum
 │   │   ├── CorrectionRound.cs     ← also contains ReplacedStep
-│   │   └── SurfaceResult.cs
+│   │   ├── SurfaceResult.cs
+│   │   ├── RailDefinition.cs
+│   │   ├── ParallelWaysParameters.cs    ← WaysOrientation enum + From() helper
+│   │   ├── ParallelWaysTask.cs          ← TaskType, PassDirection enums
+│   │   ├── ParallelWaysStrategyParameters.cs  ← DriftCorrectionMethod, SolverMode enums + From()
+│   │   └── ParallelWaysResult.cs        ← RailProfile, ParallelismProfile, ParallelWaysResult
 │   ├── Geometry/
 │   │   ├── StrategyFactory.cs     ← Create(strategyId) → IMeasurementStrategy
 │   │   ├── CalculatorFactory.cs   ← Create(methodId, strategy) → ISurfaceCalculator
@@ -78,11 +83,15 @@ LevelApp/
 │   │   │   ├── LeastSquaresCalculator.cs        ← least-squares solver + outlier detection
 │   │   │   ├── SequentialIntegrationCalculator.cs ← proportional closure distribution
 │   │   │   └── ClosureErrorCalculator.cs        ← shared closure-loop helper
-│   │   └── SurfacePlate/
+│   │   ├── SurfacePlate/
+│   │   │   └── Strategies/
+│   │   │       ├── FullGridStrategy.cs
+│   │   │       ├── UnionJackStrategy.cs
+│   │   │       └── UnionJackRings.cs
+│   │   └── ParallelWays/
+│   │       ├── ParallelWaysCalculator.cs   ← standalone calculator returning ParallelWaysResult
 │   │       └── Strategies/
-│   │           ├── FullGridStrategy.cs
-│   │           ├── UnionJackStrategy.cs
-│   │           └── UnionJackRings.cs
+│   │           └── ParallelWaysStrategy.cs
 │   └── Serialization/
 │       ├── ProjectSerializer.cs
 │       ├── ObjectValueConverter.cs
@@ -125,12 +134,16 @@ LevelApp/
 │       │   └── SurfacePlot3DDisplay.cs
 │       ├── MeasurementsGrid/
 │       │   └── MeasurementsGridRenderer.cs  ← 2D step-map canvas (arrows, loop fills, zoom)
-│       └── StrategyPreview/
-│           └── StrategyPreviewRenderer.cs   ← small preview canvas in ProjectSetupView
+│       ├── StrategyPreview/
+│       │   └── StrategyPreviewRenderer.cs   ← small preview canvas in ProjectSetupView
+│       └── ParallelWaysDisplay/
+│           └── ParallelWaysDisplay.cs       ← 2D rail schematic with coloured station dots
 ├── LevelApp.Tests/
 │   ├── FullGridStrategyTests.cs
 │   ├── UnionJackStrategyTests.cs
-│   └── LeastSquaresCalculatorTests.cs
+│   ├── LeastSquaresCalculatorTests.cs
+│   ├── ParallelWaysStrategyTests.cs
+│   └── ParallelWaysCalculatorTests.cs
 └── docs/
     ├── architecture.md               ← This file
     └── levelproj.md                  ← .levelproj JSON format reference
@@ -208,12 +221,12 @@ public static ISurfaceCalculator Create(string methodId, IMeasurementStrategy st
 Project
 ├── Id, Name, CreatedAt, ModifiedAt, Operator, Notes
 ├── ObjectDefinition
-│   ├── GeometryModuleId          (e.g. "SurfacePlate")
+│   ├── GeometryModuleId          ("SurfacePlate" or "ParallelWays")
 │   └── Parameters                (Dictionary<string, object>; module interprets)
-│       ├── widthMm
-│       ├── heightMm
-│       ├── columnsCount
-│       └── rowsCount
+│       ├── SurfacePlate:   widthMm, heightMm, columnsCount / rowsCount  (FullGrid)
+│       │                   widthMm, heightMm, segments, rings            (UnionJack)
+│       └── ParallelWays:   orientation, referenceRailIndex, rails[], tasks[],
+│                           driftCorrection, solverMode
 └── Measurements[ ]
     └── MeasurementSession
         ├── Id, Label, TakenAt, Operator, InstrumentId, StrategyId, Notes
@@ -222,16 +235,36 @@ Project
         │   ├── Steps[ ]
         │   │   └── MeasurementStep
         │   │       ├── Index, GridCol, GridRow
-        │   │       ├── Orientation  (North | South | East | West)
+        │   │       ├── NodeId, ToNodeId   (symbolic node identifiers)
+        │   │       ├── Orientation        (North | South | East | West | diagonals)
+        │   │       ├── PassPhase          (NotApplicable | Forward | Return)
         │   │       ├── InstructionText
         │   │       └── Reading  (double?  — null until operator records a value, mm/m)
-        │   └── Result  (SurfaceResult?)
-        │       ├── HeightMapMm[][]   (jagged array, indexed [row][col])
-        │       ├── FlatnessValueMm
-        │       ├── Residuals[]       (one per step, in step order)
+        │   ├── Result  (SurfaceResult? — Surface Plate sessions)
+        │   │   ├── NodeHeights            (Dictionary<string, double>)
+        │   │   ├── FlatnessValueMm
+        │   │   ├── Residuals[]            (one per step, in step order)
+        │   │   ├── FlaggedStepIndices[]
+        │   │   ├── SigmaThreshold
+        │   │   ├── Sigma                  (residual RMS with DOF correction, mm)
+        │   │   └── PrimitiveLoops[]       (closure loops for Union Jack Full)
+        │   └── ParallelWaysResult  (ParallelWaysResult? — Parallel Ways sessions)
+        │       ├── RailProfiles[]
+        │       │   └── RailProfile
+        │       │       ├── RailIndex
+        │       │       ├── HeightProfileMm[]      (straightness after line removal)
+        │       │       ├── StationPositionsMm[]
+        │       │       └── StraightnessValueMm    (peak-to-valley)
+        │       ├── ParallelismProfiles[]
+        │       │   └── ParallelismProfile
+        │       │       ├── RailIndexA, RailIndexB
+        │       │       ├── DeviationMm[]          (hB − hA at common stations)
+        │       │       ├── StationPositionsMm[]
+        │       │       └── ParallelismValueMm     (peak-to-valley)
+        │       ├── Residuals[]
         │       ├── FlaggedStepIndices[]
         │       ├── SigmaThreshold
-        │       └── Sigma             (residual RMS with DOF correction, mm)
+        │       └── ResidualRms
         └── Corrections[ ]
             └── CorrectionRound
                 ├── Id, TriggeredAt, Operator, Notes
@@ -287,6 +320,29 @@ Eight arms radiate from the centre node in the cardinal and diagonal directions 
 `NodeId` / `ToNodeId` on each step are symbolic identifiers (e.g. `"center"`, `"armN_seg2"`, `"armNE_seg3"`). `UnionJackStrategy.NodePositionById` converts them to physical (mm) coordinates for rendering and calculation. Total steps depend on the number of arms, segments per arm, and whether a circumference ring is present.
 
 
+
+### Parallel Ways
+
+Measures the straightness of two or more parallel rails (or machine beds, slideways, etc.) and the parallelism between them.
+
+**Rail / task model** — the operator defines two or more `RailDefinition` objects (label, length, lateral separation, vertical offset, axial offset) and a list of `ParallelWaysTask` objects. Each task is either:
+- `AlongRail` — traverse one rail end-to-end with a given step distance; forward-only or forward-and-return pass.
+- `Bridge` — measure across two rails at each common station; same pass options.
+
+**Node ID scheme** — every node is `"rail{r}_sta{s}"` where `r` is the 0-based rail index and `s` is the 0-based station index. Bridge steps go from `"rail{rA}_sta{s}"` to `"rail{rB}_sta{s}"`.
+
+**`PassPhase`** — each step carries a `PassPhase` enum value:
+- `NotApplicable` — single-pass tasks.
+- `Forward` — first pass of a forward-and-return task.
+- `Return` — second (return) pass.
+
+**Two solver modes** (set in `SolverMode` enum on `ParallelWaysStrategyParameters`):
+- `GlobalLeastSquares` — all readings are submitted to one joint least-squares system; the reference rail station `r=0, s=0` is the height datum.
+- `IndependentThenReconcile` — each rail is solved independently first, then a secondary least-squares step reconciles the bridge readings to bring the rails onto a common datum.
+
+**Output** — `ParallelWaysCalculator.Calculate` returns a `ParallelWaysResult` (stored separately from `SurfaceResult` on `MeasurementRound`) containing per-rail `RailProfile` objects (height profile after best-fit line removal, straightness peak-to-valley value) and per-pair `ParallelismProfile` objects (height difference profile, parallelism peak-to-valley value).
+
+**`ParallelWaysStrategy`** implements `IMeasurementStrategy` and is registered in `StrategyFactory` under the strategy ID `"ParallelWays"`. `ParallelWaysCalculator` is a standalone class (not `ISurfaceCalculator`) invoked directly by `MeasurementViewModel`.
 
 ### Adding new strategies
 
@@ -428,8 +484,8 @@ User preferences (currently: default project folder) are persisted to `%LOCALAPP
 
 ```json
 {
-  "schemaVersion": "1.0",
-  "appVersion": "0.2.1",
+  "schemaVersion": "1.1",
+  "appVersion": "0.7.0",
   "project": {
     "id": "<uuid>",
     "name": "Granite plate workshop 3",
@@ -527,6 +583,7 @@ Implements `IResultDisplay`. Each module receives a `SurfaceResult` and returns 
 | 3D Surface Plot | **Built** | Pseudo-3D isometric canvas; nodes coloured blue→cyan→green→yellow→red by height |
 | Measurements Grid | **Built** | 2D step-map canvas with directed arrows, value labels, loop-closure colour fills, and mouse-wheel zoom |
 | Strategy Preview | **Built** | Small read-only canvas in ProjectSetupView showing step layout for the selected strategy |
+| Parallel Ways Display | **Built** | 2D rail schematic canvas showing station dots coloured by step state (pending / measured / current) |
 | Colour / Heat Map | Future | Intuitive flatness overview |
 | Numerical Table | Future | Raw height values per grid point |
 | Residuals Chart | Future | Useful for diagnosing bad readings |
@@ -608,6 +665,18 @@ The vertical exaggeration (`maxZPixels`) is computed per render as `max(10, (col
 - Assembly/file version metadata in `.csproj`
 - Commit message convention: `[vX.Y.Z] description`
 
+### WP0.07 — Parallel Ways geometry module ✓ Complete (v0.7.0)
+- New Core models: `RailDefinition`, `ParallelWaysParameters`, `ParallelWaysTask`, `ParallelWaysStrategyParameters`, `ParallelWaysResult` (with `RailProfile` and `ParallelismProfile`)
+- `PassPhase` enum added to `MeasurementStep`; `ParallelWaysResult` field added to `MeasurementRound`
+- `ParallelWaysStrategy` implements `IMeasurementStrategy`: generates AlongRail and Bridge steps, node IDs `"rail{r}_sta{s}"`, forward/return passes, East/West orientation
+- `ParallelWaysCalculator` (standalone, not `ISurfaceCalculator`): two solver modes (GlobalLeastSquares, IndependentThenReconcile), per-rail height profiles with best-fit line removal, parallelism between rail pairs
+- `ParallelWaysDisplay` renders the 2D rail schematic in the Measurement view
+- `ProjectSetupViewModel` / `ProjectSetupView.xaml` rewritten to support Parallel Ways parameter editor (rails, tasks, orientation, drift correction, solver mode)
+- `MeasurementViewModel` dispatches to `ParallelWaysCalculator` for Parallel Ways sessions
+- `ResultsViewModel` / `ResultsView.xaml` show per-rail straightness and per-pair parallelism results
+- Schema bumped to `"1.1"` (adds `passPhase` on steps and `parallelWaysResult` on rounds)
+- Unit tests: `ParallelWaysStrategyTests` (14 tests), `ParallelWaysCalculatorTests` (9 tests)
+
 ### WP0.06 — Code Quality Cleanup ✓ Complete (v0.6.0)
 - Unified calculator interface: deleted `IGeometryCalculator`, consolidated on `ISurfaceCalculator`
 - `LeastSquaresCalculator` (renamed from `SurfacePlateCalculator`) moved to `Core/Geometry/Calculators/`; now respects `CalculationParameters.AutoExcludeOutliers`
@@ -623,6 +692,7 @@ The vertical exaggeration (`maxZPixels`) is computed per render as `max(10, (col
 
 ### Future phases
 - Additional display modules (heat map, numerical table, residuals chart)
+- Parallel Ways: correction workflow (currently Surface Plate only)
 - Bluetooth LE instrument provider
 - USB HID instrument provider
 - Additional geometry modules (straightness, squareness, etc.)
@@ -646,7 +716,7 @@ The vertical exaggeration (`maxZPixels`) is computed per render as `max(10, (col
 public static class AppVersion
 {
     public const int Major = 0;
-    public const int Minor = 6;
+    public const int Minor = 7;
     public const int Patch = 0;
 
     public static string Full    => $"{Major}.{Minor}.{Patch}";

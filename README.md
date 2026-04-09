@@ -8,14 +8,20 @@ The software guides the operator through a defined measurement procedure, acquir
 
 ## Features
 
-- **Guided measurement workflow** — step-by-step instructions with a live grid map showing position, orientation arrow, and progress indicator
-- **Full Grid strategy** — boustrophedon row and column traversal ensures every interior grid point is measured twice (once horizontally, once vertically) for redundancy
-- **Union Jack strategy** — eight arms from the centre in the cardinal and diagonal directions, with configurable segment count and optional circumference ring; supports Full (with closure loops) and Circumference variants
-- **Least-squares surface fitting** — closure errors are distributed optimally across the grid rather than allowed to accumulate through simple sequential integration
-- **Outlier detection** — suspect readings are flagged automatically when their residual exceeds a configurable sigma threshold (default: 2.5σ)
-- **Correction workflow** — flagged steps can be re-measured in a guided mini-session; original readings are always preserved and the full correction history is stored
-- **3D surface plot** — colour-mapped dot-and-wire visualisation of the fitted height map
-- **Flatness result** — peak-to-valley flatness value and residual RMS displayed alongside the plot
+- **Guided measurement workflow** — step-by-step instructions with a live map showing position, orientation arrow, and progress indicator
+- **Surface plate qualification** — Full Grid and Union Jack measurement strategies for granite surface plates and similar flat objects
+  - **Full Grid** — boustrophedon row and column traversal ensures every interior grid point is measured twice for redundancy
+  - **Union Jack** — eight arms from the centre with configurable segment count; Full (with closure loops) and Circumference variants
+  - **Least-squares surface fitting** — closure errors are distributed optimally across all steps simultaneously
+  - **Outlier detection** — suspect readings flagged automatically when their residual exceeds a configurable sigma threshold (default: 2.5σ)
+  - **Correction workflow** — flagged steps can be re-measured in a guided mini-session; original readings are always preserved
+  - **3D surface plot** — colour-mapped dot-and-wire visualisation of the fitted height map
+- **Parallel Ways** — straightness and parallelism evaluation for machine tool beds, slideways, and rail pairs
+  - Configurable number of rails, step distance, and optional bridge measurements between rails
+  - Forward-only or forward-and-return passes per rail/bridge task
+  - Two solver modes: Global Least-Squares and Independent-then-Reconcile
+  - Per-rail straightness (peak-to-valley after best-fit line removal) and per-pair parallelism results
+- **Flatness / straightness result** — peak-to-valley value and residual RMS displayed alongside the plot
 - **Project persistence** — projects are saved as `.levelproj` files (JSON), human-readable and version-control friendly
 - **Open existing project** — load a `.levelproj` file at any time; if the file contains all readings but no computed result the solver runs automatically on load
 - **Preferences** — configurable default project folder, remembered across sessions
@@ -65,10 +71,10 @@ Open `LevelApp.slnx` in Visual Studio 2022 and build the solution (`Ctrl+Shift+B
 ### Create a project
 
 1. Enter a project name, operator name and optional notes
-2. Select **Surface Plate** as the geometry type
-3. Enter the plate dimensions (mm) and grid size (columns × rows)
-4. Select a measurement strategy (Full Grid or Union Jack)
-5. Click **Start Measurement**
+2. Select a geometry type:
+   - **Surface Plate** — enter plate dimensions (mm) and grid size; choose Full Grid or Union Jack strategy
+   - **Parallel Ways** — define two or more rails (label, length, separation), add measurement tasks (along-rail and/or bridge), and choose solver options
+3. Click **Start Measurement**
 
 ### Take measurements
 
@@ -97,10 +103,11 @@ After all steps are complete the app runs the least-squares solver and displays:
 ```
 LevelApp/
 ├── LevelApp.Core/               # No UI dependencies — fully unit-testable
-│   ├── Models/                  # Project, Session, Step, Result data models
+│   ├── Models/                  # Project, Session, Step, Result, RailDefinition, …
 │   ├── Interfaces/              # IMeasurementStrategy, ISurfaceCalculator
 │   ├── Geometry/                # StrategyFactory, CalculatorFactory,
-│   │                            # Calculators/, SurfacePlate/Strategies/
+│   │                            # Calculators/, SurfacePlate/Strategies/,
+│   │                            # ParallelWays/ (strategy + calculator)
 │   └── Serialization/           # ProjectSerializer, ObjectValueConverter,
 │                                # OrientationConverter
 ├── LevelApp.App/                # WinUI 3 application
@@ -109,7 +116,7 @@ LevelApp/
 │   ├── ViewModels/              # MVVM view models
 │   ├── Services/                # ProjectFileService, SettingsService
 │   └── DisplayModules/          # SurfacePlot3DDisplay, MeasurementsGridRenderer,
-│                                # StrategyPreviewRenderer
+│                                # StrategyPreviewRenderer, ParallelWaysDisplay
 ├── LevelApp.Tests/              # xUnit unit tests (Core only)
 └── docs/
     ├── architecture.md          # Full architecture and design reference
@@ -121,12 +128,14 @@ LevelApp/
 ## Roadmap
 
 - [x] Union Jack measurement strategy
+- [x] Parallel Ways geometry module (straightness + parallelism for rails/slideways)
+- [ ] Parallel Ways correction workflow
 - [ ] Heat map display module
 - [ ] Numerical table display module
 - [ ] Residuals chart display module
 - [ ] Bluetooth LE instrument provider
 - [ ] USB HID instrument provider
-- [ ] Additional geometry modules (straightness, squareness, lathe bed, …)
+- [ ] Additional geometry modules (squareness, lathe bed, …)
 - [ ] PDF report export
 - [ ] German / English localisation
 
