@@ -55,9 +55,11 @@ public partial class App : Application
         settings.Load();
 
         // Apply language override before XAML is parsed so x:Uid strings use the right language.
-        // An empty string clears the override and falls back to the system language.
-        Windows.Globalization.ApplicationLanguages.PrimaryLanguageOverride =
-            settings.AppLanguage ?? string.Empty;
+        // ApplicationLanguages.PrimaryLanguageOverride requires package identity and throws for
+        // unpackaged apps. ResourceContext.SetGlobalQualifierValue works unconditionally.
+        if (!string.IsNullOrEmpty(settings.AppLanguage))
+            Windows.ApplicationModel.Resources.Core.ResourceContext
+                .SetGlobalQualifierValue("Language", settings.AppLanguage);
 
         this.InitializeComponent();
     }
