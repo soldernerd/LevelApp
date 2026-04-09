@@ -71,6 +71,7 @@ LevelApp/
 │   │   ├── MeasurementStep.cs     ← includes PassPhase enum
 │   │   ├── CorrectionRound.cs     ← also contains ReplacedStep
 │   │   ├── SurfaceResult.cs
+│   │   ├── CalculationParameters.cs   ← MethodId, SigmaThreshold, AutoExcludeOutliers, ManuallyExcludedStepIndices
 │   │   ├── RailDefinition.cs
 │   │   ├── ParallelWaysParameters.cs    ← WaysOrientation enum + From() helper
 │   │   ├── ParallelWaysTask.cs          ← TaskType, PassDirection enums
@@ -119,6 +120,8 @@ LevelApp/
 │   │   ├── SettingsService.cs     ← persists settings to %LOCALAPPDATA%\LevelApp\settings.json
 │   │   ├── IThemeService.cs       ← Apply(ElementTheme), SetTarget(FrameworkElement)
 │   │   └── ThemeService.cs        ← singleton; applies RequestedTheme to RootFrame
+│   ├── Converters/
+│   │   └── BoolToVisibilityConverter.cs
 │   ├── Views/
 │   │   ├── ProjectSetupView.xaml
 │   │   ├── MeasurementView.xaml
@@ -534,8 +537,8 @@ User preferences (default project folder and app theme) are persisted to `%LOCAL
             }
           ],
           "result": {
-            "heightMapMm": [[0.0, 0.012], [0.008, 0.019]],
-            "flatnessValueMm": 0.041,
+            "nodeHeights": { "col0_row0": 0.0, "col1_row0": 0.012, "col0_row1": 0.008, "col1_row1": 0.019 },
+            "flatnessValueMm": 0.019,
             "residuals": [0.001, 0.002, 0.087],
             "flaggedStepIndices": [14, 31],
             "sigmaThreshold": 2.5,
@@ -584,7 +587,7 @@ The `schemaVersion` field at the root allows the app to detect older files and a
 
 
 
-Implements `IResultDisplay`. Each module receives a `SurfaceResult` and returns a renderable object (cast to `UIElement` by the caller).
+Each module is a static renderer class that receives a result and a `Canvas`, producing a rendered visual. The `UIElement` is handed back to the caller (e.g. `ResultsView`) which places it in the view.
 
 | Module | Status | Notes |
 |---|---|---|
@@ -595,8 +598,6 @@ Implements `IResultDisplay`. Each module receives a `SurfaceResult` and returns 
 | Colour / Heat Map | Future | Intuitive flatness overview |
 | Numerical Table | Future | Raw height values per grid point |
 | Residuals Chart | Future | Useful for diagnosing bad readings |
-
-Adding a new display: implement `IResultDisplay`, register it. The results page discovers available modules automatically.
 
 #### Theme colour resolution in renderers
 
@@ -681,15 +682,17 @@ The vertical exaggeration (`maxZPixels`) is computed per render as `max(10, (col
 - Assembly/file version metadata in `.csproj`
 - Commit message convention: `[vX.Y.Z] description`
 
-### WP0.08 — Theme architecture ✓ Complete (v0.8.1)
+### WP0.08 — Theme architecture ✓ Complete (v0.8.4)
 - `LevelApp.App/Styles/` folder with three `ResourceDictionary` XAML files merged in `App.xaml`:
   - `ThemeColors.xaml` — all colour tokens in `ThemeDictionaries` (`Light` + `Default`/Dark); covers plot ramp (5 stops), grid canvas colours, loop-closure brushes
   - `TextStyles.xaml` — named `TextBlock` styles (`PageTitleStyle`, `SectionHeaderStyle`, `MetricValueStyle`, etc.) using `{ThemeResource}` tokens
   - `ControlStyles.xaml` — implicit `Button` style; `CardStyle`; `CompactCardStyle`
 - `ISettingsService.AppTheme` (`ElementTheme`) persisted as string in `settings.json`
-- `MainWindow`: `ApplyPersistedTheme()` on startup; `ApplyTheme(ElementTheme)` public method; menu bar with `File`, `Edit` (→ Preferences…), `Help` (→ About LevelApp…)
-- `PreferencesDialog`: Theme `RadioButtons` (Follow system / Light / Dark); live preview on selection change; reverts to original on Cancel
-- All four canvas renderers (`SurfacePlot3DDisplay`, `MeasurementsGridRenderer`, `StrategyPreviewRenderer`, `ParallelWaysDisplay`) resolve colours from theme resources at render time via `Application.Current.Resources.TryGetValue()`
+- `IThemeService` / `ThemeService` singleton: `SetTarget(RootFrame)` called once by `MainWindow` on startup; `PreferencesDialog` calls `_theme.Apply()` directly for live preview without holding a reference to the window
+- `MainWindow`: wires `IThemeService` to `RootFrame` on startup and restores the persisted theme; menu bar with `File`, `Edit` (→ Preferences…), `Help` (→ About LevelApp…)
+- `PreferencesDialog`: Theme `RadioButtons` (Follow system / Light / Dark); live preview on selection change via `IThemeService`; reverts to original on Cancel
+- `ThemeHelper` (`LevelApp.App/Helpers/ThemeHelper.cs`): shared static helper used by all four canvas renderers — `GetColor`, `GetBrush`, `GetPlotRamp`, `InterpolateRamp`; the `PlotRamp` struct is resolved once per render pass (5 lookups total) rather than once per node
+- All four canvas renderers resolve colours via `ThemeHelper` at render time; no direct `Application.Current.Resources` calls in renderer code
 - All four views subscribe to `ActualThemeChanged` for live theme-switch re-render; `ResultsViewModel.RebuildPlotCanvas()` reconstructs plot canvases with updated colours
 - No hardcoded colours, font sizes, or font weights in any View XAML
 
