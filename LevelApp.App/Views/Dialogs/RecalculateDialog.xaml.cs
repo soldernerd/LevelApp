@@ -1,4 +1,5 @@
 using LevelApp.Core.Models;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
@@ -19,11 +20,11 @@ public sealed partial class RecalculateDialog : ContentDialog
     {
         InitializeComponent();
 
-        var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
-        Title               = loader.GetString("Recalculate_Title.Text");
-        PrimaryButtonText   = loader.GetString("Recalculate_OkButton.Content");
-        SecondaryButtonText = loader.GetString("Recalculate_SaveResult_Label.Text");
-        CloseButtonText     = loader.GetString("Recalculate_CancelButton.Content");
+        var loc = App.Services.GetRequiredService<LevelApp.App.Services.ILocalisationService>();
+        Title               = loc.Get("Recalculate_Title.Text");
+        PrimaryButtonText   = loc.Get("Recalculate_OkButton.Content");
+        SecondaryButtonText = loc.Get("Recalculate_SaveResult_Label.Text");
+        CloseButtonText     = loc.Get("Recalculate_CancelButton.Content");
 
         MethodCombo.SelectedIndex = currentParams.MethodId == "SequentialIntegration" ? 1 : 0;
         AutoExcludeToggle.IsOn    = currentParams.AutoExcludeOutliers;
