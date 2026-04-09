@@ -94,10 +94,10 @@
                                       VerticalScrollMode="Auto"
                                       HorizontalScrollBarVisibility="Auto"
                                       VerticalScrollBarVisibility="Auto"
-                                      Padding="16,0,16,16">
+                                      Padding="16,0,16,16"
+                                      PointerWheelChanged="OnMeasurementsCanvasWheel">
                             <Canvas x:Name="MeasurementsCanvas"
-                                    Background="Transparent"
-                                    PointerWheelChanged="OnMeasurementsCanvasWheel"/>
+                                    Background="Transparent"/>
                         </ScrollViewer>
 
                     </Grid>
