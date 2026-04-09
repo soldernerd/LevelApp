@@ -5,7 +5,9 @@ using LevelApp.Core.Models;
 using Orientation = LevelApp.Core.Models.Orientation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
 using Microsoft.UI.Xaml.Shapes;
 using Windows.UI;
@@ -35,6 +37,7 @@ public sealed partial class CorrectionView : Page
         {
             ViewModel.Initialize(args);
             ViewModel.PropertyChanged += OnViewModelPropertyChanged;
+            this.ActualThemeChanged   += OnActualThemeChanged;
             DrawCorrectionMap();
         }
     }
@@ -43,6 +46,7 @@ public sealed partial class CorrectionView : Page
     {
         base.OnNavigatedFrom(e);
         ViewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        this.ActualThemeChanged   -= OnActualThemeChanged;
     }
 
     // ── Canvas refresh ────────────────────────────────────────────────────────
@@ -57,13 +61,16 @@ public sealed partial class CorrectionView : Page
         }
     }
 
+    private void OnActualThemeChanged(FrameworkElement sender, object args)
+        => DrawCorrectionMap();
+
     /// <summary>
     /// Redraws the grid map for the correction session.
-    /// • Orange       — current flagged step (from-node)
-    /// • CornflowerBlue — current flagged step (to-node)
-    /// • Gold         — other not-yet-corrected flagged steps
-    /// • Green        — already-corrected flagged steps
-    /// • Grey         — non-flagged nodes
+    /// • GridCurrentStepBrush  — current step from-node and to-node
+    /// • GridCompletedStepBrush — already-corrected flagged steps
+    /// • GridFlaggedStepBrush   — pending (not-yet-corrected) flagged steps
+    /// • GridPendingStepBrush   — non-flagged nodes
+    /// All colours are resolved from the ThemeColors resource dictionary at draw time.
     /// </summary>
     private void DrawCorrectionMap()
     {
@@ -72,10 +79,15 @@ public sealed partial class CorrectionView : Page
         var step = ViewModel.CurrentStep;
         if (step is null) return;
 
+        // Resolve theme colours at draw time
+        Color activeColor    = GetThemeColor("GridCurrentStepBrush");
+        Color completedColor = GetThemeColor("GridCompletedStepBrush");
+        Color flaggedColor   = GetThemeColor("GridFlaggedStepBrush");
+        Color pendingColor   = GetThemeColor("GridPendingStepBrush");
+
         int cols = ViewModel.GridColumns;
         int rows = ViewModel.GridRows;
 
-        // To-node of current step
         (int toCol, int toRow) = step.Orientation switch
         {
             Orientation.East      => (step.GridCol + 1, step.GridRow),
@@ -89,7 +101,6 @@ public sealed partial class CorrectionView : Page
             _                     => (-1, -1)
         };
 
-        // Sets for fast lookup
         var alreadyCorrected = ViewModel.FlaggedSteps
             .Take(ViewModel.CurrentStepIndex)
             .Select(s => (s.GridCol, s.GridRow))
@@ -111,32 +122,32 @@ public sealed partial class CorrectionView : Page
 
                 if (c == step.GridCol && r == step.GridRow)
                 {
-                    colour = Colors.Orange;
+                    colour = activeColor;
                     radius = NodeRadius + 3;
                 }
                 else if (c == toCol && r == toRow)
                 {
-                    colour = Colors.CornflowerBlue;
+                    colour = activeColor;
                     radius = NodeRadius + 3;
                 }
                 else if (alreadyCorrected.Contains((c, r)))
                 {
-                    colour = Color.FromArgb(255, 80, 170, 80);   // green
+                    colour = completedColor;
                 }
                 else if (pendingFlagged.Contains((c, r)))
                 {
-                    colour = Colors.Gold;                         // pending flagged
+                    colour = flaggedColor;
                 }
                 else
                 {
-                    colour = Color.FromArgb(255, 150, 150, 150); // unvisited
+                    colour = pendingColor;
                 }
 
                 var ellipse = new Ellipse
                 {
                     Width  = radius * 2,
                     Height = radius * 2,
-                    Fill   = new Microsoft.UI.Xaml.Media.SolidColorBrush(colour)
+                    Fill   = new SolidColorBrush(colour)
                 };
                 Canvas.SetLeft(ellipse, cx - radius);
                 Canvas.SetTop(ellipse,  cy - radius);
@@ -146,5 +157,21 @@ public sealed partial class CorrectionView : Page
 
         GridCanvas.Width  = (cols - 1) * NodeSpacing + NodeRadius * 2;
         GridCanvas.Height = (rows - 1) * NodeSpacing + NodeRadius * 2;
+    }
+
+    // ── Theme helper ──────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Resolves a named theme colour using GridCanvas (in the visual tree) first,
+    /// then falls back to application resources.
+    /// </summary>
+    private Color GetThemeColor(string resourceKey)
+    {
+        if (GridCanvas.Resources.TryGetValue(resourceKey, out var res)
+            || Application.Current.Resources.TryGetValue(resourceKey, out res))
+        {
+            return res is SolidColorBrush brush ? brush.Color : Colors.Gray;
+        }
+        return Colors.Gray;
     }
 }

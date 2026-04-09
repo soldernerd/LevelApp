@@ -1,6 +1,7 @@
 using LevelApp.Core.Interfaces;
 using LevelApp.Core.Models;
 using Microsoft.UI;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
@@ -16,7 +17,8 @@ namespace LevelApp.App.DisplayModules.SurfacePlot3D;
 /// positions come from <see cref="IMeasurementStrategy.GetNodePosition"/>, so the
 /// display correctly reflects plate proportions for any strategy.
 ///
-/// Nodes are coloured blue (low) → cyan → green → yellow → red (high).
+/// Nodes are coloured low (blue) → mid-low (green) → mid (yellow) → mid-high (orange) → high (red).
+/// Colours are resolved from the app's ThemeColors resource dictionary at render time.
 /// </summary>
 public sealed class SurfacePlot3DDisplay
 {
@@ -37,7 +39,6 @@ public sealed class SurfacePlot3DDisplay
         double hRange = hMax > hMin ? hMax - hMin : 1.0;
 
         // ── Physical coordinate ranges ─────────────────────────────────────────
-        // Collect all node physical positions to determine bounding box.
         var nodePos = new Dictionary<string, (double X, double Y)>();
         foreach (var step in steps)
         {
@@ -57,8 +58,6 @@ public sealed class SurfacePlot3DDisplay
         if (physH < 1e-6) physH = 1.0;
 
         // ── Isometric projection constants ────────────────────────────────────
-        // Map physical (x, y) in mm to isometric pixel offsets.
-        // We choose IsoW and IsoH so that the total canvas width is ~500 px.
         const double TargetWidth = 500.0;
         double isoW = TargetWidth / (physW + physH) * (physW / (physW + physH) * 2);
         double isoH = isoW * 0.5 * (physH / physW);
@@ -67,15 +66,11 @@ public sealed class SurfacePlot3DDisplay
 
         double maxZPixels = Math.Max(10.0, (physW / physH + 1) * isoH * 4 * 0.20);
 
-        // originX places (physMinX, physMinY) node at screen left accounting for y-depth offset
-        double originX = (physH / physH) * isoW * (physH / (physW + physH) * (physW + physH) / physW) + Margin;
-        // Simpler: use a scale factor
         double scaleX = TargetWidth / (physW + physH);
         double scaleY = scaleX * 0.5;
-        originX = scaleX * (physMaxY - physMinY) + Margin;
+        double originX = scaleX * (physMaxY - physMinY) + Margin;
         double originY = maxZPixels + Margin;
 
-        // Screen position for a physical node
         (double sx, double sy) ScreenPos(string nodeId)
         {
             var (px, py) = nodePos[nodeId];
@@ -89,10 +84,12 @@ public sealed class SurfacePlot3DDisplay
             return (sx, sy);
         }
 
-        // ── Edges (graph-driven, between consecutive steps in same pass) ───────
-        var edgeBrush = new SolidColorBrush(Color.FromArgb(100, 160, 160, 160));
+        // ── Edges ──────────────────────────────────────────────────────────────
+        // Use canvas as the FrameworkElement owner; falls through to App resources.
+        var edgeBrush = new SolidColorBrush(GetThemeColor(canvas, "GridStepArrowBrush"));
+        // Edges are drawn faint — apply alpha manually
+        edgeBrush.Opacity = 0.4;
 
-        // Group steps by PassId; within each group, draw node[i] → node[i+1]
         var passBuckets = new Dictionary<int, List<MeasurementStep>>();
         foreach (var step in steps)
         {
@@ -103,7 +100,6 @@ public sealed class SurfacePlot3DDisplay
 
         foreach (var bucket in passBuckets.Values)
         {
-            // Draw edge from each step's from-node to its to-node
             foreach (var step in bucket)
             {
                 if (!nodePos.ContainsKey(step.NodeId) || !nodePos.ContainsKey(step.ToNodeId))
@@ -112,7 +108,7 @@ public sealed class SurfacePlot3DDisplay
             }
         }
 
-        // ── Nodes (painter order: sort by screen y descending = back-to-front) ─
+        // ── Nodes ──────────────────────────────────────────────────────────────
         var allNodes = nodePos.Keys
             .Where(id => result.NodeHeights.ContainsKey(id))
             .OrderBy(id => { var (_, sy) = ScreenPos(id); return -sy; })
@@ -128,7 +124,7 @@ public sealed class SurfacePlot3DDisplay
             {
                 Width  = NodeRadius * 2,
                 Height = NodeRadius * 2,
-                Fill   = new SolidColorBrush(HeightColor(t))
+                Fill   = new SolidColorBrush(HeightColor(t, canvas))
             };
             Canvas.SetLeft(ellipse, sx - NodeRadius);
             Canvas.SetTop(ellipse,  sy - NodeRadius);
@@ -153,16 +149,40 @@ public sealed class SurfacePlot3DDisplay
         Stroke = stroke, StrokeThickness = 1.0
     };
 
-    private static Color HeightColor(double t)
+    /// <summary>
+    /// Maps a normalised height [0,1] to a colour by interpolating between the
+    /// five themed plot anchor colours: low → mid-low → mid → mid-high → high.
+    /// </summary>
+    private static Color HeightColor(double t, FrameworkElement owner)
     {
         t = Math.Clamp(t, 0.0, 1.0);
+        Color low     = GetThemeColor(owner, "PlotLowBrush");
+        Color midLow  = GetThemeColor(owner, "PlotMidLowBrush");
+        Color mid     = GetThemeColor(owner, "PlotMidBrush");
+        Color midHigh = GetThemeColor(owner, "PlotMidHighBrush");
+        Color high    = GetThemeColor(owner, "PlotHighBrush");
+
         return t switch
         {
-            <= 0.25 => Lerp(Colors.Blue,   Colors.Cyan,   t / 0.25),
-            <= 0.50 => Lerp(Colors.Cyan,   Colors.Lime,   (t - 0.25) / 0.25),
-            <= 0.75 => Lerp(Colors.Lime,   Colors.Yellow, (t - 0.50) / 0.25),
-            _       => Lerp(Colors.Yellow, Colors.Red,    (t - 0.75) / 0.25)
+            <= 0.25 => Lerp(low,     midLow,  t / 0.25),
+            <= 0.50 => Lerp(midLow,  mid,     (t - 0.25) / 0.25),
+            <= 0.75 => Lerp(mid,     midHigh, (t - 0.50) / 0.25),
+            _       => Lerp(midHigh, high,    (t - 0.75) / 0.25)
         };
+    }
+
+    /// <summary>
+    /// Resolves a named theme brush colour from the resource dictionary.
+    /// Checks the element's own resources first, then the application resources.
+    /// </summary>
+    private static Color GetThemeColor(FrameworkElement element, string resourceKey)
+    {
+        if (element.Resources.TryGetValue(resourceKey, out var res)
+            || Application.Current.Resources.TryGetValue(resourceKey, out res))
+        {
+            return res is SolidColorBrush brush ? brush.Color : Colors.Gray;
+        }
+        return Colors.Gray;
     }
 
     private static Color Lerp(Color a, Color b, double t) =>

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.UI.Xaml;
 
 namespace LevelApp.App.Services;
 
@@ -14,10 +15,18 @@ public sealed class SettingsService : ISettingsService
     private string _defaultProjectFolder =
         Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
 
+    private ElementTheme? _appTheme;
+
     public string DefaultProjectFolder
     {
         get => _defaultProjectFolder;
         set => _defaultProjectFolder = value;
+    }
+
+    public ElementTheme AppTheme
+    {
+        get => _appTheme ?? ElementTheme.Default;
+        set => _appTheme = value;
     }
 
     public void Load()
@@ -31,6 +40,9 @@ public sealed class SettingsService : ISettingsService
             var data = JsonSerializer.Deserialize<SettingsData>(json);
             if (data?.DefaultProjectFolder is { Length: > 0 } folder)
                 _defaultProjectFolder = folder;
+            if (data?.AppTheme is { Length: > 0 } ts
+                && Enum.TryParse<ElementTheme>(ts, out var t))
+                _appTheme = t;
         }
         catch { /* ignore corrupt or missing settings file */ }
     }
@@ -40,7 +52,11 @@ public sealed class SettingsService : ISettingsService
         try
         {
             string path = GetSettingsPath();
-            var data = new SettingsData { DefaultProjectFolder = _defaultProjectFolder };
+            var data = new SettingsData
+            {
+                DefaultProjectFolder = _defaultProjectFolder,
+                AppTheme             = _appTheme?.ToString()
+            };
             File.WriteAllText(path, JsonSerializer.Serialize(data, JsonOptions));
         }
         catch { /* best effort */ }
@@ -58,5 +74,6 @@ public sealed class SettingsService : ISettingsService
     private sealed class SettingsData
     {
         public string? DefaultProjectFolder { get; set; }
+        public string? AppTheme             { get; set; }
     }
 }

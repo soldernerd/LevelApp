@@ -28,12 +28,6 @@ public sealed partial class MeasurementView : Page
     private const double ArrowLen       = 10.0;
     private const double ArrowHalfW     =  4.5;
 
-    // Active step is orange so it stands out clearly from green (completed) and grey (pending)
-    private static readonly Color ActiveColor  = Color.FromArgb(255, 230, 110,   0);
-    private static readonly Color GreenColor   = Color.FromArgb(255,   0, 160,  80);
-    private static readonly Color GreyColor    = Color.FromArgb(255, 140, 140, 140);
-    private static readonly Color PendingColor = Color.FromArgb(180, 140, 140, 140);
-
     public MeasurementViewModel ViewModel { get; }
 
     public MeasurementView()
@@ -52,6 +46,7 @@ public sealed partial class MeasurementView : Page
         {
             ViewModel.Initialize(args);
             ViewModel.PropertyChanged += OnViewModelPropertyChanged;
+            this.ActualThemeChanged   += OnActualThemeChanged;
             DrawGridMap();
         }
     }
@@ -60,13 +55,13 @@ public sealed partial class MeasurementView : Page
     {
         base.OnNavigatedFrom(e);
         ViewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        this.ActualThemeChanged   -= OnActualThemeChanged;
     }
 
     // ── Canvas refresh ────────────────────────────────────────────────────────
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        // Redraw whenever the active step changes
         if (e.PropertyName is
             nameof(MeasurementViewModel.CurrentStepIndex) or
             nameof(MeasurementViewModel.CurrentStep))
@@ -75,12 +70,13 @@ public sealed partial class MeasurementView : Page
         }
     }
 
+    private void OnActualThemeChanged(FrameworkElement sender, object args)
+        => DrawGridMap();
+
     /// <summary>
     /// Redraws the grid map canvas with nodes and edges.
-    /// Edge colour states: pending = grey | current step = accent blue | completed = green.
-    /// Node colour: grey for all nodes, except the two endpoints of the current step
-    /// which are drawn in accent blue.  Nodes never permanently turn green — only edges do.
-    /// Pixel spacing is proportional to the plate's physical aspect ratio.
+    /// Edge colour states: pending = grey | current step = accent | completed = green.
+    /// Colours are resolved from the ThemeColors resource dictionary at draw time.
     /// </summary>
     private void DrawGridMap()
     {
@@ -89,6 +85,11 @@ public sealed partial class MeasurementView : Page
         var currentStep = ViewModel.CurrentStep;
         if (currentStep is null) return;
 
+        // Resolve theme colours at draw time
+        Color activeColor  = GetThemeColor("GridCurrentStepBrush");
+        Color completedColor = GetThemeColor("GridCompletedStepBrush");
+        Color pendingColor = GetThemeColor("GridPendingStepBrush");
+
         int    cols      = ViewModel.GridColumns;
         int    rows      = ViewModel.GridRows;
         int    curIdx    = ViewModel.CurrentStepIndex;
@@ -96,31 +97,27 @@ public sealed partial class MeasurementView : Page
         double widthMm   = ViewModel.WidthMm;
         double heightMm  = ViewModel.HeightMm;
 
-        // Parallel Ways sessions use a dedicated rail-line renderer
         if (ViewModel.IsParallelWays)
         {
-            DrawParallelWaysMap(currentStep, curIdx, steps);
+            DrawParallelWaysMap(currentStep, curIdx, steps, activeColor, completedColor, pendingColor);
             return;
         }
 
-        // Union Jack (and other non-grid strategies) don't use GridColumns/GridRows
         if (cols <= 0 || rows <= 0)
         {
-            DrawUnionJackMap(currentStep, curIdx, steps, widthMm, heightMm);
+            DrawUnionJackMap(currentStep, curIdx, steps, widthMm, heightMm,
+                             activeColor, completedColor, pendingColor);
             return;
         }
 
-        // Pixel spacing proportional to physical dimensions, capped to TargetMaxPx
         double scale    = TargetMaxPx / Math.Max(widthMm, heightMm);
         double xSpacing = Math.Max(MinSpacingPx, widthMm  / (cols - 1) * scale);
         double ySpacing = Math.Max(MinSpacingPx, heightMm / (rows - 1) * scale);
 
-        // Node centres include padding so the outermost highlighted nodes are not clipped
         (double x, double y) NodePos(int c, int r) =>
             (c * xSpacing + CanvasPad + HighlightR,
              r * ySpacing + CanvasPad + HighlightR);
 
-        // Endpoints of the active step
         (int toCol, int toRow) = currentStep.Orientation switch
         {
             Orientation.East  => (currentStep.GridCol + 1, currentStep.GridRow),
@@ -130,7 +127,7 @@ public sealed partial class MeasurementView : Page
             _                 => (-1, -1)
         };
 
-        // ── Draw edges (painter order: drawn before nodes) ────────────────────
+        // ── Draw edges ────────────────────────────────────────────────────────
         for (int i = 0; i < steps.Count; i++)
         {
             var s = steps[i];
@@ -146,12 +143,12 @@ public sealed partial class MeasurementView : Page
 
             if (i == curIdx)
             {
-                AddArrow(fx, fy, tx, ty, ActiveColor, 3.0);
+                AddArrow(fx, fy, tx, ty, activeColor, 3.0);
             }
             else
             {
-                Color  edgeColor  = i < curIdx ? GreenColor : PendingColor;
-                double thickness  = i < curIdx ? 2.5 : 1.5;
+                Color  edgeColor = i < curIdx ? completedColor : pendingColor;
+                double thickness = i < curIdx ? 2.5 : 1.5;
                 GridCanvas.Children.Add(new Line
                 {
                     X1 = fx, Y1 = fy, X2 = tx, Y2 = ty,
@@ -161,7 +158,7 @@ public sealed partial class MeasurementView : Page
             }
         }
 
-        // ── Draw nodes (on top of edges) ──────────────────────────────────────
+        // ── Draw nodes ────────────────────────────────────────────────────────
         for (int r = 0; r < rows; r++)
         {
             for (int c = 0; c < cols; c++)
@@ -169,8 +166,8 @@ public sealed partial class MeasurementView : Page
                 bool isEndpoint = (c == currentStep.GridCol && r == currentStep.GridRow)
                                || (c == toCol              && r == toRow);
 
-                Color  color  = isEndpoint ? ActiveColor : GreyColor;
-                double radius = isEndpoint ? HighlightR  : NodeRadius;
+                Color  color  = isEndpoint ? activeColor  : pendingColor;
+                double radius = isEndpoint ? HighlightR   : NodeRadius;
 
                 var (cx, cy) = NodePos(c, r);
                 var ellipse = new Ellipse
@@ -185,27 +182,21 @@ public sealed partial class MeasurementView : Page
             }
         }
 
-        // Canvas size: last node centre + padding to avoid clipping
         GridCanvas.Width  = (cols - 1) * xSpacing + (CanvasPad + HighlightR) * 2;
         GridCanvas.Height = (rows - 1) * ySpacing + (CanvasPad + HighlightR) * 2;
     }
 
-    /// <summary>
-    /// Draws the Parallel Ways step map: each rail is a horizontal line of
-    /// station dots.  Step edges run along-rail or as vertical bridge connectors.
-    /// Colour states: pending grey → current orange → completed green.
-    /// </summary>
     private void DrawParallelWaysMap(
         MeasurementStep               currentStep,
         int                           curIdx,
-        IReadOnlyList<MeasurementStep> steps)
+        IReadOnlyList<MeasurementStep> steps,
+        Color                         activeColor,
+        Color                         completedColor,
+        Color                         pendingColor)
     {
-        var definition = ViewModel.Definition;
-
         const double railSpacingPx = 60.0;
         const double pad           = 20.0;
 
-        // Collect all unique node IDs and figure out the rail/station extent
         var allNodeIds = steps
             .SelectMany(s => new[] { s.NodeId, s.ToNodeId })
             .Where(id => !string.IsNullOrEmpty(id))
@@ -233,7 +224,6 @@ public sealed partial class MeasurementView : Page
             return (pad + s * stationSpacingPx, pad + r * railSpacingPx);
         }
 
-        // ── Draw edges ────────────────────────────────────────────────────────
         for (int i = 0; i < steps.Count; i++)
         {
             var s = steps[i];
@@ -244,11 +234,11 @@ public sealed partial class MeasurementView : Page
 
             if (i == curIdx)
             {
-                AddArrow(fx, fy, tx, ty, ActiveColor, 2.5);
+                AddArrow(fx, fy, tx, ty, activeColor, 2.5);
             }
             else
             {
-                Color  edgeColor = i < curIdx ? GreenColor : PendingColor;
+                Color  edgeColor = i < curIdx ? completedColor : pendingColor;
                 double thickness = i < curIdx ? 2.0 : 1.0;
                 GridCanvas.Children.Add(new Line
                 {
@@ -259,12 +249,11 @@ public sealed partial class MeasurementView : Page
             }
         }
 
-        // ── Draw nodes ────────────────────────────────────────────────────────
         foreach (var nodeId in allNodeIds)
         {
             bool isEndpoint = nodeId == currentStep.NodeId || nodeId == currentStep.ToNodeId;
-            Color  color  = isEndpoint ? ActiveColor : GreyColor;
-            double radius = isEndpoint ? HighlightR  : NodeRadius;
+            Color  color  = isEndpoint ? activeColor  : pendingColor;
+            double radius = isEndpoint ? HighlightR   : NodeRadius;
 
             var (cx, cy) = NodePos(nodeId);
             var ellipse = new Ellipse
@@ -282,17 +271,15 @@ public sealed partial class MeasurementView : Page
         GridCanvas.Height = pad * 2 + (numRails - 1) * railSpacingPx;
     }
 
-    /// <summary>
-    /// Draws the Union Jack step map using physical node positions from
-    /// <see cref="UnionJackStrategy.NodePositionById"/>.
-    /// Same colour states as the Full Grid: pending grey → current accent → completed green.
-    /// </summary>
     private void DrawUnionJackMap(
         MeasurementStep               currentStep,
         int                           curIdx,
         IReadOnlyList<MeasurementStep> steps,
         double                        widthMm,
-        double                        heightMm)
+        double                        heightMm,
+        Color                         activeColor,
+        Color                         completedColor,
+        Color                         pendingColor)
     {
         var definition = ViewModel.Definition;
         if (definition is null || widthMm <= 0 || heightMm <= 0) return;
@@ -306,7 +293,6 @@ public sealed partial class MeasurementView : Page
                     mmY * scale + CanvasPad + HighlightR);
         }
 
-        // ── Draw edges (painter order: drawn before nodes) ────────────────────
         for (int i = 0; i < steps.Count; i++)
         {
             var s = steps[i];
@@ -315,11 +301,11 @@ public sealed partial class MeasurementView : Page
 
             if (i == curIdx)
             {
-                AddArrow(fx, fy, tx, ty, ActiveColor, 3.0);
+                AddArrow(fx, fy, tx, ty, activeColor, 3.0);
             }
             else
             {
-                Color  edgeColor = i < curIdx ? GreenColor : PendingColor;
+                Color  edgeColor = i < curIdx ? completedColor : pendingColor;
                 double thickness = i < curIdx ? 2.5 : 1.5;
                 GridCanvas.Children.Add(new Line
                 {
@@ -330,7 +316,6 @@ public sealed partial class MeasurementView : Page
             }
         }
 
-        // ── Draw nodes (on top of edges) ──────────────────────────────────────
         var nodeIds = steps
             .SelectMany(s => new[] { s.NodeId, s.ToNodeId })
             .Where(id => !string.IsNullOrEmpty(id))
@@ -339,8 +324,8 @@ public sealed partial class MeasurementView : Page
         foreach (var nodeId in nodeIds)
         {
             bool isEndpoint = nodeId == currentStep.NodeId || nodeId == currentStep.ToNodeId;
-            Color  color  = isEndpoint ? ActiveColor : GreyColor;
-            double radius = isEndpoint ? HighlightR  : NodeRadius;
+            Color  color  = isEndpoint ? activeColor  : pendingColor;
+            double radius = isEndpoint ? HighlightR   : NodeRadius;
 
             var (cx, cy) = NodePos(nodeId);
             var ellipse = new Ellipse
@@ -354,16 +339,12 @@ public sealed partial class MeasurementView : Page
             GridCanvas.Children.Add(ellipse);
         }
 
-        // Canvas size: plate bounding box + padding
         GridCanvas.Width  = widthMm  * scale + (CanvasPad + HighlightR) * 2;
         GridCanvas.Height = heightMm * scale + (CanvasPad + HighlightR) * 2;
     }
 
     // ── Shared helpers ────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Draws a directed arrow on <see cref="GridCanvas"/>: line shaft + filled arrowhead.
-    /// </summary>
     private void AddArrow(double x1, double y1, double x2, double y2, Color color, double thickness)
     {
         double dx  = x2 - x1;
@@ -400,5 +381,19 @@ public sealed partial class MeasurementView : Page
             },
             Fill = brush
         });
+    }
+
+    /// <summary>
+    /// Resolves a named theme colour using GridCanvas (in the visual tree) first,
+    /// then falls back to application resources.
+    /// </summary>
+    private Color GetThemeColor(string resourceKey)
+    {
+        if (GridCanvas.Resources.TryGetValue(resourceKey, out var res)
+            || Application.Current.Resources.TryGetValue(resourceKey, out res))
+        {
+            return res is SolidColorBrush brush ? brush.Color : Colors.Gray;
+        }
+        return Colors.Gray;
     }
 }

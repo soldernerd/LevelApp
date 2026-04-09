@@ -48,10 +48,10 @@
                             CornerRadius="28"
                             Background="{ThemeResource AccentFillColorDefaultBrush}">
                         <TextBlock Text="{x:Bind ViewModel.OrientationArrow, Mode=OneWay}"
-                                   FontSize="28"
+                                   Style="{StaticResource MetricValueStyle}"
                                    HorizontalAlignment="Center"
                                    VerticalAlignment="Center"
-                                   Foreground="White"/>
+                                   Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
                     </Border>
 
                     <TextBlock Grid.Column="1"

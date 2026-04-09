@@ -34,7 +34,26 @@ public sealed partial class ResultsView : Page
                 PlotContainer.Content = plotElement;
 
             DrawMeasurementsGrid();
+            this.ActualThemeChanged += OnActualThemeChanged;
         }
+    }
+
+    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    {
+        base.OnNavigatedFrom(e);
+        this.ActualThemeChanged -= OnActualThemeChanged;
+    }
+
+    // ── Theme change ──────────────────────────────────────────────────────────
+
+    private void OnActualThemeChanged(FrameworkElement sender, object args)
+    {
+        // Rebuild the plot canvas so it picks up the new theme colours.
+        ViewModel.RebuildPlotCanvas();
+        if (ViewModel.PlotContent is UIElement plotElement)
+            PlotContainer.Content = plotElement;
+
+        DrawMeasurementsGrid();
     }
 
     // ── Recalculate ───────────────────────────────────────────────────────────
@@ -50,9 +69,9 @@ public sealed partial class ResultsView : Page
 
         var result = await dialog.ShowAsync();
 
-        if (result == ContentDialogResult.None) return;   // Cancel
+        if (result == ContentDialogResult.None) return;
 
-        bool save = result == ContentDialogResult.Secondary; // "Recalculate & Save"
+        bool save = result == ContentDialogResult.Secondary;
         var parameters = dialog.BuildParameters();
 
         await ViewModel.RecalculateAsync(parameters, save);
@@ -80,16 +99,9 @@ public sealed partial class ResultsView : Page
             _zoomFactor);
     }
 
-    /// <summary>
-    /// Re-renders the measurements grid whenever the Mode or Units toggle changes.
-    /// </summary>
     private void OnModeOrUnitsChanged(object sender, RoutedEventArgs e)
         => DrawMeasurementsGrid();
 
-    /// <summary>
-    /// Mouse-wheel zoom: each notch scales by ×1.2 or ÷1.2, clamped to 0.25 – 8×.
-    /// The event is marked handled so the parent ScrollViewer scrolls only via its bars.
-    /// </summary>
     private void OnMeasurementsCanvasWheel(object sender, PointerRoutedEventArgs e)
     {
         var delta = e.GetCurrentPoint(MeasurementsCanvas).Properties.MouseWheelDelta;
@@ -99,10 +111,6 @@ public sealed partial class ResultsView : Page
         e.Handled = true;
     }
 
-    /// <summary>
-    /// Ensures the measurements grid is drawn when Tab 2 is first selected,
-    /// in case the canvas was not yet visible during <see cref="OnNavigatedTo"/>.
-    /// </summary>
     private void OnResultsTabSelectionChanged(object sender, SelectionChangedEventArgs args)
     {
         if (sender is TabView tv && tv.SelectedIndex == 1)

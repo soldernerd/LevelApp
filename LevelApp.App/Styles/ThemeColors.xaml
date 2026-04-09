@@ -1,0 +1,55 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <ResourceDictionary.ThemeDictionaries>
+
+    <ResourceDictionary x:Key="Light">
+      <!-- Brand accent — overrides Windows system accent for this app -->
+      <Color x:Key="AppAccentColor">#005B9A</Color>
+
+      <!-- Surface plot: height-map node colours (blue→green→red scale) -->
+      <SolidColorBrush x:Key="PlotLowBrush"      Color="#2980B9"/>
+      <SolidColorBrush x:Key="PlotMidLowBrush"   Color="#27AE60"/>
+      <SolidColorBrush x:Key="PlotMidBrush"       Color="#F1C40F"/>
+      <SolidColorBrush x:Key="PlotMidHighBrush"  Color="#E67E22"/>
+      <SolidColorBrush x:Key="PlotHighBrush"     Color="#C0392B"/>
+
+      <!-- Measurement grid canvas -->
+      <SolidColorBrush x:Key="GridCanvasBackgroundBrush" Color="#F8F8F8"/>
+      <SolidColorBrush x:Key="GridStepArrowBrush"        Color="#444444"/>
+      <SolidColorBrush x:Key="GridCurrentStepBrush"      Color="#005B9A"/>
+      <SolidColorBrush x:Key="GridCompletedStepBrush"    Color="#27AE60"/>
+      <SolidColorBrush x:Key="GridPendingStepBrush"      Color="#BBBBBB"/>
+      <SolidColorBrush x:Key="GridFlaggedStepBrush"      Color="#C0392B"/>
+
+      <!-- Closure loop fill (MeasurementsGrid) -->
+      <SolidColorBrush x:Key="LoopOkBrush"    Color="#2020B020"/>
+      <SolidColorBrush x:Key="LoopWarnBrush"  Color="#20E67E22"/>
+      <SolidColorBrush x:Key="LoopErrorBrush" Color="#20C0392B"/>
+    </ResourceDictionary>
+
+    <ResourceDictionary x:Key="Default"> <!-- Dark mode -->
+      <Color x:Key="AppAccentColor">#3A9FD8</Color>
+
+      <SolidColorBrush x:Key="PlotLowBrush"      Color="#5DADE2"/>
+      <SolidColorBrush x:Key="PlotMidLowBrush"   Color="#2ECC71"/>
+      <SolidColorBrush x:Key="PlotMidBrush"       Color="#F4D03F"/>
+      <SolidColorBrush x:Key="PlotMidHighBrush"  Color="#EB984E"/>
+      <SolidColorBrush x:Key="PlotHighBrush"     Color="#E74C3C"/>
+
+      <SolidColorBrush x:Key="GridCanvasBackgroundBrush" Color="#1E1E1E"/>
+      <SolidColorBrush x:Key="GridStepArrowBrush"        Color="#CCCCCC"/>
+      <SolidColorBrush x:Key="GridCurrentStepBrush"      Color="#3A9FD8"/>
+      <SolidColorBrush x:Key="GridCompletedStepBrush"    Color="#2ECC71"/>
+      <SolidColorBrush x:Key="GridPendingStepBrush"      Color="#555555"/>
+      <SolidColorBrush x:Key="GridFlaggedStepBrush"      Color="#E74C3C"/>
+
+      <SolidColorBrush x:Key="LoopOkBrush"    Color="#202ECC7120"/>
+      <SolidColorBrush x:Key="LoopWarnBrush"  Color="#20EB984E"/>
+      <SolidColorBrush x:Key="LoopErrorBrush" Color="#20E74C3C"/>
+    </ResourceDictionary>
+
+  </ResourceDictionary.ThemeDictionaries>
+
+</ResourceDictionary>

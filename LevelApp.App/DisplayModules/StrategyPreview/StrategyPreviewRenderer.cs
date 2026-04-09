@@ -1,9 +1,11 @@
 using LevelApp.Core.Interfaces;
 using LevelApp.Core.Models;
 using Microsoft.UI;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
+using Windows.UI;
 
 namespace LevelApp.App.DisplayModules.StrategyPreview;
 
@@ -11,6 +13,8 @@ namespace LevelApp.App.DisplayModules.StrategyPreview;
 /// Renders a 2-D top-down preview of a measurement strategy on a <see cref="Canvas"/>.
 /// Nodes are drawn as small filled circles; edges connect consecutive steps within
 /// each pass.  Physical plate proportions are preserved.
+/// Pass colours are semi-transparent hues chosen to distinguish passes in both themes.
+/// Node fill and stroke colours are resolved from the app's ThemeColors resource dictionary.
 /// </summary>
 public static class StrategyPreviewRenderer
 {
@@ -66,7 +70,7 @@ public static class StrategyPreviewRenderer
             bucket.Add(step);
         }
 
-        // Assign a distinct hue per pass for visual distinction
+        // Semi-transparent pass colours — chosen for visibility in both Light and Dark themes
         var passColors = new[]
         {
             Windows.UI.Color.FromArgb(180, 70,  130, 220),
@@ -104,8 +108,12 @@ public static class StrategyPreviewRenderer
         }
 
         // ── Nodes ─────────────────────────────────────────────────────────────
-        var nodeFill   = new SolidColorBrush(Colors.White);
-        var nodeStroke = new SolidColorBrush(Colors.SteelBlue);
+        // Node fill uses the canvas background colour so they contrast with lines;
+        // stroke uses the current step accent colour.
+        var nodeFillColor   = GetThemeColor(canvas, "GridCanvasBackgroundBrush");
+        var nodeStrokeColor = GetThemeColor(canvas, "GridCurrentStepBrush");
+        var nodeFill        = new SolidColorBrush(nodeFillColor);
+        var nodeStroke      = new SolidColorBrush(nodeStrokeColor);
 
         foreach (var (nodeId, (px, py)) in nodePos)
         {
@@ -128,5 +136,21 @@ public static class StrategyPreviewRenderer
         canvas.Height = innerH + Margin * 2;
 
         return canvas;
+    }
+
+    // ── Theme helper ──────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Resolves a named theme brush colour from the resource dictionary.
+    /// Checks the element's own resources first, then the application resources.
+    /// </summary>
+    private static Color GetThemeColor(FrameworkElement element, string resourceKey)
+    {
+        if (element.Resources.TryGetValue(resourceKey, out var res)
+            || Application.Current.Resources.TryGetValue(resourceKey, out res))
+        {
+            return res is SolidColorBrush brush ? brush.Color : Colors.Gray;
+        }
+        return Colors.Gray;
     }
 }

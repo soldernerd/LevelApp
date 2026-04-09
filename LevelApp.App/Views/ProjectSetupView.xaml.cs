@@ -27,7 +27,17 @@ public sealed partial class ProjectSetupView : Page
             Bindings.Update();
         }
         ViewModel.SchedulePreviewUpdate(DispatcherQueue);
+        this.ActualThemeChanged += OnActualThemeChanged;
     }
+
+    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    {
+        base.OnNavigatedFrom(e);
+        this.ActualThemeChanged -= OnActualThemeChanged;
+    }
+
+    private void OnActualThemeChanged(FrameworkElement sender, object args)
+        => ViewModel.SchedulePreviewUpdate(DispatcherQueue);
 
     // ── Surface Plate handlers ────────────────────────────────────────────────
 

@@ -2,6 +2,7 @@ using LevelApp.Core.Geometry.SurfacePlate.Strategies;
 using LevelApp.Core.Models;
 using Microsoft.UI;
 using Microsoft.UI.Text;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
@@ -20,22 +21,21 @@ namespace LevelApp.App.DisplayModules.MeasurementsGrid;
 /// relative to the standard deviation of all cell errors.
 ///
 /// Flagged steps (from <see cref="SurfaceResult.FlaggedStepIndices"/>) are
-/// drawn in orange-red to distinguish them visually.
+/// drawn in the flagged colour to distinguish them visually.
+/// All colours are resolved from the app's ThemeColors resource dictionary at render time.
 /// </summary>
 public static class MeasurementsGridRenderer
 {
     // ── Layout constants (at zoom = 1.0) ──────────────────────────────────────
 
-    private const double TargetMaxPx     = 420.0;  // max canvas dimension
-    private const double MinSpacingPx    = 36.0;   // minimum cell size for legibility
-    private const double CanvasPad       = 48.0;   // outer margin (room for labels)
+    private const double TargetMaxPx     = 420.0;
+    private const double MinSpacingPx    = 36.0;
+    private const double CanvasPad       = 48.0;
     private const double NodeRadius      = 4.0;
 
-    // Approximate half-dimensions of an 8pt label (e.g. "−1.234")
     private const double LabelHalfW     = 15.0;
     private const double LabelHalfH     =  7.0;
 
-    // Arrowhead geometry (canvas pixels at zoom = 1.0)
     private const double ArrowLen       = 10.0;
     private const double ArrowHalfW     =  4.5;
 
@@ -90,18 +90,15 @@ public static class MeasurementsGridRenderer
 
         if (cols < 2 || rows < 2 || steps.Count == 0) return;
 
-        // Physical interval in metres (used for µm conversion)
         double hDistM = widthMm  / (cols - 1) / 1000.0;
         double vDistM = heightMm / (rows - 1) / 1000.0;
 
-        // Pixel spacing preserving physical aspect ratio
         double effectiveMaxPx  = TargetMaxPx   * zoomFactor;
         double effectiveMinPx  = MinSpacingPx  * zoomFactor;
         double scale    = effectiveMaxPx / Math.Max(widthMm, heightMm);
         double xSpacing = Math.Max(effectiveMinPx, widthMm  / (cols - 1) * scale);
         double ySpacing = Math.Max(effectiveMinPx, heightMm / (rows - 1) * scale);
 
-        // Arrowhead and text sizes scaled with zoom
         double arrowLen        = ArrowLen   * zoomFactor;
         double arrowHalfW      = ArrowHalfW * zoomFactor;
         double fontSize        = Math.Clamp(8.0  * zoomFactor, 7.0, 28.0);
@@ -113,17 +110,6 @@ public static class MeasurementsGridRenderer
              r * ySpacing + CanvasPad);
 
         // ── Build edge lookup maps ─────────────────────────────────────────────
-        //
-        // hEdge[(c, r)] = (stepListIndex, isEast)
-        //   covers the horizontal edge between node (c, r) and node (c+1, r).
-        //   isEast = true  → step goes East  (from-node is (c, r))
-        //   isEast = false → step goes West  (from-node is (c+1, r))
-        //
-        // vEdge[(c, r)] = (stepListIndex, isSouth)
-        //   covers the vertical edge between node (c, r) and node (c, r+1).
-        //   isSouth = true  → step goes South (from-node is (c, r))
-        //   isSouth = false → step goes North (from-node is (c, r+1))
-
         var hEdge = new Dictionary<(int, int), (int idx, bool isEast)>();
         var vEdge = new Dictionary<(int, int), (int idx, bool isSouth)>();
 
@@ -136,14 +122,12 @@ public static class MeasurementsGridRenderer
                     hEdge[(s.GridCol,     s.GridRow)] = (i, true);
                     break;
                 case Orientation.West:
-                    // From-node is the right node; canonical key uses left node
                     hEdge[(s.GridCol - 1, s.GridRow)] = (i, false);
                     break;
                 case Orientation.South:
                     vEdge[(s.GridCol, s.GridRow)]     = (i, true);
                     break;
                 case Orientation.North:
-                    // From-node is the bottom node; canonical key uses top node
                     vEdge[(s.GridCol, s.GridRow - 1)] = (i, false);
                     break;
             }
@@ -151,7 +135,6 @@ public static class MeasurementsGridRenderer
 
         var flaggedSet = result.FlaggedStepIndices.ToHashSet();
 
-        // ── Effective reading (raw or adjusted) ───────────────────────────────
         double EffectiveReading(int stepIdx)
         {
             double raw = steps[stepIdx].Reading ?? 0.0;
@@ -161,17 +144,6 @@ public static class MeasurementsGridRenderer
         }
 
         // ── Compute loop closure errors (always µm) ───────────────────────────
-        //
-        // For cell bounded by (c, r) and (c+1, r+1), clockwise:
-        //   top    edge → East  is positive
-        //   right  edge → South is positive
-        //   bottom edge → East  is negative  (clockwise goes West)
-        //   left   edge → South is negative  (clockwise goes North)
-        //
-        // loop_error = top_norm - bottom_norm + right_norm - left_norm   (µm)
-        //
-        // where _norm means "normalized to East / South direction" in µm.
-
         int numCellsX = cols - 1;
         int numCellsY = rows - 1;
         var loopErrors = new double[numCellsX * numCellsY];
@@ -180,34 +152,43 @@ public static class MeasurementsGridRenderer
         {
             for (int cc = 0; cc < numCellsX; cc++)
             {
-                double HNorm(int c, int r)   // horizontal edge normalised to East (µm)
+                double HNorm(int c, int r)
                 {
                     if (!hEdge.TryGetValue((c, r), out var e)) return 0.0;
                     double delta = EffectiveReading(e.idx) * hDistM * 1000.0;
                     return e.isEast ? delta : -delta;
                 }
 
-                double VNorm(int c, int r)   // vertical edge normalised to South (µm)
+                double VNorm(int c, int r)
                 {
                     if (!vEdge.TryGetValue((c, r), out var e)) return 0.0;
                     double delta = EffectiveReading(e.idx) * vDistM * 1000.0;
                     return e.isSouth ? delta : -delta;
                 }
 
-                double top    =  HNorm(cc,     cr);      // East  is clockwise-positive for top
-                double bottom =  HNorm(cc,     cr + 1);  // East  is clockwise-negative for bottom
-                double right  =  VNorm(cc + 1, cr);      // South is clockwise-positive for right
-                double left   =  VNorm(cc,     cr);      // South is clockwise-negative for left
+                double top    =  HNorm(cc,     cr);
+                double bottom =  HNorm(cc,     cr + 1);
+                double right  =  VNorm(cc + 1, cr);
+                double left   =  VNorm(cc,     cr);
 
                 loopErrors[cr * numCellsX + cc] = top - bottom + right - left;
             }
         }
 
-        // Standard deviation of all loop errors (for colour coding)
         double errMean  = loopErrors.Average();
         double errVar   = loopErrors.Select(e => (e - errMean) * (e - errMean)).Average();
         double errSigma = Math.Sqrt(errVar);
-        if (errSigma < 1e-9) errSigma = 1.0;  // guard against zero-variance (adjusted mode)
+        if (errSigma < 1e-9) errSigma = 1.0;
+
+        // ── Resolve theme brushes ─────────────────────────────────────────────
+        var loopOkBrush    = GetThemeBrush(canvas, "LoopOkBrush");
+        var loopWarnBrush  = GetThemeBrush(canvas, "LoopWarnBrush");
+        var loopErrorBrush = GetThemeBrush(canvas, "LoopErrorBrush");
+        var normalBrush    = new SolidColorBrush(GetThemeColor(canvas, "GridStepArrowBrush"));
+        var flaggedBrush   = new SolidColorBrush(GetThemeColor(canvas, "GridFlaggedStepBrush"));
+        var labelFg        = new SolidColorBrush(GetThemeColor(canvas, "GridStepArrowBrush"));
+        var errorFg        = new SolidColorBrush(GetThemeColor(canvas, "GridStepArrowBrush"));
+        var nodeBrush      = new SolidColorBrush(GetThemeColor(canvas, "GridPendingStepBrush"));
 
         // ── Cell background fills ─────────────────────────────────────────────
         for (int cr = 0; cr < numCellsY; cr++)
@@ -215,11 +196,9 @@ public static class MeasurementsGridRenderer
             for (int cc = 0; cc < numCellsX; cc++)
             {
                 double abs = Math.Abs(loopErrors[cr * numCellsX + cc]);
-                Color bg = abs < errSigma
-                    ? Color.FromArgb( 35, 0,   180,  60)   // < 1σ — green tint
-                    : abs < 2 * errSigma
-                        ? Color.FromArgb( 55, 220, 160,   0)  // 1σ–2σ — amber tint
-                        : Color.FromArgb( 75, 210,  40,  40); // > 2σ — red tint
+                var bg = abs < errSigma       ? loopOkBrush
+                       : abs < 2 * errSigma   ? loopWarnBrush
+                                              : loopErrorBrush;
 
                 var (x1, y1) = NodePos(cc,     cr);
                 var (x2, y2) = NodePos(cc + 1, cr + 1);
@@ -228,7 +207,7 @@ public static class MeasurementsGridRenderer
                 {
                     Width  = x2 - x1,
                     Height = y2 - y1,
-                    Fill   = new SolidColorBrush(bg)
+                    Fill   = bg
                 };
                 Canvas.SetLeft(rect, x1);
                 Canvas.SetTop(rect,  y1);
@@ -237,10 +216,6 @@ public static class MeasurementsGridRenderer
         }
 
         // ── Edge arrows ───────────────────────────────────────────────────────
-        var normalBrush  = new SolidColorBrush(Color.FromArgb(200, 100, 100, 100));
-        var flaggedBrush = new SolidColorBrush(Color.FromArgb(255, 210,  80,  20));
-
-        // Horizontal edges — arrow direction reflects actual step orientation
         for (int r = 0; r < rows; r++)
         {
             for (int c = 0; c < cols - 1; c++)
@@ -250,7 +225,6 @@ public static class MeasurementsGridRenderer
                 var  brush     = isFlagged ? flaggedBrush : normalBrush;
                 double thick   = isFlagged ? 2.0 : 1.5;
 
-                // isEast = true → from (c,r) to (c+1,r); false → from (c+1,r) to (c,r)
                 var (fx, fy) = hasStep && !he.isEast ? NodePos(c + 1, r) : NodePos(c, r);
                 var (tx, ty) = hasStep && !he.isEast ? NodePos(c,     r) : NodePos(c + 1, r);
 
@@ -258,7 +232,6 @@ public static class MeasurementsGridRenderer
             }
         }
 
-        // Vertical edges — arrow direction reflects actual step orientation
         for (int c = 0; c < cols; c++)
         {
             for (int r = 0; r < rows - 1; r++)
@@ -268,7 +241,6 @@ public static class MeasurementsGridRenderer
                 var  brush     = isFlagged ? flaggedBrush : normalBrush;
                 double thick   = isFlagged ? 2.0 : 1.5;
 
-                // isSouth = true → from (c,r) to (c,r+1); false → from (c,r+1) to (c,r)
                 var (fx, fy) = hasStep && !ve.isSouth ? NodePos(c, r + 1) : NodePos(c, r);
                 var (tx, ty) = hasStep && !ve.isSouth ? NodePos(c, r)     : NodePos(c, r + 1);
 
@@ -289,9 +261,6 @@ public static class MeasurementsGridRenderer
             return $"{reading:F3}";
         }
 
-        var labelFg = new SolidColorBrush(Color.FromArgb(220, 50, 50, 50));
-
-        // Horizontal edge labels — centred on edge midpoint, just above the line
         for (int r = 0; r < rows; r++)
         {
             for (int c = 0; c < cols - 1; c++)
@@ -314,7 +283,6 @@ public static class MeasurementsGridRenderer
             }
         }
 
-        // Vertical edge labels — centred on edge midpoint, just left of the line, rotated −90°
         for (int c = 0; c < cols; c++)
         {
             for (int r = 0; r < rows - 1; r++)
@@ -340,8 +308,6 @@ public static class MeasurementsGridRenderer
         }
 
         // ── Loop closure error labels ─────────────────────────────────────────
-        var errorFg = new SolidColorBrush(Color.FromArgb(230, 20, 20, 20));
-
         for (int cr = 0; cr < numCellsY; cr++)
         {
             for (int cc = 0; cc < numCellsX; cc++)
@@ -367,9 +333,7 @@ public static class MeasurementsGridRenderer
             }
         }
 
-        // ── Node dots (drawn last — on top of labels that run close to nodes) ─
-        var nodeBrush = new SolidColorBrush(Color.FromArgb(220, 110, 110, 110));
-
+        // ── Node dots ─────────────────────────────────────────────────────────
         for (int r = 0; r < rows; r++)
         {
             for (int c = 0; c < cols; c++)
@@ -387,17 +351,12 @@ public static class MeasurementsGridRenderer
             }
         }
 
-        // ── Canvas size ───────────────────────────────────────────────────────
         canvas.Width  = (cols - 1) * xSpacing + CanvasPad * 2;
         canvas.Height = (rows - 1) * ySpacing + CanvasPad * 2;
     }
 
     // ── Union Jack renderer ───────────────────────────────────────────────────
 
-    /// <summary>
-    /// Renders a Union Jack step map: directed arrows labelled with readings,
-    /// flagged edges highlighted, loop closure polygons colour-coded by σ.
-    /// </summary>
     private static void RenderUnionJack(
         Canvas                         canvas,
         IReadOnlyList<MeasurementStep> steps,
@@ -411,15 +370,14 @@ public static class MeasurementsGridRenderer
     {
         if (steps.Count == 0) return;
 
-        double effectiveMaxPx  = TargetMaxPx * zoomFactor;
-        double scale           = effectiveMaxPx / Math.Max(widthMm, heightMm);
-        double arrowLen        = ArrowLen   * zoomFactor;
-        double arrowHalfW      = ArrowHalfW * zoomFactor;
-        double fontSize        = Math.Clamp(8.0 * zoomFactor, 7.0, 28.0);
-        double errorFontSize   = Math.Clamp(9.0 * zoomFactor, 7.0, 30.0);
+        double effectiveMaxPx   = TargetMaxPx * zoomFactor;
+        double scale            = effectiveMaxPx / Math.Max(widthMm, heightMm);
+        double arrowLen         = ArrowLen   * zoomFactor;
+        double arrowHalfW       = ArrowHalfW * zoomFactor;
+        double fontSize         = Math.Clamp(8.0 * zoomFactor, 7.0, 28.0);
+        double errorFontSize    = Math.Clamp(9.0 * zoomFactor, 7.0, 30.0);
         double scaledLabelHalfW = LabelHalfW * zoomFactor;
 
-        // Convert physical mm position to canvas pixel position
         (double px, double py) ToCanvas(double mmX, double mmY) =>
             (mmX * scale + CanvasPad,
              mmY * scale + CanvasPad);
@@ -433,31 +391,31 @@ public static class MeasurementsGridRenderer
         double canvasW = widthMm  * scale + CanvasPad * 2;
         double canvasH = heightMm * scale + CanvasPad * 2;
 
-        // Invisible background rectangle — ensures the canvas has a uniform
-        // hit-test surface even when no filled loop polygons are drawn.
         canvas.Children.Add(new Rectangle { Width = canvasW, Height = canvasH,
             Fill = new SolidColorBrush(Color.FromArgb(1, 0, 0, 0)) });
 
         var flaggedSet   = result.FlaggedStepIndices.ToHashSet();
-        var normalBrush  = new SolidColorBrush(Color.FromArgb(200, 100, 100, 100));
-        var flaggedBrush = new SolidColorBrush(Color.FromArgb(255, 210,  80,  20));
-        var labelFg      = new SolidColorBrush(Color.FromArgb(220,  50,  50,  50));
+        var normalBrush  = new SolidColorBrush(GetThemeColor(canvas, "GridStepArrowBrush"));
+        var flaggedBrush = new SolidColorBrush(GetThemeColor(canvas, "GridFlaggedStepBrush"));
+        var labelFg      = new SolidColorBrush(GetThemeColor(canvas, "GridStepArrowBrush"));
 
         // ── Loop closure polygons ─────────────────────────────────────────────
         if (result.PrimitiveLoops.Length > 0)
         {
             double loopSigmaUm = result.ClosureErrorRms * 1000.0;
             if (loopSigmaUm < 1e-9) loopSigmaUm = 1.0;
-            var errorFg = new SolidColorBrush(Color.FromArgb(230, 20, 20, 20));
+            var errorFg = new SolidColorBrush(GetThemeColor(canvas, "GridStepArrowBrush"));
+
+            var loopOkBrush    = GetThemeBrush(canvas, "LoopOkBrush");
+            var loopWarnBrush  = GetThemeBrush(canvas, "LoopWarnBrush");
+            var loopErrorBrush = GetThemeBrush(canvas, "LoopErrorBrush");
 
             foreach (var loop in result.PrimitiveLoops)
             {
                 double absUm = Math.Abs(loop.ClosureErrorMm * 1000.0);
-                Color bg = absUm < loopSigmaUm
-                    ? Color.FromArgb( 50,   0, 180,  60)
-                    : absUm < 2 * loopSigmaUm
-                        ? Color.FromArgb( 70, 220, 160,   0)
-                        : Color.FromArgb( 90, 210,  40,  40);
+                var bg = absUm < loopSigmaUm     ? loopOkBrush
+                       : absUm < 2 * loopSigmaUm ? loopWarnBrush
+                                                  : loopErrorBrush;
 
                 var points = new PointCollection();
                 double cx = 0, cy = 0;
@@ -471,7 +429,7 @@ public static class MeasurementsGridRenderer
                 cx /= loop.NodeIds.Length;
                 cy /= loop.NodeIds.Length;
 
-                canvas.Children.Add(new Polygon { Points = points, Fill = new SolidColorBrush(bg) });
+                canvas.Children.Add(new Polygon { Points = points, Fill = bg });
 
                 string errLabel = $"{loop.ClosureErrorMm * 1000.0:F2}µm";
                 var tb = new TextBlock
@@ -543,7 +501,7 @@ public static class MeasurementsGridRenderer
         }
 
         // ── Node dots ─────────────────────────────────────────────────────────
-        var nodeBrush = new SolidColorBrush(Color.FromArgb(220, 110, 110, 110));
+        var nodeBrush = new SolidColorBrush(GetThemeColor(canvas, "GridPendingStepBrush"));
         var nodeIds   = steps
             .SelectMany(s => new[] { s.NodeId, s.ToNodeId })
             .Where(id => !string.IsNullOrEmpty(id))
@@ -563,18 +521,42 @@ public static class MeasurementsGridRenderer
             canvas.Children.Add(e);
         }
 
-        // ── Canvas size ───────────────────────────────────────────────────────
         canvas.Width  = canvasW;
         canvas.Height = canvasH;
     }
 
-    // ── Shared helpers ────────────────────────────────────────────────────────
+    // ── Theme helpers ─────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Draws a directed arrow from (x1,y1) to (x2,y2): a line body ending in a
-    /// filled arrowhead triangle.  The line is shortened by <paramref name="arrowLen"/>
-    /// so the shaft does not overlap the head.
+    /// Resolves a named theme brush colour from the resource dictionary.
+    /// Checks the element's own resources first, then the application resources.
     /// </summary>
+    private static Color GetThemeColor(FrameworkElement element, string resourceKey)
+    {
+        if (element.Resources.TryGetValue(resourceKey, out var res)
+            || Application.Current.Resources.TryGetValue(resourceKey, out res))
+        {
+            return res is SolidColorBrush brush ? brush.Color : Colors.Gray;
+        }
+        return Colors.Gray;
+    }
+
+    /// <summary>
+    /// Resolves a named theme brush from the resource dictionary, preserving any
+    /// alpha channel baked into the brush colour (e.g. semi-transparent loop fills).
+    /// </summary>
+    private static SolidColorBrush GetThemeBrush(FrameworkElement element, string resourceKey)
+    {
+        if (element.Resources.TryGetValue(resourceKey, out var res)
+            || Application.Current.Resources.TryGetValue(resourceKey, out res))
+        {
+            return res is SolidColorBrush brush ? brush : new SolidColorBrush(Colors.Gray);
+        }
+        return new SolidColorBrush(Colors.Gray);
+    }
+
+    // ── Shared arrow helper ───────────────────────────────────────────────────
+
     private static void AddArrow(
         Canvas          canvas,
         double          x1, double y1,
@@ -589,16 +571,14 @@ public static class MeasurementsGridRenderer
         double len = Math.Sqrt(dx * dx + dy * dy);
         if (len < 1e-6) return;
 
-        double nx = dx / len;   // unit direction
+        double nx = dx / len;
         double ny = dy / len;
-        double px = -ny;        // unit perpendicular
+        double px = -ny;
         double py =  nx;
 
-        // Cap arrowhead to 40 % of edge length so very short edges still look right
         double al = Math.Min(arrowLen,  len * 0.40);
         double hw = Math.Min(arrowHalfW, al * 0.50);
 
-        // Shorten the line shaft to end at the arrowhead base
         double bx = x2 - nx * al;
         double by = y2 - ny * al;
 
@@ -614,9 +594,9 @@ public static class MeasurementsGridRenderer
         {
             Points = new PointCollection
             {
-                new Point(x2,          y2),           // tip
-                new Point(bx + px * hw, by + py * hw), // base left
-                new Point(bx - px * hw, by - py * hw)  // base right
+                new Point(x2,          y2),
+                new Point(bx + px * hw, by + py * hw),
+                new Point(bx - px * hw, by - py * hw)
             },
             Fill = brush
         });

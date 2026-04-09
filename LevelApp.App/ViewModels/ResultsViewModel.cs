@@ -322,6 +322,36 @@ public sealed partial class ResultsViewModel : ViewModelBase
         ActiveDefinition = _project.ObjectDefinition;
     }
 
+    /// <summary>
+    /// Rebuilds <see cref="PlotContent"/> from cached session data so that the
+    /// canvas picks up new theme colours after a theme change.
+    /// Call from the view's <c>ActualThemeChanged</c> handler.
+    /// </summary>
+    public void RebuildPlotCanvas()
+    {
+        if (_session is null || _project is null) return;
+
+        if (IsParallelWays)
+        {
+            var pwResult = _session.InitialRound.ParallelWaysResult;
+            if (pwResult is null) return;
+            var pwp   = ParallelWaysParameters.From(_project.ObjectDefinition.Parameters);
+            var strat = ParallelWaysStrategyParameters.From(_project.ObjectDefinition.Parameters);
+            PlotContent = new ParallelWaysDisplay().Render(
+                pwResult, pwp, strat, _session.InitialRound.Steps);
+        }
+        else
+        {
+            if (_currentResult is null) return;
+            var strategy   = StrategyFactory.Create(_session.StrategyId);
+            var definition = _project.ObjectDefinition;
+            PlotContent = new SurfacePlot3DDisplay().Render(
+                _currentResult, strategy, definition, _session.InitialRound.Steps);
+        }
+
+        OnPropertyChanged(nameof(PlotContent));
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private CalculationParameters GetCurrentCalculationParameters(SurfaceResult? result)

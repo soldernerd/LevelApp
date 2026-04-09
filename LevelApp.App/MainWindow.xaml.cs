@@ -36,6 +36,9 @@ public sealed partial class MainWindow : Window
         var nav = (NavigationService)App.Services.GetRequiredService<INavigationService>();
         nav.Attach(RootFrame);
 
+        // Apply persisted theme before first navigation
+        ApplyPersistedTheme();
+
         // Update the title bar whenever the project name or dirty flag changes
         this.Title = ViewModel.WindowTitle;
         ViewModel.PropertyChanged += (_, e) =>
@@ -53,6 +56,18 @@ public sealed partial class MainWindow : Window
         nav.NavigateTo(PageKey.ProjectSetup);
     }
 
+    /// <summary>Restores the user's saved theme on startup.</summary>
+    private void ApplyPersistedTheme()
+    {
+        RootFrame.RequestedTheme = _settings.AppTheme;
+    }
+
+    /// <summary>Called by PreferencesDialog to apply a live theme change.</summary>
+    public void ApplyTheme(ElementTheme theme)
+    {
+        RootFrame.RequestedTheme = theme;
+    }
+
     private async void OnAppWindowClosing(AppWindow sender, AppWindowClosingEventArgs args)
     {
         // Always cancel the close initially so we can show the dialog asynchronously
@@ -68,7 +83,7 @@ public sealed partial class MainWindow : Window
 
     private async void OnPreferencesClicked(object sender, RoutedEventArgs e)
     {
-        var dialog = new PreferencesDialog(_settings, _hwnd)
+        var dialog = new PreferencesDialog(_settings, _hwnd, ApplyTheme)
         {
             XamlRoot = RootFrame.XamlRoot
         };

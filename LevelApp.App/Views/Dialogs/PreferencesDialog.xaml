@@ -6,7 +6,8 @@
     PrimaryButtonText="OK"
     SecondaryButtonText="Cancel"
     DefaultButton="Primary"
-    PrimaryButtonClick="OnOkClicked">
+    PrimaryButtonClick="OnOkClicked"
+    SecondaryButtonClick="OnCancelClicked">
 
     <StackPanel Spacing="16" MinWidth="440">
 
@@ -23,6 +24,16 @@
                     Click="OnBrowseClicked"
                     VerticalAlignment="Bottom"/>
         </Grid>
+
+        <StackPanel Spacing="8">
+            <TextBlock Text="Theme"
+                       Style="{StaticResource SectionHeaderStyle}"/>
+            <RadioButtons SelectedIndex="{x:Bind ThemeIndex, Mode=TwoWay}">
+                <x:String>Follow system</x:String>
+                <x:String>Light</x:String>
+                <x:String>Dark</x:String>
+            </RadioButtons>
+        </StackPanel>
 
     </StackPanel>
 
