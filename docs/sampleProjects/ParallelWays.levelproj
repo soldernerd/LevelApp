@@ -1,0 +1,301 @@
+{
+  "schemaVersion": "1.1",
+  "appVersion": "0.7.0",
+  "project": {
+    "id": "1759172a-7aa0-4f39-b353-25510f898482",
+    "name": "Rail",
+    "createdAt": "2026-04-09T08:18:03.9413479Z",
+    "modifiedAt": "2026-04-09T08:19:07.4713308Z",
+    "operator": "",
+    "notes": "",
+    "objectDefinition": {
+      "geometryModuleId": "ParallelWays",
+      "parameters": {
+        "orientation": "Horizontal",
+        "referenceRailIndex": 0,
+        "rails": [
+          {
+            "label": "Front",
+            "lengthMm": 800,
+            "axialOffsetMm": 0,
+            "lateralSeparationMm": 0,
+            "verticalOffsetMm": 0
+          },
+          {
+            "label": "Rear",
+            "lengthMm": 800,
+            "axialOffsetMm": 0,
+            "lateralSeparationMm": 250,
+            "verticalOffsetMm": 0
+          }
+        ],
+        "tasks": [
+          {
+            "taskType": "AlongRail",
+            "railIndexA": 0,
+            "railIndexB": 1,
+            "passDirection": "SinglePass",
+            "stepDistanceMm": 200
+          },
+          {
+            "taskType": "AlongRail",
+            "railIndexA": 1,
+            "railIndexB": 1,
+            "passDirection": "SinglePass",
+            "stepDistanceMm": 200
+          },
+          {
+            "taskType": "Bridge",
+            "railIndexA": 0,
+            "railIndexB": 1,
+            "passDirection": "SinglePass",
+            "stepDistanceMm": 200
+          }
+        ],
+        "driftCorrection": "LeastSquares",
+        "solverMode": "GlobalLeastSquares"
+      }
+    },
+    "measurements": [
+      {
+        "id": "91aa823b-bc9a-46d9-adbe-99fbed9d09db",
+        "label": "Measurement 1",
+        "takenAt": "2026-04-09T08:18:03.9410442Z",
+        "operator": "",
+        "instrumentId": "manual-entry",
+        "strategyId": "ParallelWays",
+        "notes": "",
+        "initialRound": {
+          "completedAt": "2026-04-09T08:19:07.4712916Z",
+          "steps": [
+            {
+              "index": 0,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "Rail \u2018Front\u2019 \u2014 station 1 \u2192 2, facing East",
+              "reading": 0.001,
+              "nodeId": "rail0_sta0",
+              "toNodeId": "rail0_sta1",
+              "passPhase": "NotApplicable"
+            },
+            {
+              "index": 1,
+              "gridCol": 1,
+              "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "Rail \u2018Front\u2019 \u2014 station 2 \u2192 3, facing East",
+              "reading": 0.001,
+              "nodeId": "rail0_sta1",
+              "toNodeId": "rail0_sta2",
+              "passPhase": "NotApplicable"
+            },
+            {
+              "index": 2,
+              "gridCol": 2,
+              "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "Rail \u2018Front\u2019 \u2014 station 3 \u2192 4, facing East",
+              "reading": 0.001,
+              "nodeId": "rail0_sta2",
+              "toNodeId": "rail0_sta3",
+              "passPhase": "NotApplicable"
+            },
+            {
+              "index": 3,
+              "gridCol": 3,
+              "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "Rail \u2018Front\u2019 \u2014 station 4 \u2192 5, facing East",
+              "reading": 0.001,
+              "nodeId": "rail0_sta3",
+              "toNodeId": "rail0_sta4",
+              "passPhase": "NotApplicable"
+            },
+            {
+              "index": 4,
+              "gridCol": 0,
+              "gridRow": 1,
+              "orientation": "East",
+              "instructionText": "Rail \u2018Rear\u2019 \u2014 station 1 \u2192 2, facing East",
+              "reading": 0,
+              "nodeId": "rail1_sta0",
+              "toNodeId": "rail1_sta1",
+              "passPhase": "NotApplicable"
+            },
+            {
+              "index": 5,
+              "gridCol": 1,
+              "gridRow": 1,
+              "orientation": "East",
+              "instructionText": "Rail \u2018Rear\u2019 \u2014 station 2 \u2192 3, facing East",
+              "reading": -0.001,
+              "nodeId": "rail1_sta1",
+              "toNodeId": "rail1_sta2",
+              "passPhase": "NotApplicable"
+            },
+            {
+              "index": 6,
+              "gridCol": 2,
+              "gridRow": 1,
+              "orientation": "East",
+              "instructionText": "Rail \u2018Rear\u2019 \u2014 station 3 \u2192 4, facing East",
+              "reading": 0.003,
+              "nodeId": "rail1_sta2",
+              "toNodeId": "rail1_sta3",
+              "passPhase": "NotApplicable"
+            },
+            {
+              "index": 7,
+              "gridCol": 3,
+              "gridRow": 1,
+              "orientation": "East",
+              "instructionText": "Rail \u2018Rear\u2019 \u2014 station 4 \u2192 5, facing East",
+              "reading": 0,
+              "nodeId": "rail1_sta3",
+              "toNodeId": "rail1_sta4",
+              "passPhase": "NotApplicable"
+            },
+            {
+              "index": 8,
+              "gridCol": 0,
+              "gridRow": 1,
+              "orientation": "North",
+              "instructionText": "Bridge Front\u2194Rear \u2014 station 1, spanning Front \u2192 Rear",
+              "reading": 0.001,
+              "nodeId": "rail0_sta0",
+              "toNodeId": "rail1_sta0",
+              "passPhase": "NotApplicable"
+            },
+            {
+              "index": 9,
+              "gridCol": 1,
+              "gridRow": 1,
+              "orientation": "North",
+              "instructionText": "Bridge Front\u2194Rear \u2014 station 2, spanning Front \u2192 Rear",
+              "reading": 0.002,
+              "nodeId": "rail0_sta1",
+              "toNodeId": "rail1_sta1",
+              "passPhase": "NotApplicable"
+            },
+            {
+              "index": 10,
+              "gridCol": 2,
+              "gridRow": 1,
+              "orientation": "North",
+              "instructionText": "Bridge Front\u2194Rear \u2014 station 3, spanning Front \u2192 Rear",
+              "reading": 0.002,
+              "nodeId": "rail0_sta2",
+              "toNodeId": "rail1_sta2",
+              "passPhase": "NotApplicable"
+            },
+            {
+              "index": 11,
+              "gridCol": 3,
+              "gridRow": 1,
+              "orientation": "North",
+              "instructionText": "Bridge Front\u2194Rear \u2014 station 4, spanning Front \u2192 Rear",
+              "reading": 0.003,
+              "nodeId": "rail0_sta3",
+              "toNodeId": "rail1_sta3",
+              "passPhase": "NotApplicable"
+            },
+            {
+              "index": 12,
+              "gridCol": 4,
+              "gridRow": 1,
+              "orientation": "North",
+              "instructionText": "Bridge Front\u2194Rear \u2014 station 5, spanning Front \u2192 Rear",
+              "reading": 0,
+              "nodeId": "rail0_sta4",
+              "toNodeId": "rail1_sta4",
+              "passPhase": "NotApplicable"
+            }
+          ],
+          "result": null,
+          "parallelWaysResult": {
+            "railProfiles": [
+              {
+                "railIndex": 0,
+                "heightProfileMm": [
+                  9.583732057416286E-05,
+                  -2.4306220095693767E-05,
+                  -0.0001257894736842106,
+                  -5.88516746411484E-05,
+                  0.00011311004784689
+                ],
+                "stationPositionsMm": [
+                  0,
+                  200,
+                  400,
+                  600,
+                  800
+                ],
+                "straightnessValueMm": 0.0002388995215311006
+              },
+              {
+                "railIndex": 1,
+                "heightProfileMm": [
+                  2.4162679425837412E-05,
+                  2.430622009569382E-05,
+                  -0.00019421052631578945,
+                  0.00021885167464114823,
+                  -7.31100478468899E-05
+                ],
+                "stationPositionsMm": [
+                  0,
+                  200,
+                  400,
+                  600,
+                  800
+                ],
+                "straightnessValueMm": 0.0004130622009569377
+              }
+            ],
+            "parallelismProfiles": [
+              {
+                "railIndexA": 0,
+                "railIndexB": 1,
+                "deviationMm": [
+                  0.00039377990430621983,
+                  0.0004813397129186602,
+                  0.00033157894736842103,
+                  0.0006449760765550238,
+                  0.00014832535885167444
+                ],
+                "stationPositionsMm": [
+                  0,
+                  200,
+                  400,
+                  600,
+                  800
+                ],
+                "parallelismValueMm": 0.0004966507177033494
+              }
+            ],
+            "residuals": [
+              -0.00014377990430622034,
+              -0.00012511961722488053,
+              4.330143540669847E-05,
+              0.00014832535885167468,
+              0.00014377990430622,
+              0.00012511961722488032,
+              -4.330143540669869E-05,
+              -0.00014832535885167465,
+              0.00014377990430621983,
+              -1.8660287081339808E-05,
+              -0.00016842105263157898,
+              -0.00010502392344497618,
+              0.00014832535885167444
+            ],
+            "flaggedStepIndices": [],
+            "sigmaThreshold": 2.5,
+            "residualRms": 0.00012490703204543063
+          },
+          "calculationParameters": null
+        },
+        "corrections": []
+      }
+    ]
+  }
+}
