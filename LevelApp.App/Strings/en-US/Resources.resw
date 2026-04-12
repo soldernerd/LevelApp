@@ -139,6 +139,8 @@
   <data name="Preferences_DefaultFolder_Label.Text" xml:space="preserve"><value>Default project folder</value></data>
   <data name="Preferences_DefaultFolder_Tooltip.Content" xml:space="preserve"><value>The folder that the Open and Save dialogs open to by default.</value></data>
   <data name="Preferences_BrowseFolder.Content" xml:space="preserve"><value>Browse…</value></data>
+  <data name="Preferences_ActivityLogging_Toggle.Header" xml:space="preserve"><value>Activity logging</value></data>
+  <data name="Preferences_ActivityLogging_Description.Text" xml:space="preserve"><value>Records user interactions to a local log file for crash reproduction. Logs are stored in %LOCALAPPDATA%\LevelApp\Logs and deleted automatically after 14 days.</value></data>
   <data name="Preferences_OkButton.Content" xml:space="preserve"><value>OK</value></data>
   <data name="Preferences_CancelButton.Content" xml:space="preserve"><value>Cancel</value></data>
 
