@@ -1,5 +1,6 @@
 using LevelApp.App.Navigation;
 using LevelApp.App.Services;
+using LevelApp.Core.Interfaces;
 using LevelApp.App.ViewModels;
 using LevelApp.Core.Geometry.ParallelWays;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,6 +31,7 @@ public partial class App : Application
 
         // Services
         services.AddSingleton<IProjectFileService, ProjectFileService>();
+        services.AddSingleton<IActivityLogger, ActivityLogger>();
 
         // Shell ViewModel — singleton so all page VMs share the same project state
         services.AddSingleton<MainViewModel>();
@@ -58,6 +60,20 @@ public partial class App : Application
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
+        // Resolve the logger (triggers constructor: creates log file, writes Session.Start)
+        var logger = Services.GetRequiredService<IActivityLogger>();
+
+        // Unhandled exception hooks — log before the process dies
+        AppDomain.CurrentDomain.UnhandledException += (s, e) =>
+            logger.Log("CRASH", e.ExceptionObject?.ToString());
+
+        Application.Current.UnhandledException += (s, e) =>
+        {
+            logger.Log("CRASH.UI", e.Message,
+                new Dictionary<string, object> { ["stackTrace"] = e.Exception?.StackTrace ?? "" });
+            e.Handled = true;
+        };
+
         _window = new MainWindow();
         _window.Activate();
     }

@@ -1,4 +1,5 @@
 using LevelApp.App.Services;
+using LevelApp.Core.Interfaces;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Windows.Storage.Pickers;
@@ -8,10 +9,11 @@ namespace LevelApp.App.Views.Dialogs;
 
 public sealed partial class PreferencesDialog : ContentDialog
 {
-    private readonly ISettingsService _settings;
-    private readonly nint             _hwnd;
-    private readonly IThemeService    _theme;
-    private readonly ElementTheme     _originalTheme;
+    private readonly ISettingsService  _settings;
+    private readonly nint              _hwnd;
+    private readonly IThemeService     _theme;
+    private readonly IActivityLogger   _activityLogger;
+    private readonly ElementTheme      _originalTheme;
 
     // ── ThemeIndex ────────────────────────────────────────────────────────────
     // 0 = Follow system (ElementTheme.Default)
@@ -35,13 +37,27 @@ public sealed partial class PreferencesDialog : ContentDialog
         }
     }
 
-    public PreferencesDialog(ISettingsService settings, nint hwnd, IThemeService theme)
+    // ── ActivityLoggingEnabled ────────────────────────────────────────────────
+
+    private bool _activityLoggingEnabled;
+
+    /// <summary>Bound two-way to the ToggleSwitch in XAML.</summary>
+    public bool ActivityLoggingEnabled
     {
-        _settings      = settings;
-        _hwnd          = hwnd;
-        _theme         = theme;
-        _originalTheme = settings.AppTheme;
-        _themeIndex    = ThemeToIndex(settings.AppTheme);
+        get => _activityLoggingEnabled;
+        set => _activityLoggingEnabled = value;
+    }
+
+    public PreferencesDialog(ISettingsService settings, nint hwnd,
+                             IThemeService theme, IActivityLogger activityLogger)
+    {
+        _settings              = settings;
+        _hwnd                  = hwnd;
+        _theme                 = theme;
+        _activityLogger        = activityLogger;
+        _originalTheme         = settings.AppTheme;
+        _themeIndex            = ThemeToIndex(settings.AppTheme);
+        _activityLoggingEnabled = settings.ActivityLoggingEnabled;
 
         InitializeComponent();
 
@@ -50,10 +66,13 @@ public sealed partial class PreferencesDialog : ContentDialog
 
     private void OnOkClicked(ContentDialog sender, ContentDialogButtonClickEventArgs args)
     {
-        _settings.DefaultProjectFolder = FolderPathBox.Text;
-        _settings.AppTheme             = IndexToTheme(ThemeIndex);
+        _settings.DefaultProjectFolder   = FolderPathBox.Text;
+        _settings.AppTheme               = IndexToTheme(ThemeIndex);
+        _settings.ActivityLoggingEnabled = _activityLoggingEnabled;
         _settings.Save();
-        // Theme is already applied live; nothing more needed here.
+
+        // Apply the new logging preference immediately to the running logger
+        _activityLogger.IsEnabled = _activityLoggingEnabled;
     }
 
     private void OnCancelClicked(ContentDialog sender, ContentDialogButtonClickEventArgs args)

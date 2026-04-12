@@ -16,6 +16,7 @@ public sealed class SettingsService : ISettingsService
         Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
 
     private ElementTheme? _appTheme;
+    private bool          _activityLoggingEnabled = true;
 
     public string DefaultProjectFolder
     {
@@ -27,6 +28,12 @@ public sealed class SettingsService : ISettingsService
     {
         get => _appTheme ?? ElementTheme.Default;
         set => _appTheme = value;
+    }
+
+    public bool ActivityLoggingEnabled
+    {
+        get => _activityLoggingEnabled;
+        set => _activityLoggingEnabled = value;
     }
 
     public void Load()
@@ -43,6 +50,8 @@ public sealed class SettingsService : ISettingsService
             if (data?.AppTheme is { Length: > 0 } ts
                 && Enum.TryParse<ElementTheme>(ts, out var t))
                 _appTheme = t;
+            if (data?.ActivityLoggingEnabled is bool al)
+                _activityLoggingEnabled = al;
         }
         catch { /* ignore corrupt or missing settings file */ }
     }
@@ -54,8 +63,9 @@ public sealed class SettingsService : ISettingsService
             string path = GetSettingsPath();
             var data = new SettingsData
             {
-                DefaultProjectFolder = _defaultProjectFolder,
-                AppTheme             = _appTheme?.ToString()
+                DefaultProjectFolder   = _defaultProjectFolder,
+                AppTheme               = _appTheme?.ToString(),
+                ActivityLoggingEnabled = _activityLoggingEnabled
             };
             File.WriteAllText(path, JsonSerializer.Serialize(data, JsonOptions));
         }
@@ -73,7 +83,8 @@ public sealed class SettingsService : ISettingsService
 
     private sealed class SettingsData
     {
-        public string? DefaultProjectFolder { get; set; }
-        public string? AppTheme             { get; set; }
+        public string? DefaultProjectFolder  { get; set; }
+        public string? AppTheme              { get; set; }
+        public bool?   ActivityLoggingEnabled { get; set; }
     }
 }

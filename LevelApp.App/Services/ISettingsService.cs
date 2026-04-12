@@ -4,8 +4,10 @@ namespace LevelApp.App.Services;
 
 public interface ISettingsService
 {
-    string DefaultProjectFolder { get; set; }
-    ElementTheme AppTheme { get; set; }
-void Load();
+    string       DefaultProjectFolder    { get; set; }
+    ElementTheme AppTheme                { get; set; }
+    bool         ActivityLoggingEnabled  { get; set; }
+
+    void Load();
     void Save();
 }
