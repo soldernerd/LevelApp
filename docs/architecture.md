@@ -4,7 +4,7 @@
 
 > Living document. Update as the project evolves.
 
-> Last updated: 2026-04-09 *(revised to reflect v0.9.11)*
+> Last updated: 2026-04-12 *(revised to reflect v0.10.0)*
 
 
 
@@ -43,6 +43,7 @@ The industry reference for this domain is **Wyler AG, Winterthur** (wylerag.com)
 | Dependency injection | Microsoft.Extensions.DependencyInjection 8.0.1 | ViewModels and services resolved from `App.Services` container |
 | Persistence | JSON via System.Text.Json | Human-readable, no dependencies, diffable |
 | Localisation | WinUI 3 `.resw` resource files (en-US, de-DE) via `Windows.ApplicationModel.Resources.ResourceLoader` | Platform-native; `x:Uid` mechanism wires keys to XAML properties automatically |
+| Activity logging | `IActivityLogger` / JSON Lines (`.jsonl`) / local only | Writes every user interaction to `%LOCALAPPDATA%\LevelApp\Logs\` for crash reproduction and replay testing; toggleable in Preferences |
 | Bluetooth (future) | Windows.Devices.Bluetooth (WinRT) | First-class Windows API, no third-party libs needed |
 | USB HID (future) | Windows.Devices.HumanInterfaceDevice (WinRT) | Same rationale |
 
@@ -63,8 +64,11 @@ LevelApp/
 │   ├── AppVersion.cs              ← Single source of truth for Major.Minor.Patch
 │   ├── Interfaces/
 │   │   ├── IMeasurementStrategy.cs
-│   │   └── ISurfaceCalculator.cs  ← single calculator interface (MethodId, Calculate)
+│   │   ├── ISurfaceCalculator.cs  ← single calculator interface (MethodId, Calculate)
+│   │   ├── IActivityLogger.cs     ← Log(), AttachProjectSnapshot(), AttachInstrumentRecording(), IsEnabled
+│   │   └── IInstrumentProvider.cs ← ReadAsync(), RecordingTarget (IActivityLogger?)
 │   ├── Models/
+│   │   ├── InstrumentReading.cs   ← Timestamp, Value; serialised to .instrument log files
 │   │   ├── Project.cs
 │   │   ├── ObjectDefinition.cs
 │   │   ├── MeasurementSession.cs
@@ -121,8 +125,9 @@ LevelApp/
 │   ├── Services/
 │   │   ├── IProjectFileService.cs    ← interface for file I/O (testable)
 │   │   ├── ProjectFileService.cs     ← Win32 IFileOpenDialog/IFileSaveDialog + JSON I/O
-│   │   ├── ISettingsService.cs       ← DefaultProjectFolder, AppTheme (ElementTheme)
+│   │   ├── ISettingsService.cs       ← DefaultProjectFolder, AppTheme, ActivityLoggingEnabled
 │   │   ├── SettingsService.cs        ← persists settings to %LOCALAPPDATA%\LevelApp\settings.json
+│   │   ├── ActivityLogger.cs         ← singleton; writes .jsonl + .instrument files to Logs/
 │   │   ├── IThemeService.cs          ← Apply(ElementTheme), SetTarget(FrameworkElement)
 │   │   ├── ThemeService.cs           ← singleton; applies RequestedTheme to RootFrame
 │   │   ├── ILocalisationService.cs   ← Get(key) → string
@@ -135,7 +140,7 @@ LevelApp/
 │   │   ├── ResultsView.xaml
 │   │   ├── CorrectionView.xaml
 │   │   └── Dialogs/
-│   │       ├── PreferencesDialog.xaml   ← default project folder + Light/Dark/System theme selector
+│   │       ├── PreferencesDialog.xaml   ← default folder, theme selector, activity logging toggle
 │   │       ├── NewMeasurementDialog.xaml
 │   │       ├── RecalculateDialog.xaml   ← recalculation parameters + save option
 │   │       └── AboutDialog.xaml         ← version, copyright, license, GitHub link
@@ -161,7 +166,15 @@ LevelApp/
 │   ├── UnionJackStrategyTests.cs
 │   ├── LeastSquaresCalculatorTests.cs
 │   ├── ParallelWaysStrategyTests.cs
-│   └── ParallelWaysCalculatorTests.cs
+│   ├── ParallelWaysCalculatorTests.cs
+│   ├── Replay/
+│   │   ├── IReplayTarget.cs               ← minimal ViewModel abstraction for replay runner
+│   │   ├── EndOfRecordingException.cs
+│   │   ├── RecordedInstrumentProvider.cs  ← IInstrumentProvider replaying a .instrument file
+│   │   ├── ActivityReplayRunner.cs        ← dispatches .jsonl entries to ViewModel stubs
+│   │   └── ReplayTests.cs                 ← [Theory] scanning TestLogs/*.jsonl
+│   └── TestLogs/
+│       └── .gitkeep                       ← place session bundles here for replay tests
 └── docs/
     ├── architecture.md               ← This file
     └── levelproj.md                  ← .levelproj JSON format reference
@@ -736,6 +749,17 @@ The vertical exaggeration (`maxZPixels`) is computed per render as `max(10, (col
 - Removed backward-compatibility code (integer `Orientation` JSON, numeric `rings` param)
 - `RecalculateMissingResultsAsync` in `MainViewModel` was temporarily removed during the cleanup but was restored in v0.6.2 — it is still needed to recompute results for files that were saved before result serialisation was enforced
 
+### WP0.10 — Activity Logging, Session Snapshots & Replay Testing ✓ Complete (v0.10.0)
+- `IActivityLogger` / `IInstrumentProvider` interfaces in `LevelApp.Core/Interfaces/` (no UI dependencies; accessible from test project)
+- `ActivityLogger` singleton in `LevelApp.App/Services/`: writes `.jsonl` + `.instrument` files to `%LOCALAPPDATA%\LevelApp\Logs\`; prunes files older than 14 days on startup
+- `Session.Start` / `Session.End` markers; `File.*` actions logged from `MainViewModel`; `Cmd.*` and `Input.Changed` call sites are stubs (// TODO) in page ViewModels not yet wired
+- `AttachProjectSnapshot` copies the open `.levelproj` into the log folder with `_p{n}` suffix and writes the `File.Open` entry (including `snapshot` field)
+- `AttachInstrumentRecording` appends `InstrumentReading` JSON lines to a `.instrument` sidecar (file created only if at least one reading is captured)
+- `ISettingsService.ActivityLoggingEnabled` (default `true`) persisted in `settings.json`; toggle in `PreferencesDialog`; writes immediately to `IActivityLogger.IsEnabled`
+- Unhandled exception hooks in `App.OnLaunched`: `CRASH` and `CRASH.UI` log entries; `CRASH.UI` sets `e.Handled = true`
+- `LevelApp.Tests/Replay/`: `RecordedInstrumentProvider`, `NullInstrumentProvider`, `ActivityReplayRunner` (full action vocabulary with // TODO stubs), `ReplayTests` (`[Theory]` over `TestLogs/*.jsonl`; zero tests with empty folder)
+- `TestLogs/` committed empty (`.gitkeep`); real session bundles added manually
+
 ### Future phases
 - Additional display modules (heat map, numerical table, residuals chart)
 - Parallel Ways: correction workflow (currently Surface Plate only)
@@ -762,8 +786,8 @@ The vertical exaggeration (`maxZPixels`) is computed per render as `max(10, (col
 public static class AppVersion
 {
     public const int Major = 0;
-    public const int Minor = 9;
-    public const int Patch = 11;
+    public const int Minor = 10;
+    public const int Patch = 0;
 
     public static string Full    => $"{Major}.{Minor}.{Patch}";
     public static string Display => $"v{Full}";
@@ -809,6 +833,7 @@ Bump `AppVersion.cs` **before** committing so the delivered commit already carri
 - Localisation: en-US and de-DE now complete (WP0.09). Additional locales (fr, it, …) can be added by dropping in a new `.resw` file — no code changes required.
 - Licensing / distribution model for the application?
 - Should the 3D surface plot be interactive (rotate, zoom)?
+- Crash upload / support bundle workflow: the activity logger writes sessions locally only. A future work package could add an opt-in "send to developer" flow that zips the `.jsonl` + `.levelproj` + `.instrument` files into a support bundle. **Deferred** — not in scope for WP0.10.
 
 
 

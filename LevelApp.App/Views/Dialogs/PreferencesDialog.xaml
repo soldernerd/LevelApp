@@ -38,6 +38,14 @@
             </RadioButtons>
         </StackPanel>
 
+        <StackPanel Spacing="4">
+            <TextBlock x:Uid="Preferences_ActivityLogging_Label"
+                       Style="{StaticResource SectionHeaderStyle}"/>
+            <ToggleSwitch x:Name="ActivityLoggingToggle"
+                          x:Uid="Preferences_ActivityLogging_Toggle"
+                          IsOn="{x:Bind ActivityLoggingEnabled, Mode=TwoWay}"/>
+        </StackPanel>
+
     </StackPanel>
 
 </ContentDialog>

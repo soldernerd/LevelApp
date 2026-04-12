@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LevelApp.App.Navigation;
 using LevelApp.App.Services;
+using LevelApp.Core.Interfaces;
 using LevelApp.Core.Geometry;
 using LevelApp.Core.Models;
 using Microsoft.UI.Xaml;
@@ -19,6 +20,7 @@ public sealed partial class MainViewModel : ObservableObject
 {
     private readonly INavigationService  _navigation;
     private readonly IProjectFileService _fileService;
+    private readonly IActivityLogger     _logger;
 
     // ── Global project state ──────────────────────────────────────────────────
 
@@ -47,10 +49,12 @@ public sealed partial class MainViewModel : ObservableObject
 
     // ── Constructor ───────────────────────────────────────────────────────────
 
-    public MainViewModel(INavigationService navigation, IProjectFileService fileService)
+    public MainViewModel(INavigationService navigation, IProjectFileService fileService,
+                         IActivityLogger logger)
     {
         _navigation  = navigation;
         _fileService = fileService;
+        _logger      = logger;
     }
 
     // ── Public API for page ViewModels ────────────────────────────────────────
@@ -83,6 +87,9 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>Clears all project state (used when starting a new project).</summary>
     public void ClearProject()
     {
+        if (ActiveProject is not null)
+            _logger.Log("File.Close");
+
         ActiveProject   = null;
         CurrentFilePath = null;
         IsDirty         = false;
@@ -98,6 +105,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         if (!await ConfirmDiscardChangesAsync()) return;
         ClearProject();
+        _logger.Log("File.New");
         _navigation.NavigateTo(PageKey.ProjectSetup);
     }
 
@@ -120,6 +128,10 @@ public sealed partial class MainViewModel : ObservableObject
         if (result.project is null) return; // user cancelled
 
         SetActiveProject(result.project, result.path);
+
+        // Log File.Open and snapshot the project file
+        if (result.path is not null)
+            _logger.AttachProjectSnapshot(result.path);
 
         try
         {
@@ -167,6 +179,7 @@ public sealed partial class MainViewModel : ObservableObject
         CurrentFilePath = path;
         IsDirty         = false;
         OnPropertyChanged(nameof(WindowTitle));
+        _logger.Log("File.SaveAs", path);
     }
 
     private bool CanSaveProjectAs() => ActiveProject is not null;
@@ -175,6 +188,7 @@ public sealed partial class MainViewModel : ObservableObject
     private async Task ExitAsync()
     {
         if (!await ConfirmDiscardChangesAsync()) return;
+        _logger.Log("Session.End");
         Application.Current.Exit();
     }
 
@@ -273,6 +287,7 @@ public sealed partial class MainViewModel : ObservableObject
                 await _fileService.SaveToPathAsync(ActiveProject, CurrentFilePath);
                 IsDirty = false;
                 OnPropertyChanged(nameof(WindowTitle));
+                _logger.Log("File.Save", CurrentFilePath);
                 return true;
             }
             catch (Exception ex)
@@ -300,6 +315,7 @@ public sealed partial class MainViewModel : ObservableObject
         CurrentFilePath = path;
         IsDirty         = false;
         OnPropertyChanged(nameof(WindowTitle));
+        _logger.Log("File.SaveAs", CurrentFilePath);
         return true;
     }
 

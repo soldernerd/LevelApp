@@ -24,4 +24,10 @@
     <ProjectReference Include="..\LevelApp.Core\LevelApp.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="TestLogs\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

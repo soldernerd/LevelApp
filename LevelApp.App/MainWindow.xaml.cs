@@ -1,5 +1,6 @@
 using LevelApp.App.Navigation;
 using LevelApp.App.Services;
+using LevelApp.Core.Interfaces;
 using LevelApp.App.ViewModels;
 using LevelApp.App.Views.Dialogs;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,15 +14,17 @@ public sealed partial class MainWindow : Window
 {
     public MainViewModel ViewModel { get; }
 
-    private readonly ISettingsService _settings;
-    private readonly IThemeService    _theme;
+    private readonly ISettingsService  _settings;
+    private readonly IThemeService     _theme;
+    private readonly IActivityLogger   _activityLogger;
     private nint _hwnd;
 
     public MainWindow()
     {
-        ViewModel = App.Services.GetRequiredService<MainViewModel>();
-        _settings = App.Services.GetRequiredService<ISettingsService>();
-        _theme    = App.Services.GetRequiredService<IThemeService>();
+        ViewModel       = App.Services.GetRequiredService<MainViewModel>();
+        _settings       = App.Services.GetRequiredService<ISettingsService>();
+        _theme          = App.Services.GetRequiredService<IThemeService>();
+        _activityLogger = App.Services.GetRequiredService<IActivityLogger>();
 
         this.InitializeComponent(); // x:Bind uses ViewModel
 
@@ -74,7 +77,7 @@ public sealed partial class MainWindow : Window
 
     private async void OnPreferencesClicked(object sender, RoutedEventArgs e)
     {
-        var dialog = new PreferencesDialog(_settings, _hwnd, _theme)
+        var dialog = new PreferencesDialog(_settings, _hwnd, _theme, _activityLogger)
         {
             XamlRoot = RootFrame.XamlRoot
         };
