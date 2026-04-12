@@ -139,7 +139,7 @@
   <data name="Preferences_DefaultFolder_Label.Text" xml:space="preserve"><value>Standard-Projektordner</value></data>
   <data name="Preferences_DefaultFolder_Tooltip.Content" xml:space="preserve"><value>Der Ordner, den die Öffnen- und Speichern-Dialoge standardmäßig öffnen.</value></data>
   <data name="Preferences_BrowseFolder.Content" xml:space="preserve"><value>Durchsuchen…</value></data>
-  <data name="Preferences_ActivityLogging_Toggle.Header" xml:space="preserve"><value>Aktivitätsprotokoll</value></data>
+  <data name="Preferences_ActivityLogging_Label.Text" xml:space="preserve"><value>Aktivitätsprotokoll</value></data>
   <data name="Preferences_ActivityLogging_Description.Text" xml:space="preserve"><value>Zeichnet Benutzeraktionen in eine lokale Protokolldatei auf. Protokolle werden in %LOCALAPPDATA%\LevelApp\Logs gespeichert und nach 14 Tagen automatisch gelöscht.</value></data>
   <data name="Preferences_OkButton.Content" xml:space="preserve"><value>OK</value></data>
   <data name="Preferences_CancelButton.Content" xml:space="preserve"><value>Abbrechen</value></data>
