@@ -153,6 +153,18 @@ Sample project files for testing and debugging are located in `docs/sampleProjec
 
 ---
 
+## CI/CD
+
+A GitHub Actions pipeline (`.github/workflows/ci.yml`) runs on every push to master:
+- Builds the solution in Release mode
+- Runs all tests in LevelApp.Tests
+- Packages the publish output as `LevelApp-X.Y.Z.zip` (self-contained, win-x64)
+- Creates a GitHub Release tagged `vX.Y.Z`
+
+**Always increment `AppVersion.cs` before pushing to master.** Pushing without a version bump will cause the release step to fail if a release with that tag already exists.
+
+---
+
 ## Repository
 
 - **Remote:** https://github.com/soldernerd/LevelApp

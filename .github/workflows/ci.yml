@@ -1,0 +1,60 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build-test-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore LevelApp.slnx
+
+      - name: Build (Release)
+        run: dotnet build LevelApp.slnx --configuration Release --no-restore
+
+      - name: Run unit tests
+        run: dotnet test LevelApp.Tests/LevelApp.Tests.csproj --configuration Release --no-build --verbosity normal
+
+      - name: Read version
+        id: version
+        shell: pwsh
+        run: |
+          $content = Get-Content LevelApp.Core/AppVersion.cs -Raw
+          $major = [regex]::Match($content, 'Major\s*=\s*(\d+)').Groups[1].Value
+          $minor = [regex]::Match($content, 'Minor\s*=\s*(\d+)').Groups[1].Value
+          $patch = [regex]::Match($content, 'Patch\s*=\s*(\d+)').Groups[1].Value
+          $version = "$major.$minor.$patch"
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+          echo "TAG=v$version" >> $env:GITHUB_OUTPUT
+
+      - name: Package release zip
+        shell: pwsh
+        run: |
+          $publishDir = "publish"
+          dotnet publish LevelApp.App/LevelApp.App.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            --output $publishDir
+          Compress-Archive -Path "$publishDir\*" -DestinationPath "LevelApp-${{ steps.version.outputs.VERSION }}.zip"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.TAG }}
+          name: LevelApp ${{ steps.version.outputs.TAG }}
+          files: LevelApp-${{ steps.version.outputs.VERSION }}.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
