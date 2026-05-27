@@ -4,6 +4,13 @@ on:
   push:
     branches: [ master ]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+permissions:
+  contents: write
+  pull-requests: read
+
 jobs:
   build-test-release:
     runs-on: windows-latest
