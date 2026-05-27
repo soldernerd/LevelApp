@@ -12,9 +12,9 @@
     <UseWinUI>true</UseWinUI>
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSdkSelfContained>true</WindowsAppSdkSelfContained>
-    <Version>0.12.1</Version>
-    <AssemblyVersion>0.12.1.0</AssemblyVersion>
-    <FileVersion>0.12.1.0</FileVersion>
+    <Version>0.12.2</Version>
+    <AssemblyVersion>0.12.2.0</AssemblyVersion>
+    <FileVersion>0.12.2.0</FileVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -41,5 +41,21 @@
     <PRIResource Include="Strings\en-US\Resources.resw" />
     <PRIResource Include="Strings\de-DE\Resources.resw" />
   </ItemGroup>
+
+  <!--
+    dotnet publish does not copy XBF (compiled XAML) or the app PRI file for
+    WinUI 3 unpackaged apps. This target copies them from the build output after
+    publish so the app can load its UI when run from the publish folder.
+  -->
+  <Target Name="CopyWinUIAssetsToPublish" AfterTargets="Publish">
+    <ItemGroup>
+      <_AppXbfFiles Include="$(OutDir)**\*.xbf" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_AppXbfFiles)"
+          DestinationFiles="@(_AppXbfFiles->'$(PublishDir)%(RecursiveDir)%(Filename)%(Extension)')" />
+    <Copy SourceFiles="$(OutDir)$(MSBuildProjectName).pri"
+          DestinationFolder="$(PublishDir)"
+          Condition="Exists('$(OutDir)$(MSBuildProjectName).pri')" />
+  </Target>
 
 </Project>
