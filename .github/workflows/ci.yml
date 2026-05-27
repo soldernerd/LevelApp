@@ -54,6 +54,12 @@ jobs:
             --runtime win-x64 `
             --self-contained true `
             --output $publishDir
+          dotnet publish LevelApp.Updater/LevelApp.Updater.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            --output $publishDir
           Compress-Archive -Path "$publishDir\*" -DestinationPath "LevelApp-${{ steps.version.outputs.VERSION }}.zip"
 
       - name: Create GitHub Release

@@ -6,6 +6,7 @@ using LevelApp.App.Views.Dialogs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using WinRT.Interop;
 
 namespace LevelApp.App;
@@ -17,6 +18,7 @@ public sealed partial class MainWindow : Window
     private readonly ISettingsService  _settings;
     private readonly IThemeService     _theme;
     private readonly IActivityLogger   _activityLogger;
+    private readonly IUpdateService    _updateService;
     private nint _hwnd;
 
     public MainWindow()
@@ -25,6 +27,7 @@ public sealed partial class MainWindow : Window
         _settings       = App.Services.GetRequiredService<ISettingsService>();
         _theme          = App.Services.GetRequiredService<IThemeService>();
         _activityLogger = App.Services.GetRequiredService<IActivityLogger>();
+        _updateService  = App.Services.GetRequiredService<IUpdateService>();
 
         this.InitializeComponent(); // x:Bind uses ViewModel
 
@@ -53,8 +56,13 @@ public sealed partial class MainWindow : Window
                 this.Title = ViewModel.WindowTitle;
         };
 
-        // XamlRoot is available once the content is in the visual tree
-        RootFrame.Loaded += (_, _) => ViewModel.XamlRoot = RootFrame.XamlRoot;
+        // XamlRoot is available once the content is in the visual tree;
+        // kick off the update check at the same point so the window is rendered first.
+        RootFrame.Loaded += (_, _) =>
+        {
+            ViewModel.XamlRoot = RootFrame.XamlRoot;
+            CheckForUpdateOnStartup();
+        };
 
         // Intercept the window close button for unsaved-changes handling
         AppWindow.Closing += OnAppWindowClosing;
@@ -89,6 +97,18 @@ public sealed partial class MainWindow : Window
         var dialog = new AboutDialog
         {
             XamlRoot = RootFrame.XamlRoot
+        };
+        await dialog.ShowAsync();
+    }
+
+    private async void CheckForUpdateOnStartup()
+    {
+        var update = await _updateService.CheckForUpdateAsync();
+        if (update is null) return;
+
+        var dialog = new UpdateDialog(update)
+        {
+            XamlRoot = Content.XamlRoot
         };
         await dialog.ShowAsync();
     }

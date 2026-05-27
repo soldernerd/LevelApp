@@ -32,6 +32,7 @@ public partial class App : Application
         // Services
         services.AddSingleton<IProjectFileService, ProjectFileService>();
         services.AddSingleton<IActivityLogger, ActivityLogger>();
+        services.AddSingleton<IUpdateService, UpdateService>();
 
         // Shell ViewModel — singleton so all page VMs share the same project state
         services.AddSingleton<MainViewModel>();
