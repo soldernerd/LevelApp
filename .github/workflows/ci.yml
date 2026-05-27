@@ -71,18 +71,33 @@ jobs:
             Write-Host "CODE_SIGN_CERT secret not configured — skipping signing"
             exit 0
           }
+
           $pfx = [Convert]::FromBase64String($env:CODE_SIGN_CERT)
           $pfxPath = "$env:TEMP\codesign.pfx"
           [IO.File]::WriteAllBytes($pfxPath, $pfx)
+
           $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" `
             -Recurse -Filter "signtool.exe" |
             Where-Object { $_.FullName -like "*x64*" } |
             Sort-Object FullName -Descending |
             Select-Object -First 1 -ExpandProperty FullName
+          Write-Host "signtool path: $signtool"
+
           & $signtool sign /f $pfxPath /p $env:CODE_SIGN_PASSWORD `
             /fd SHA256 /td SHA256 /tr http://timestamp.digicert.com `
             "publish\LevelApp.App.exe" "publish\LevelApp.Updater.exe"
+
+          # Propagate signtool exit code — without this, a signing failure looks green
+          if ($LASTEXITCODE -ne 0) {
+            Remove-Item $pfxPath -ErrorAction SilentlyContinue
+            exit $LASTEXITCODE
+          }
+
           Remove-Item $pfxPath
+
+          # Verify both files are now signed
+          & $signtool verify /pa /v "publish\LevelApp.App.exe"
+          & $signtool verify /pa /v "publish\LevelApp.Updater.exe"
 
       - name: Create release zip
         shell: pwsh
