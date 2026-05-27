@@ -41,8 +41,12 @@ public sealed partial class UpdateDialog : ContentDialog
 
             StatusText.Text = "Restarting…";
 
-            string installFolder = AppContext.BaseDirectory;
-            string updaterPath   = Path.Combine(installFolder, "LevelApp.Updater.exe");
+            // TrimEnd: AppContext.BaseDirectory has a trailing backslash, which
+            // causes \"…\" in the argument string to be mis-parsed as an escaped
+            // quote, merging the install-folder and exe-name arguments into one.
+            string installFolder = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar,
+                                                                     Path.AltDirectorySeparatorChar);
+            string updaterPath   = Path.Combine(AppContext.BaseDirectory, "LevelApp.Updater.exe");
 
             Process.Start(new ProcessStartInfo
             {
