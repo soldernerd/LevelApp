@@ -7,59 +7,99 @@ using System.IO.Compression;
 //   [3] mainExeName   – executable to relaunch after update
 //   [--from-temp]     – signals we are already running from the temp copy
 
-var cmdArgs  = Environment.GetCommandLineArgs();
-var argsList = cmdArgs.ToList();
+string logPath = Path.Combine(Path.GetTempPath(), "LevelApp.Updater.log");
 
-if (cmdArgs.Length < 4)
+void Log(string message)
 {
-    Console.Error.WriteLine(
-        "Usage: LevelApp.Updater <zipPath> <installFolder> <mainExeName> [--from-temp]");
-    return 1;
+    string line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} {message}";
+    Console.WriteLine(line);
+    File.AppendAllText(logPath, line + Environment.NewLine);
 }
 
-string zipPath       = cmdArgs[1];
-string installFolder = cmdArgs[2];
-string mainExeName   = cmdArgs[3];
-bool   fromTemp      = argsList.Contains("--from-temp");
-
-if (!fromTemp)
+try
 {
-    // Step 1–3: copy self to a temp path and re-launch with --from-temp so
-    // the install folder is fully unlocked when extraction happens.
-    string tempExe = Path.Combine(Path.GetTempPath(), "LevelApp.Updater.tmp.exe");
-    File.Copy(Environment.ProcessPath!, tempExe, overwrite: true);
+    File.WriteAllText(logPath, $"=== LevelApp Updater started {DateTime.Now:yyyy-MM-dd HH:mm:ss} ==={Environment.NewLine}");
+    Log($"Args: {string.Join(" | ", Environment.GetCommandLineArgs())}");
 
+    var cmdArgs  = Environment.GetCommandLineArgs();
+    var argsList = cmdArgs.ToList();
+
+    if (cmdArgs.Length < 4)
+    {
+        Log("ERROR: insufficient arguments");
+        Log($"Usage: LevelApp.Updater <zipPath> <installFolder> <mainExeName> [--from-temp]");
+        Console.ReadKey();
+        return 1;
+    }
+
+    string zipPath       = cmdArgs[1];
+    string installFolder = cmdArgs[2];
+    string mainExeName   = cmdArgs[3];
+    bool   fromTemp      = argsList.Contains("--from-temp");
+
+    Log($"zipPath:       {zipPath}");
+    Log($"installFolder: {installFolder}");
+    Log($"mainExeName:   {mainExeName}");
+    Log($"fromTemp:      {fromTemp}");
+
+    if (!fromTemp)
+    {
+        // Step 1–3: copy self to a temp path and re-launch with --from-temp so
+        // the install folder is fully unlocked when extraction happens.
+        string tempExe = Path.Combine(Path.GetTempPath(), "LevelApp.Updater.tmp.exe");
+        Log($"Copying self to {tempExe}");
+        File.Copy(Environment.ProcessPath!, tempExe, overwrite: true);
+
+        Log("Launching temp copy...");
+        Process.Start(new ProcessStartInfo
+        {
+            FileName        = tempExe,
+            Arguments       = $"\"{zipPath}\" \"{installFolder}\" \"{mainExeName}\" --from-temp",
+            UseShellExecute = true   // visible window so errors are readable
+        });
+
+        return 0;
+    }
+
+    // Step 4: wait for the main app to exit (it should already be exiting, but
+    // allow up to 10 seconds in case of a slow shutdown).
+    Log("Waiting for main app to exit...");
+    var deadline = DateTime.UtcNow.AddSeconds(10);
+    while (DateTime.UtcNow < deadline)
+    {
+        var procs = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(mainExeName));
+        if (procs.Length == 0) break;
+        Log($"  still running ({procs.Length} instance(s))…");
+        Thread.Sleep(200);
+    }
+    Log("Main app exited (or timed out).");
+
+    // Step 5: extract the zip over the install folder, overwriting all files.
+    Log($"Extracting {zipPath} → {installFolder}");
+    ZipFile.ExtractToDirectory(zipPath, installFolder, overwriteFiles: true);
+    Log("Extraction complete.");
+
+    // Step 6: delete the downloaded zip.
+    File.Delete(zipPath);
+    Log("Zip deleted.");
+
+    // Step 7: launch the new version.
+    string newExePath = Path.Combine(installFolder, mainExeName);
+    Log($"Launching {newExePath}");
     Process.Start(new ProcessStartInfo
     {
-        FileName        = tempExe,
-        Arguments       = $"\"{zipPath}\" \"{installFolder}\" \"{mainExeName}\" --from-temp",
-        UseShellExecute = false
+        FileName        = newExePath,
+        UseShellExecute = true
     });
 
+    Log("Done.");
     return 0;
 }
-
-// Step 4: wait for the main app to exit (it should already be exiting, but
-// allow up to 10 seconds in case of a slow shutdown).
-var deadline = DateTime.UtcNow.AddSeconds(10);
-while (DateTime.UtcNow < deadline)
+catch (Exception ex)
 {
-    var procs = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(mainExeName));
-    if (procs.Length == 0) break;
-    Thread.Sleep(200);
+    Log($"FATAL: {ex}");
+    Console.WriteLine();
+    Console.WriteLine("Press any key to close...");
+    Console.ReadKey();
+    return 1;
 }
-
-// Step 5: extract the zip over the install folder, overwriting all files.
-ZipFile.ExtractToDirectory(zipPath, installFolder, overwriteFiles: true);
-
-// Step 6: delete the downloaded zip.
-File.Delete(zipPath);
-
-// Step 7: launch the new version.
-Process.Start(new ProcessStartInfo
-{
-    FileName        = Path.Combine(installFolder, mainExeName),
-    UseShellExecute = true
-});
-
-return 0;
