@@ -94,10 +94,9 @@ jobs:
           }
 
           Remove-Item $pfxPath
-
-          # Verify both files are now signed
-          & $signtool verify /pa /v "publish\LevelApp.App.exe"
-          & $signtool verify /pa /v "publish\LevelApp.Updater.exe"
+          # "Successfully signed" in the output above confirms the signature was applied.
+          # signtool verify /pa is intentionally omitted: it checks the full trust chain,
+          # which a self-signed cert can never pass (it is its own root).
 
       - name: Create release zip
         shell: pwsh
