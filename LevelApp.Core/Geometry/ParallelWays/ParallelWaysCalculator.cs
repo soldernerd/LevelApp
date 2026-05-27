@@ -94,10 +94,41 @@ public sealed class ParallelWaysCalculator
             Atb[from] -= delta;
         }
 
-        // Datum: first station of reference rail = 0
+        // Datum: one per connected component.
+        // Without bridge tasks the rails form disconnected sub-graphs; a single
+        // datum only fixes the reference rail, leaving all other rails singular.
+        // BFS discovers every component and pins its first visited node to zero.
+        var adj = new List<int>[n];
+        for (int k = 0; k < n; k++) adj[k] = [];
+        for (int k = 0; k < m; k++)
+        {
+            int f = nodeIndex[steps[k].NodeId];
+            int t = nodeIndex[steps[k].ToNodeId];
+            adj[f].Add(t);
+            adj[t].Add(f);
+        }
+
+        var visited = new bool[n];
         string refDatum = $"rail{pwp.ReferenceRailIndex}_sta0";
-        int    refIdx   = nodeIndex.TryGetValue(refDatum, out int ri) ? ri : 0;
-        AtA[refIdx, refIdx] += 1.0;
+        int    refStart = nodeIndex.TryGetValue(refDatum, out int ri) ? ri : 0;
+
+        void VisitComponent(int start)
+        {
+            AtA[start, start] += 1.0;
+            visited[start] = true;
+            var bfsQ = new Queue<int>();
+            bfsQ.Enqueue(start);
+            while (bfsQ.Count > 0)
+            {
+                int cur = bfsQ.Dequeue();
+                foreach (int nb in adj[cur])
+                    if (!visited[nb]) { visited[nb] = true; bfsQ.Enqueue(nb); }
+            }
+        }
+
+        VisitComponent(refStart);
+        for (int k = 0; k < n; k++)
+            if (!visited[k]) VisitComponent(k);
 
         // ── Solve ─────────────────────────────────────────────────────────────
         double[] h = SolveLinearSystem(AtA, Atb);
