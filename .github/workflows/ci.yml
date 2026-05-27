@@ -45,7 +45,7 @@ jobs:
           echo "VERSION=$version" >> $env:GITHUB_OUTPUT
           echo "TAG=v$version" >> $env:GITHUB_OUTPUT
 
-      - name: Package release zip
+      - name: Publish executables
         shell: pwsh
         run: |
           $publishDir = "publish"
@@ -60,7 +60,34 @@ jobs:
             --self-contained true `
             -p:PublishSingleFile=true `
             --output $publishDir
-          Compress-Archive -Path "$publishDir\*" -DestinationPath "LevelApp-${{ steps.version.outputs.VERSION }}.zip"
+
+      - name: Sign executables
+        shell: pwsh
+        env:
+          CODE_SIGN_CERT: ${{ secrets.CODE_SIGN_CERT }}
+          CODE_SIGN_PASSWORD: ${{ secrets.CODE_SIGN_PASSWORD }}
+        run: |
+          if (-not $env:CODE_SIGN_CERT) {
+            Write-Host "CODE_SIGN_CERT secret not configured — skipping signing"
+            exit 0
+          }
+          $pfx = [Convert]::FromBase64String($env:CODE_SIGN_CERT)
+          $pfxPath = "$env:TEMP\codesign.pfx"
+          [IO.File]::WriteAllBytes($pfxPath, $pfx)
+          $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" `
+            -Recurse -Filter "signtool.exe" |
+            Where-Object { $_.FullName -like "*x64*" } |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1 -ExpandProperty FullName
+          & $signtool sign /f $pfxPath /p $env:CODE_SIGN_PASSWORD `
+            /fd SHA256 /td SHA256 /tr http://timestamp.digicert.com `
+            "publish\LevelApp.App.exe" "publish\LevelApp.Updater.exe"
+          Remove-Item $pfxPath
+
+      - name: Create release zip
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "publish\*" -DestinationPath "LevelApp-${{ steps.version.outputs.VERSION }}.zip"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
