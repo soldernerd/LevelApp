@@ -1,0 +1,132 @@
+{
+  "schemaVersion": "1.1",
+  "appVersion": "0.13.2",
+  "project": {
+    "id": "c1d2e3f4-a5b6-7890-abcd-ef1234567893",
+    "name": "Rail Measurement — IndependentThenReconcile solver",
+    "createdAt": "2026-05-27T09:00:00.0000000Z",
+    "modifiedAt": "2026-05-27T09:30:00.0000000Z",
+    "operator": "Lukas Fässler",
+    "notes": "Synthetic test data. SinglePass along-rail, IndependentThenReconcile solver mode.",
+    "objectDefinition": {
+      "geometryModuleId": "ParallelWays",
+      "parameters": {
+        "orientation": "Horizontal",
+        "referenceRailIndex": 0,
+        "rails": [
+          {
+            "label": "Front",
+            "lengthMm": 1000,
+            "axialOffsetMm": 0,
+            "lateralSeparationMm": 0,
+            "verticalOffsetMm": 0
+          },
+          {
+            "label": "Rear",
+            "lengthMm": 1000,
+            "axialOffsetMm": 0,
+            "lateralSeparationMm": 350,
+            "verticalOffsetMm": 0
+          }
+        ],
+        "tasks": [
+          {
+            "taskType": "AlongRail",
+            "railIndexA": 0,
+            "railIndexB": 0,
+            "passDirection": "SinglePass",
+            "stepDistanceMm": 200
+          },
+          {
+            "taskType": "AlongRail",
+            "railIndexA": 1,
+            "railIndexB": 1,
+            "passDirection": "SinglePass",
+            "stepDistanceMm": 200
+          }
+        ],
+        "driftCorrection": "LeastSquares",
+        "solverMode": "IndependentThenReconcile"
+      }
+    },
+    "measurements": [
+      {
+        "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567897",
+        "label": "Measurement 1",
+        "takenAt": "2026-05-27T09:00:00.0000000Z",
+        "operator": "Lukas Fässler",
+        "instrumentId": "manual-entry",
+        "strategyId": "ParallelWays",
+        "notes": "IndependentThenReconcile solver, slight slope on rail 0.",
+        "initialRound": {
+          "completedAt": "2026-05-27T09:15:00.0000000Z",
+          "steps": [
+            {
+              "index": 0, "gridCol": 0, "gridRow": 0, "orientation": "East",
+              "instructionText": "Rail 'Front' — station 1 → 2, facing East",
+              "reading": 0.001, "nodeId": "rail0_sta0", "toNodeId": "rail0_sta1",
+              "passPhase": "NotApplicable"
+            },
+            {
+              "index": 1, "gridCol": 0, "gridRow": 0, "orientation": "East",
+              "instructionText": "Rail 'Front' — station 2 → 3, facing East",
+              "reading": 0.001, "nodeId": "rail0_sta1", "toNodeId": "rail0_sta2",
+              "passPhase": "NotApplicable"
+            },
+            {
+              "index": 2, "gridCol": 0, "gridRow": 0, "orientation": "East",
+              "instructionText": "Rail 'Front' — station 3 → 4, facing East",
+              "reading": 0.001, "nodeId": "rail0_sta2", "toNodeId": "rail0_sta3",
+              "passPhase": "NotApplicable"
+            },
+            {
+              "index": 3, "gridCol": 0, "gridRow": 0, "orientation": "East",
+              "instructionText": "Rail 'Front' — station 4 → 5, facing East",
+              "reading": 0.001, "nodeId": "rail0_sta3", "toNodeId": "rail0_sta4",
+              "passPhase": "NotApplicable"
+            },
+            {
+              "index": 4, "gridCol": 0, "gridRow": 0, "orientation": "East",
+              "instructionText": "Rail 'Front' — station 5 → 6, facing East",
+              "reading": 0.001, "nodeId": "rail0_sta4", "toNodeId": "rail0_sta5",
+              "passPhase": "NotApplicable"
+            },
+            {
+              "index": 5, "gridCol": 0, "gridRow": 0, "orientation": "East",
+              "instructionText": "Rail 'Rear' — station 1 → 2, facing East",
+              "reading": 0.0, "nodeId": "rail1_sta0", "toNodeId": "rail1_sta1",
+              "passPhase": "NotApplicable"
+            },
+            {
+              "index": 6, "gridCol": 0, "gridRow": 0, "orientation": "East",
+              "instructionText": "Rail 'Rear' — station 2 → 3, facing East",
+              "reading": 0.0, "nodeId": "rail1_sta1", "toNodeId": "rail1_sta2",
+              "passPhase": "NotApplicable"
+            },
+            {
+              "index": 7, "gridCol": 0, "gridRow": 0, "orientation": "East",
+              "instructionText": "Rail 'Rear' — station 3 → 4, facing East",
+              "reading": 0.0, "nodeId": "rail1_sta2", "toNodeId": "rail1_sta3",
+              "passPhase": "NotApplicable"
+            },
+            {
+              "index": 8, "gridCol": 0, "gridRow": 0, "orientation": "East",
+              "instructionText": "Rail 'Rear' — station 4 → 5, facing East",
+              "reading": 0.0, "nodeId": "rail1_sta3", "toNodeId": "rail1_sta4",
+              "passPhase": "NotApplicable"
+            },
+            {
+              "index": 9, "gridCol": 0, "gridRow": 0, "orientation": "East",
+              "instructionText": "Rail 'Rear' — station 5 → 6, facing East",
+              "reading": 0.0, "nodeId": "rail1_sta4", "toNodeId": "rail1_sta5",
+              "passPhase": "NotApplicable"
+            }
+          ],
+          "result": null,
+          "parallelWaysResult": null
+        },
+        "corrections": []
+      }
+    ]
+  }
+}

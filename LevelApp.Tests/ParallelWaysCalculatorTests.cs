@@ -280,4 +280,145 @@ public class ParallelWaysCalculatorTests
         Assert.Contains(result.RailProfiles, p => p.RailIndex == 0);
         Assert.Contains(result.RailProfiles, p => p.RailIndex == 1);
     }
+
+    // ── IndependentThenReconcile with non-trivial data ────────────────────────
+
+    [Fact]
+    public void ConstantSlope_IndependentMode_StraightnessIsZero()
+    {
+        // A perfect linear slope on a rail must produce zero straightness after
+        // best-fit line removal, regardless of solver mode.
+        const double slope = 1.0;   // µm/m
+        const double dist  = 200.0;
+        int          nSta  = 5;     // 800/200 + 1
+
+        double[] heights = Enumerable.Range(0, nSta)
+            .Select(s => slope * s * dist / 1e6)
+            .ToArray();
+
+        var def = Def(
+            [Rail("A", 800), Rail("B", 800, lateral: 300)],
+            [AlongRail(0, dist), AlongRail(1, dist)],
+            solverMode: SolverMode.IndependentThenReconcile);
+
+        var steps = _strategy.GenerateSteps(def).ToList();
+        SetReadingsFromHeights(steps, 0, heights,              dist);
+        SetReadingsFromHeights(steps, 1, new double[nSta], dist);
+
+        var result = _sut.Calculate(steps, def, CalcParams());
+
+        var profile = result.RailProfiles.First(p => p.RailIndex == 0);
+        Assert.Equal(0.0, profile.StraightnessValueMm, precision: 6);
+    }
+
+    // ── ForwardAndReturn pass ─────────────────────────────────────────────────
+
+    [Fact]
+    public void ForwardAndReturn_ConstantSlope_StraightnessIsZero()
+    {
+        // A perfect slope measured forward and return (symmetric readings) must
+        // produce zero straightness after drift correction and line removal.
+        const double dist = 200.0;
+        int          nSta = 5;  // 800/200 + 1
+
+        double[] heights = Enumerable.Range(0, nSta)
+            .Select(s => s * 0.001)   // 1 µm per station
+            .ToArray();
+
+        var def = Def(
+            [Rail("A", 800), Rail("B", 800, lateral: 300)],
+            [AlongRail(0, dist, PassDirection.ForwardAndReturn),
+             AlongRail(1, dist, PassDirection.ForwardAndReturn)]);
+
+        var steps = _strategy.GenerateSteps(def).ToList();
+
+        // Set readings consistently with heights for both forward and return steps.
+        foreach (var step in steps)
+        {
+            var (r, sFrom) = ParallelWaysStrategy.ParseNodeId(step.NodeId);
+            var (_, sTo)   = ParallelWaysStrategy.ParseNodeId(step.ToNodeId);
+            if (r == 0)
+            {
+                double hFrom = sFrom < heights.Length ? heights[sFrom] : 0;
+                double hTo   = sTo   < heights.Length ? heights[sTo]   : 0;
+                step.Reading = (hTo - hFrom) / dist * 1000.0;
+            }
+            else
+                step.Reading = 0.0;
+        }
+
+        var result = _sut.Calculate(steps, def, CalcParams());
+
+        var profile = result.RailProfiles.First(p => p.RailIndex == 0);
+        Assert.Equal(0.0, profile.StraightnessValueMm, precision: 6);
+    }
+
+    // ── Bridge task ───────────────────────────────────────────────────────────
+
+    [Fact]
+    public void BridgeTask_ConstantOffset_ProducesParallelismProfile()
+    {
+        // Rail B is uniformly offset from rail A by a constant tilt across the gauge.
+        // Constant offset → parallelism (peak-to-valley of deviations) is zero.
+        const double dist       = 200.0;
+        const double lateralSep = 300.0;
+        const double heightDiff = 0.01;   // 10 µm constant offset at every station
+
+        var def = Def(
+            [Rail("A", 800), Rail("B", 800, lateral: lateralSep)],
+            [AlongRail(0, dist), AlongRail(1, dist),
+             new ParallelWaysTask
+             {
+                 TaskType       = TaskType.Bridge,
+                 RailIndexA     = 0,
+                 RailIndexB     = 1,
+                 StepDistanceMm = dist,
+                 PassDirection  = PassDirection.SinglePass
+             }]);
+
+        var steps = _strategy.GenerateSteps(def).ToList();
+        foreach (var step in steps)
+        {
+            var (rFrom, _) = ParallelWaysStrategy.ParseNodeId(step.NodeId);
+            var (rTo,   _) = ParallelWaysStrategy.ParseNodeId(step.ToNodeId);
+
+            step.Reading = rFrom == rTo
+                ? 0.0                                               // along-rail: flat
+                : heightDiff / lateralSep * 1000.0;               // bridge: constant tilt
+        }
+
+        var result = _sut.Calculate(steps, def, CalcParams());
+
+        // Bridge task → explicit parallelism profile expected.
+        Assert.NotEmpty(result.ParallelismProfiles);
+        // Constant height difference → zero peak-to-valley parallelism.
+        Assert.Equal(0.0, result.ParallelismProfiles[0].ParallelismValueMm, precision: 4);
+    }
+
+    // ── Outlier detection ─────────────────────────────────────────────────────
+
+    [Fact]
+    public void OutlierReading_IsFlagged_WhenAutoExcludeEnabled()
+    {
+        // ForwardAndReturn gives redundancy (DOF > 0) so the outlier detector
+        // can identify the contradictory reading.  A single-pass chain has
+        // DOF = 0 — every reading fits exactly and residuals are always zero.
+        const double dist = 200.0;
+        var def = Def(
+            [Rail("A", 800), Rail("B", 800, lateral: 400)],
+            [AlongRail(0, dist, PassDirection.ForwardAndReturn),
+             AlongRail(1, dist, PassDirection.ForwardAndReturn)]);
+
+        var steps = _strategy.GenerateSteps(def).ToList();
+        foreach (var s in steps) s.Reading = 0.0;
+
+        // Inject a huge noise reading on step 0 (first forward step of rail 0).
+        // The return pass for the same interval has reading ≈ 0, creating a
+        // strong contradiction that the outlier detector must flag.
+        steps[0].Reading = 1000.0;
+
+        var result = _sut.Calculate(steps, def, CalcParams(sigma: 0.5, autoExclude: true));
+
+        Assert.NotEmpty(result.FlaggedStepIndices);
+    }
 }

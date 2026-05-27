@@ -1,0 +1,166 @@
+{
+  "schemaVersion": "1.1",
+  "appVersion": "0.13.2",
+  "project": {
+    "id": "f1a2b3c4-d5e6-7890-abcd-ef1234567890",
+    "name": "Test Granite Plate 300×300 — FullGrid 3×3 Sequential Integration",
+    "createdAt": "2026-05-27T09:00:00.0000000Z",
+    "modifiedAt": "2026-05-27T09:30:00.0000000Z",
+    "operator": "Lukas Fässler",
+    "notes": "Synthetic test data. Saddle-shaped surface (~8 µm flatness), SequentialIntegration calculator.",
+    "objectDefinition": {
+      "geometryModuleId": "SurfacePlate",
+      "parameters": {
+        "widthMm": 300,
+        "heightMm": 300,
+        "columnsCount": 3,
+        "rowsCount": 3
+      }
+    },
+    "measurements": [
+      {
+        "id": "d1e2f3a4-b5c6-7890-abcd-ef1234567894",
+        "label": "Measurement 1",
+        "takenAt": "2026-05-27T09:00:00.0000000Z",
+        "operator": "Lukas Fässler",
+        "instrumentId": "manual-entry",
+        "strategyId": "FullGrid",
+        "notes": "Synthetic saddle surface, SequentialIntegration method.",
+        "initialRound": {
+          "completedAt": "2026-05-27T09:20:00.0000000Z",
+          "calculationParameters": {
+            "methodId": "SequentialIntegration",
+            "sigmaThreshold": 2.5,
+            "autoExcludeOutliers": true,
+            "manuallyExcludedStepIndices": []
+          },
+          "steps": [
+            {
+              "index": 0,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "Row pass — row 0, instrument at col 0 → 1, facing East",
+              "reading": -0.033333,
+              "nodeId": "col0_row0",
+              "toNodeId": "col1_row0"
+            },
+            {
+              "index": 1,
+              "gridCol": 1,
+              "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "Row pass — row 0, instrument at col 1 → 2, facing East",
+              "reading": 0.033333,
+              "nodeId": "col1_row0",
+              "toNodeId": "col2_row0"
+            },
+            {
+              "index": 2,
+              "gridCol": 2,
+              "gridRow": 1,
+              "orientation": "West",
+              "instructionText": "Row pass — row 1, instrument at col 2 → 1, facing West",
+              "reading": -0.033333,
+              "nodeId": "col2_row1",
+              "toNodeId": "col1_row1"
+            },
+            {
+              "index": 3,
+              "gridCol": 1,
+              "gridRow": 1,
+              "orientation": "West",
+              "instructionText": "Row pass — row 1, instrument at col 1 → 0, facing West",
+              "reading": 0.033333,
+              "nodeId": "col1_row1",
+              "toNodeId": "col0_row1"
+            },
+            {
+              "index": 4,
+              "gridCol": 0,
+              "gridRow": 2,
+              "orientation": "East",
+              "instructionText": "Row pass — row 2, instrument at col 0 → 1, facing East",
+              "reading": -0.033333,
+              "nodeId": "col0_row2",
+              "toNodeId": "col1_row2"
+            },
+            {
+              "index": 5,
+              "gridCol": 1,
+              "gridRow": 2,
+              "orientation": "East",
+              "instructionText": "Row pass — row 2, instrument at col 1 → 2, facing East",
+              "reading": 0.033333,
+              "nodeId": "col1_row2",
+              "toNodeId": "col2_row2"
+            },
+            {
+              "index": 6,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "South",
+              "instructionText": "Col pass — col 0, instrument at row 0 → 1, facing South",
+              "reading": 0.02,
+              "nodeId": "col0_row0",
+              "toNodeId": "col0_row1"
+            },
+            {
+              "index": 7,
+              "gridCol": 0,
+              "gridRow": 1,
+              "orientation": "South",
+              "instructionText": "Col pass — col 0, instrument at row 1 → 2, facing South",
+              "reading": -0.02,
+              "nodeId": "col0_row1",
+              "toNodeId": "col0_row2"
+            },
+            {
+              "index": 8,
+              "gridCol": 1,
+              "gridRow": 2,
+              "orientation": "North",
+              "instructionText": "Col pass — col 1, instrument at row 2 → 1, facing North",
+              "reading": 0.02,
+              "nodeId": "col1_row2",
+              "toNodeId": "col1_row1"
+            },
+            {
+              "index": 9,
+              "gridCol": 1,
+              "gridRow": 1,
+              "orientation": "North",
+              "instructionText": "Col pass — col 1, instrument at row 1 → 0, facing North",
+              "reading": -0.02,
+              "nodeId": "col1_row1",
+              "toNodeId": "col1_row0"
+            },
+            {
+              "index": 10,
+              "gridCol": 2,
+              "gridRow": 0,
+              "orientation": "South",
+              "instructionText": "Col pass — col 2, instrument at row 0 → 1, facing South",
+              "reading": 0.02,
+              "nodeId": "col2_row0",
+              "toNodeId": "col2_row1"
+            },
+            {
+              "index": 11,
+              "gridCol": 2,
+              "gridRow": 1,
+              "orientation": "South",
+              "instructionText": "Col pass — col 2, instrument at row 1 → 2, facing South",
+              "reading": -0.02,
+              "nodeId": "col2_row1",
+              "toNodeId": "col2_row2"
+            }
+          ],
+          "result": null,
+          "parallelWaysResult": null
+        },
+        "corrections": []
+      }
+    ]
+  }
+}

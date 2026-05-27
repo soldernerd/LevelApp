@@ -1,0 +1,200 @@
+{
+  "schemaVersion": "1.1",
+  "appVersion": "0.13.2",
+  "project": {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567891",
+    "name": "Test Granite Plate 600×600 — UnionJack seg2 None",
+    "createdAt": "2026-05-27T09:00:00.0000000Z",
+    "modifiedAt": "2026-05-27T09:30:00.0000000Z",
+    "operator": "Lukas Fässler",
+    "notes": "Synthetic test data. Flat surface, UnionJack None rings variant (4 arms only, no circumference).",
+    "objectDefinition": {
+      "geometryModuleId": "SurfacePlate",
+      "parameters": {
+        "widthMm": 600,
+        "heightMm": 600,
+        "segments": 2,
+        "rings": "None"
+      }
+    },
+    "measurements": [
+      {
+        "id": "e1f2a3b4-c5d6-7890-abcd-ef1234567895",
+        "label": "Measurement 1",
+        "takenAt": "2026-05-27T09:00:00.0000000Z",
+        "operator": "Lukas Fässler",
+        "instrumentId": "manual-entry",
+        "strategyId": "UnionJack",
+        "notes": "Synthetic flat surface, None rings variant.",
+        "initialRound": {
+          "completedAt": "2026-05-27T09:15:00.0000000Z",
+          "steps": [
+            {
+              "index": 0,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "H arm — W side, seg 2→1, facing East",
+              "reading": 0.0,
+              "nodeId": "armW_seg2",
+              "toNodeId": "armW_seg1"
+            },
+            {
+              "index": 1,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "H arm — W side, seg 1→0, facing East",
+              "reading": 0.0,
+              "nodeId": "armW_seg1",
+              "toNodeId": "center"
+            },
+            {
+              "index": 2,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "H arm — E side, seg 0→1, facing East",
+              "reading": 0.0,
+              "nodeId": "center",
+              "toNodeId": "armE_seg1"
+            },
+            {
+              "index": 3,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "H arm — E side, seg 1→2, facing East",
+              "reading": 0.0,
+              "nodeId": "armE_seg1",
+              "toNodeId": "armE_seg2"
+            },
+            {
+              "index": 4,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "South",
+              "instructionText": "V arm — N side, seg 2→1, facing South",
+              "reading": 0.0,
+              "nodeId": "armN_seg2",
+              "toNodeId": "armN_seg1"
+            },
+            {
+              "index": 5,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "South",
+              "instructionText": "V arm — N side, seg 1→0, facing South",
+              "reading": 0.0,
+              "nodeId": "armN_seg1",
+              "toNodeId": "center"
+            },
+            {
+              "index": 6,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "South",
+              "instructionText": "V arm — S side, seg 0→1, facing South",
+              "reading": 0.0,
+              "nodeId": "center",
+              "toNodeId": "armS_seg1"
+            },
+            {
+              "index": 7,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "South",
+              "instructionText": "V arm — S side, seg 1→2, facing South",
+              "reading": 0.0,
+              "nodeId": "armS_seg1",
+              "toNodeId": "armS_seg2"
+            },
+            {
+              "index": 8,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "Diag arm NW→SE — NW side, seg 2→1, facing SE",
+              "reading": 0.0,
+              "nodeId": "armNW_seg2",
+              "toNodeId": "armNW_seg1"
+            },
+            {
+              "index": 9,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "Diag arm NW→SE — NW side, seg 1→0, facing SE",
+              "reading": 0.0,
+              "nodeId": "armNW_seg1",
+              "toNodeId": "center"
+            },
+            {
+              "index": 10,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "Diag arm NW→SE — SE side, seg 0→1, facing SE",
+              "reading": 0.0,
+              "nodeId": "center",
+              "toNodeId": "armSE_seg1"
+            },
+            {
+              "index": 11,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "East",
+              "instructionText": "Diag arm NW→SE — SE side, seg 1→2, facing SE",
+              "reading": 0.0,
+              "nodeId": "armSE_seg1",
+              "toNodeId": "armSE_seg2"
+            },
+            {
+              "index": 12,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "West",
+              "instructionText": "Diag arm NE→SW — NE side, seg 2→1, facing SW",
+              "reading": 0.0,
+              "nodeId": "armNE_seg2",
+              "toNodeId": "armNE_seg1"
+            },
+            {
+              "index": 13,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "West",
+              "instructionText": "Diag arm NE→SW — NE side, seg 1→0, facing SW",
+              "reading": 0.0,
+              "nodeId": "armNE_seg1",
+              "toNodeId": "center"
+            },
+            {
+              "index": 14,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "West",
+              "instructionText": "Diag arm NE→SW — SW side, seg 0→1, facing SW",
+              "reading": 0.0,
+              "nodeId": "center",
+              "toNodeId": "armSW_seg1"
+            },
+            {
+              "index": 15,
+              "gridCol": 0,
+              "gridRow": 0,
+              "orientation": "West",
+              "instructionText": "Diag arm NE→SW — SW side, seg 1→2, facing SW",
+              "reading": 0.0,
+              "nodeId": "armSW_seg1",
+              "toNodeId": "armSW_seg2"
+            }
+          ],
+          "result": null,
+          "parallelWaysResult": null
+        },
+        "corrections": []
+      }
+    ]
+  }
+}
