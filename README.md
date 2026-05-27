@@ -26,6 +26,7 @@ The software guides the operator through a defined measurement procedure, acquir
 - **Open existing project** — load a `.levelproj` file at any time; if the file contains all readings but no computed result the solver runs automatically on load
 - **Preferences** — configurable default project folder and Light / Dark / Follow system theme, both remembered across sessions
 - **About dialog** — Help → About LevelApp shows the current version, copyright, license, and links to the license text and GitHub repository
+- **Auto-update** — checks for new releases on GitHub at startup; if a newer version is available the app offers to download and install it automatically
 - **Contextual help** — ⓘ flyout buttons on all section headers and algorithmic concepts (least-squares, flagged steps, sigma threshold, correction rounds, etc.); tooltips on all metric labels and input fields
 - **Localised UI** — full English (en-US) and German (de-DE) localisation; the OS language setting selects the active locale automatically
 - **Extensible architecture** — geometry modules, measurement strategies, instrument providers and display modules are all plugin-style interfaces; new object types and instruments can be added without touching existing code
@@ -54,8 +55,8 @@ The software guides the operator through a defined measurement procedure, acquir
 ## Requirements
 
 - Windows 10 version 1809 or later (Windows 11 recommended)
-- [Windows App SDK runtime](https://learn.microsoft.com/en-us/windows/apps/windows-app-sdk/downloads)
-- .NET 8 or .NET 9 runtime
+
+No additional runtime installation is required — the published release bundles the Windows App SDK and .NET runtime (self-contained deployment).
 
 ---
 
@@ -126,6 +127,7 @@ LevelApp/
 │   └── DisplayModules/          # SurfacePlot3DDisplay, MeasurementsGridRenderer,
 │                                # StrategyPreviewRenderer, ParallelWaysDisplay
 ├── LevelApp.Tests/              # xUnit unit tests (Core only)
+├── LevelApp.Updater/            # Standalone updater utility (copy-to-temp, extract, relaunch)
 └── docs/
     ├── architecture.md          # Full architecture and design reference
     └── levelproj.md             # .levelproj JSON format reference
@@ -139,6 +141,8 @@ LevelApp/
 - [x] Parallel Ways geometry module (straightness + parallelism for rails/slideways)
 - [x] Light / Dark / Follow system theme with live preview and persistence
 - [x] Contextual help (tooltips + ⓘ flyouts) and en-US / de-DE localisation
+- [x] CI/CD pipeline — automated build, test, package, and GitHub Release on every push
+- [x] Auto-update — in-app check and one-click download/install of new releases
 - [ ] Parallel Ways correction workflow
 - [ ] Heat map display module
 - [ ] Numerical table display module

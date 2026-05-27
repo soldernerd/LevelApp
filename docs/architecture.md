@@ -4,7 +4,7 @@
 
 > Living document. Update as the project evolves.
 
-> Last updated: 2026-04-12 *(revised to reflect v0.10.0)*
+> Last updated: 2026-05-27 *(revised to reflect v0.13.0)*
 
 
 
@@ -131,7 +131,9 @@ LevelApp/
 │   │   ├── IThemeService.cs          ← Apply(ElementTheme), SetTarget(FrameworkElement)
 │   │   ├── ThemeService.cs           ← singleton; applies RequestedTheme to RootFrame
 │   │   ├── ILocalisationService.cs   ← Get(key) → string
-│   │   └── LocalisationService.cs    ← wraps ResourceLoader; singleton
+│   │   ├── LocalisationService.cs    ← wraps ResourceLoader; singleton
+│   │   ├── IUpdateService.cs         ← CheckForUpdateAsync(), DownloadUpdateAsync()
+│   │   └── UpdateService.cs          ← polls GitHub Releases API; downloads zip to %TEMP%
 │   ├── Converters/
 │   │   └── BoolToVisibilityConverter.cs
 │   ├── Views/
@@ -143,7 +145,8 @@ LevelApp/
 │   │       ├── PreferencesDialog.xaml   ← default folder, theme selector, activity logging toggle
 │   │       ├── NewMeasurementDialog.xaml
 │   │       ├── RecalculateDialog.xaml   ← recalculation parameters + save option
-│   │       └── AboutDialog.xaml         ← version, copyright, license, GitHub link
+│   │       ├── AboutDialog.xaml         ← version, copyright, license, GitHub link
+│   │       └── UpdateDialog.xaml        ← download progress, confirmation prompt, launches LevelApp.Updater
 │   ├── ViewModels/
 │   │   ├── ViewModelBase.cs       ← inherits ObservableObject
 │   │   ├── MainViewModel.cs       ← shell state: window title, dirty flag, unsaved-changes dialog
@@ -167,6 +170,7 @@ LevelApp/
 │   ├── LeastSquaresCalculatorTests.cs
 │   ├── ParallelWaysStrategyTests.cs
 │   ├── ParallelWaysCalculatorTests.cs
+│   ├── ProjectReplayTests.cs          ← [Theory] loading docs/sampleProjects/*.levelproj
 │   ├── Replay/
 │   │   ├── IReplayTarget.cs               ← minimal ViewModel abstraction for replay runner
 │   │   ├── EndOfRecordingException.cs
@@ -175,9 +179,12 @@ LevelApp/
 │   │   └── ReplayTests.cs                 ← [Theory] scanning TestLogs/*.jsonl
 │   └── TestLogs/
 │       └── .gitkeep                       ← place session bundles here for replay tests
+├── LevelApp.Updater/
+│   └── Program.cs                    ← copy-to-temp updater: extracts zip, relaunches app
 └── docs/
     ├── architecture.md               ← This file
-    └── levelproj.md                  ← .levelproj JSON format reference
+    ├── levelproj.md                  ← .levelproj JSON format reference
+    └── sampleProjects/               ← .levelproj files used by ProjectReplayTests
 ```
 
 
@@ -760,6 +767,25 @@ The vertical exaggeration (`maxZPixels`) is computed per render as `max(10, (col
 - `LevelApp.Tests/Replay/`: `RecordedInstrumentProvider`, `NullInstrumentProvider`, `ActivityReplayRunner` (full action vocabulary with // TODO stubs), `ReplayTests` (`[Theory]` over `TestLogs/*.jsonl`; zero tests with empty folder)
 - `TestLogs/` committed empty (`.gitkeep`); real session bundles added manually
 
+### WP0.11 — CI/CD Pipeline ✓ Complete (v0.11.0)
+- GitHub Actions workflow (`.github/workflows/ci.yml`): build → test → publish → package → release on every push to master
+- Solution built in Release mode; `dotnet test LevelApp.Tests/` runs automatically; any test failure blocks the release
+- Self-contained `win-x64` publish for both `LevelApp.App` and `LevelApp.Updater` via `dotnet publish`
+- `<WindowsAppSdkSelfContained>true</WindowsAppSdkSelfContained>` bundles WinAppSDK native DLLs into the output; custom `CopyWinUIAssetsToPublish` MSBuild target copies XBF (compiled XAML) and the app PRI file to the publish folder (skipped by `dotnet publish` for unpackaged WinUI 3 apps by default)
+- Packaged as `LevelApp-X.Y.Z.zip` and uploaded as a GitHub Release asset tagged `vX.Y.Z`
+
+### WP0.12 — Auto-Update & Code Signing ✓ Complete (v0.12.10)
+- `IUpdateService` / `UpdateService` in `LevelApp.App/Services/`: polls the GitHub Releases API for a newer `vX.Y.Z` tag on startup; downloads the zip to `%TEMP%` with async progress reporting
+- `UpdateDialog.xaml` in `LevelApp.App/Views/Dialogs/`: shows download progress bar, confirms restart; strips trailing backslash from `AppContext.BaseDirectory` before passing the install folder as a quoted argument (avoids `\"` mis-parse in the shell)
+- `LevelApp.Updater` (standalone project): copy-to-temp pattern — first invocation copies itself to `%TEMP%\LevelApp.Updater.tmp.exe` and relaunches with `--from-temp`; temp copy waits up to 10 s for the main app process to exit, extracts the zip (`overwriteFiles: true`), deletes the zip, then launches the new `LevelApp.App.exe`; all steps logged to `%TEMP%\LevelApp.Updater.log`
+- Authenticode code signing in CI: `signtool.exe` signs both executables; PFX certificate stored as `CODE_SIGN_CERT` (Base64) and `CODE_SIGN_PASSWORD` GitHub secrets; step skipped gracefully when secrets are absent; note: self-signed cert shows "Unknown Publisher" in SmartScreen — only OV/EV certificates from a public CA establish SmartScreen reputation
+- Known limitation: update fails if the app is installed in a write-protected directory (e.g. `Program Files`); install to a user-writable folder as a workaround (elevation support deferred)
+
+### WP0.13 — Project Replay Tests ✓ Complete (v0.13.0)
+- `LevelApp.Tests/ProjectReplayTests.cs`: xUnit `[Theory]` test that discovers every `.levelproj` file in `docs/sampleProjects/` at runtime, deserialises each via `ProjectSerializer.Deserialize`, re-runs the appropriate calculator (`ParallelWaysCalculator` for Parallel Ways sessions, or `StrategyFactory` + `CalculatorFactory` for Surface Plate sessions), and asserts a non-null, non-empty result
+- Discovery walks up from `AppContext.BaseDirectory` until `LevelApp.slnx` is found; yields no test cases (no failure) when the folder is absent
+- 5 sample project files in `docs/sampleProjects/` produce 5 Theory test cases in CI; covered by the existing "Run unit tests" CI step with no new step required
+
 ### Future phases
 - Additional display modules (heat map, numerical table, residuals chart)
 - Parallel Ways: correction workflow (currently Surface Plate only)
@@ -786,7 +812,7 @@ The vertical exaggeration (`maxZPixels`) is computed per render as `max(10, (col
 public static class AppVersion
 {
     public const int Major = 0;
-    public const int Minor = 10;
+    public const int Minor = 13;
     public const int Patch = 0;
 
     public static string Full    => $"{Major}.{Minor}.{Patch}";
