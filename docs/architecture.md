@@ -4,7 +4,7 @@
 
 > Living document. Update as the project evolves.
 
-> Last updated: 2026-05-27 *(revised to reflect v0.13.0)*
+> Last updated: 2026-05-27 *(revised to reflect v0.13.2)*
 
 
 
