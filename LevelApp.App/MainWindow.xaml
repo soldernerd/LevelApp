@@ -27,6 +27,11 @@
                                 Click="OnPreferencesClicked"/>
             </MenuBarItem>
 
+            <MenuBarItem x:Uid="Menu_Instruments">
+                <MenuFlyoutItem x:Uid="Menu_Instruments_Manage"
+                                Click="OnInstrumentsClicked"/>
+            </MenuBarItem>
+
             <MenuBarItem x:Uid="Menu_Help">
                 <MenuFlyoutItem x:Uid="Menu_Help_About"
                                 Click="OnAboutClicked"/>

@@ -59,6 +59,7 @@ public partial class App : Application
         services.AddTransient<MeasurementViewModel>();
         services.AddTransient<ResultsViewModel>();
         services.AddTransient<CorrectionViewModel>();
+        services.AddTransient<InstrumentsViewModel>();
 
         return services.BuildServiceProvider();
     }

@@ -16,7 +16,8 @@ public sealed class NavigationService : INavigationService
         [PageKey.ProjectSetup] = typeof(ProjectSetupView),
         [PageKey.Measurement]  = typeof(MeasurementView),
         [PageKey.Results]      = typeof(ResultsView),
-        [PageKey.Correction]   = typeof(CorrectionView)
+        [PageKey.Correction]   = typeof(CorrectionView),
+        [PageKey.Instruments]  = typeof(InstrumentsPage)
     };
 
     private Frame? _frame;

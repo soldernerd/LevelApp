@@ -92,6 +92,12 @@ public sealed partial class MainWindow : Window
         await dialog.ShowAsync();
     }
 
+    private void OnInstrumentsClicked(object sender, RoutedEventArgs e)
+    {
+        var nav = App.Services.GetRequiredService<INavigationService>();
+        nav.NavigateTo(PageKey.Instruments);
+    }
+
     private async void OnAboutClicked(object sender, RoutedEventArgs e)
     {
         var dialog = new AboutDialog

@@ -21,6 +21,8 @@
   <data name="Menu_File_SaveProjectAs.Text" xml:space="preserve"><value>Save Project As…</value></data>
   <data name="Menu_Edit.Title" xml:space="preserve"><value>Edit</value></data>
   <data name="Menu_Edit_Preferences.Text" xml:space="preserve"><value>Preferences…</value></data>
+  <data name="Menu_Instruments.Title" xml:space="preserve"><value>Instruments</value></data>
+  <data name="Menu_Instruments_Manage.Text" xml:space="preserve"><value>Manage Instruments…</value></data>
   <data name="Menu_Help.Title" xml:space="preserve"><value>Help</value></data>
   <data name="Menu_Help_About.Text" xml:space="preserve"><value>About LevelApp…</value></data>
 

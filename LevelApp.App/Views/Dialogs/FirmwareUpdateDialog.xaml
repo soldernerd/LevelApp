@@ -1,0 +1,109 @@
+<ContentDialog
+    x:Class="LevelApp.App.Views.Dialogs.FirmwareUpdateDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Firmware Update"
+    PrimaryButtonText="Update Now"
+    CloseButtonText="Cancel"
+    DefaultButton="None"
+    PrimaryButtonClick="OnUpdateNowClicked">
+
+    <StackPanel Spacing="16" MinWidth="400">
+
+        <!-- Loading indicator shown while checking for update -->
+        <StackPanel x:Name="CheckingRow"
+                    Orientation="Horizontal"
+                    Spacing="12">
+            <ProgressRing IsActive="True" Width="20" Height="20"/>
+            <TextBlock Text="Checking for updates…"
+                       VerticalAlignment="Center"
+                       Style="{StaticResource BodyTextBlockStyle}"/>
+        </StackPanel>
+
+        <!-- Version info (shown once check completes) -->
+        <Grid x:Name="VersionPanel"
+              ColumnDefinitions="Auto,*"
+              RowDefinitions="Auto,Auto"
+              ColumnSpacing="12"
+              RowSpacing="6"
+              Visibility="Collapsed">
+
+            <TextBlock Grid.Row="0" Grid.Column="0"
+                       Text="Current version:"
+                       Style="{StaticResource CaptionTextBlockStyle}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                       VerticalAlignment="Center"/>
+            <TextBlock Grid.Row="0" Grid.Column="1"
+                       x:Name="CurrentVersionText"
+                       Style="{StaticResource BodyStrongTextBlockStyle}"
+                       VerticalAlignment="Center"/>
+
+            <TextBlock Grid.Row="1" Grid.Column="0"
+                       Text="Available version:"
+                       Style="{StaticResource CaptionTextBlockStyle}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                       VerticalAlignment="Center"/>
+            <TextBlock Grid.Row="1" Grid.Column="1"
+                       x:Name="AvailableVersionText"
+                       Style="{StaticResource BodyStrongTextBlockStyle}"
+                       VerticalAlignment="Center"/>
+        </Grid>
+
+        <!-- Release notes -->
+        <StackPanel x:Name="ReleaseNotesPanel"
+                    Spacing="4"
+                    Visibility="Collapsed">
+            <TextBlock Text="Release notes:"
+                       Style="{StaticResource CaptionTextBlockStyle}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    CornerRadius="4"
+                    Padding="8"
+                    MaxHeight="120">
+                <ScrollViewer VerticalScrollMode="Auto"
+                              VerticalScrollBarVisibility="Auto">
+                    <TextBlock x:Name="ReleaseNotesText"
+                               TextWrapping="Wrap"
+                               Style="{StaticResource BodyTextBlockStyle}"/>
+                </ScrollViewer>
+            </Border>
+        </StackPanel>
+
+        <!-- "Up to date" message -->
+        <TextBlock x:Name="UpToDateText"
+                   Text="Your device firmware is up to date."
+                   Visibility="Collapsed"
+                   HorizontalAlignment="Center"
+                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                   Style="{StaticResource BodyTextBlockStyle}"/>
+
+        <!-- Error message -->
+        <InfoBar x:Name="ErrorBar"
+                 Severity="Error"
+                 IsOpen="False"
+                 IsClosable="False"/>
+
+        <!-- Update progress -->
+        <StackPanel x:Name="ProgressPanel"
+                    Spacing="8"
+                    Visibility="Collapsed">
+            <ProgressBar x:Name="UpdateProgress"
+                         Minimum="0" Maximum="100"
+                         Value="0"/>
+            <TextBlock x:Name="ProgressText"
+                       Text="Updating…"
+                       HorizontalAlignment="Center"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                       Style="{StaticResource CaptionTextBlockStyle}"/>
+        </StackPanel>
+
+        <!-- Completion message -->
+        <InfoBar x:Name="CompleteBar"
+                 Severity="Success"
+                 IsOpen="False"
+                 IsClosable="False"
+                 Title="Update complete. Please reconnect the device."/>
+
+    </StackPanel>
+
+</ContentDialog>

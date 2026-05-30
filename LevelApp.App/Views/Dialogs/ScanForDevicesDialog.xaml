@@ -1,0 +1,78 @@
+<ContentDialog
+    x:Class="LevelApp.App.Views.Dialogs.ScanForDevicesDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Add Device"
+    CloseButtonText="Cancel"
+    DefaultButton="None">
+
+    <StackPanel Spacing="16" MinWidth="360">
+
+        <!-- Transport selector (only shown when plugin has multiple transports) -->
+        <StackPanel x:Name="TransportRow"
+                    Spacing="4"
+                    Visibility="Collapsed">
+            <TextBlock Text="Transport"
+                       Style="{StaticResource CaptionTextBlockStyle}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <ComboBox x:Name="TransportCombo"
+                      HorizontalAlignment="Stretch"/>
+        </StackPanel>
+
+        <!-- Scan button + spinner -->
+        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+            <Button Grid.Column="0"
+                    Content="Scan"
+                    Click="OnScanClicked"
+                    x:Name="ScanButton"/>
+            <ProgressRing Grid.Column="2"
+                          x:Name="ScanSpinner"
+                          IsActive="False"
+                          Width="24" Height="24"
+                          Visibility="Collapsed"/>
+        </Grid>
+
+        <!-- Candidate list -->
+        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                CornerRadius="4"
+                MinHeight="120"
+                MaxHeight="240"
+                Padding="8">
+            <Grid>
+                <ListView x:Name="CandidateList"
+                          SelectionMode="Single"
+                          SelectionChanged="OnCandidateSelectionChanged">
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="{Binding DisplayName}"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding SignalText}"
+                                           VerticalAlignment="Center"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           Style="{StaticResource CaptionTextBlockStyle}"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+                <TextBlock x:Name="NoCandidatesText"
+                           Text="No devices found."
+                           Visibility="Collapsed"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                           Style="{StaticResource BodyTextBlockStyle}"/>
+            </Grid>
+        </Border>
+
+        <!-- Add selected button -->
+        <Button x:Name="AddSelectedButton"
+                Content="Add Selected"
+                IsEnabled="False"
+                Click="OnAddSelectedClicked"
+                Style="{StaticResource AccentButtonStyle}"
+                HorizontalAlignment="Right"/>
+
+    </StackPanel>
+
+</ContentDialog>

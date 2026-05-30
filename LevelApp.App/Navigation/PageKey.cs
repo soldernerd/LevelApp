@@ -9,5 +9,6 @@ public enum PageKey
     ProjectSetup,
     Measurement,
     Results,
-    Correction
+    Correction,
+    Instruments
 }
