@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\LevelApp.Core\LevelApp.Core.csproj" />
+    <ProjectReference Include="..\LevelApp.Instruments.Manual\LevelApp.Instruments.Manual.csproj" />
   </ItemGroup>
 
   <ItemGroup>

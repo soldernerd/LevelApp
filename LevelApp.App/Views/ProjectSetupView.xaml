@@ -63,6 +63,20 @@
                              TextWrapping="Wrap"/>
                 </StackPanel>
 
+                <!-- ── Instrument ───────────────────────────────────────────── -->
+                <TextBlock Text="Instrument"
+                           Style="{StaticResource SubtitleTextBlockStyle}"
+                           Margin="0,0,0,12"/>
+
+                <StackPanel Spacing="4" Margin="0,0,0,32">
+                    <TextBlock Text="Instrument"
+                               Style="{StaticResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <ComboBox ItemsSource="{x:Bind ViewModel.InstrumentItems, Mode=OneWay}"
+                              SelectedIndex="{x:Bind ViewModel.SelectedInstrumentIndex, Mode=TwoWay}"
+                              HorizontalAlignment="Stretch"/>
+                </StackPanel>
+
                 <!-- ── Object ─────────────────────────────────────────────── -->
                 <TextBlock x:Uid="Object_SectionHeader"
                            Style="{StaticResource SubtitleTextBlockStyle}"

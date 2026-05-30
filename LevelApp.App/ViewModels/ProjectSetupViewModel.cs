@@ -13,6 +13,9 @@ using System.Collections.ObjectModel;
 // Alias so the short name 'UJRings' is available without ambiguity
 using UJRings = LevelApp.Core.Geometry.SurfacePlate.Strategies.UnionJackRings;
 
+// Alias to avoid name collision with Windows.UI.Input.Inking etc.
+using InstrumentPlugin = LevelApp.Core.Interfaces.IInstrumentPlugin;
+
 namespace LevelApp.App.ViewModels;
 
 // ── Rail editor item ──────────────────────────────────────────────────────────
@@ -73,17 +76,24 @@ public sealed partial class TaskViewModel : ObservableObject
 
 public sealed partial class ProjectSetupViewModel : ViewModelBase
 {
-    private readonly INavigationService _navigation;
-    private readonly MainViewModel      _mainViewModel;
+    private readonly INavigationService            _navigation;
+    private readonly MainViewModel                 _mainViewModel;
+    private readonly IReadOnlyList<InstrumentPlugin> _plugins;
     private Project? _loadedProject;
 
     // Debounce timer for live preview
     private DispatcherQueueTimer? _previewDebounce;
 
-    public ProjectSetupViewModel(INavigationService navigation, MainViewModel mainViewModel)
+    public ProjectSetupViewModel(INavigationService navigation, MainViewModel mainViewModel,
+                                 IEnumerable<InstrumentPlugin> plugins)
     {
         _navigation    = navigation;
         _mainViewModel = mainViewModel;
+        _plugins       = plugins.ToList();
+
+        // Populate instrument selector from registered plugins
+        foreach (var p in _plugins)
+            InstrumentItems.Add(p.DisplayName);
 
         // Initialise with two default rails
         _railItems.Add(new RailViewModel { Label = "Front", LengthMm = 1000, IsReference = true });
@@ -93,6 +103,18 @@ public sealed partial class ProjectSetupViewModel : ViewModelBase
         _taskItems.Add(new TaskViewModel { TaskTypeIndex = 0, RailIndexA = 0, StepDistanceMm = 200 });
         _taskItems.Add(new TaskViewModel { TaskTypeIndex = 0, RailIndexA = 1, StepDistanceMm = 200 });
     }
+
+    // ── Instrument selector ───────────────────────────────────────────────────
+
+    public ObservableCollection<string> InstrumentItems { get; } = [];
+
+    [ObservableProperty]
+    private int _selectedInstrumentIndex = 0;
+
+    private string ActiveInstrumentId =>
+        _plugins.Count > 0 && SelectedInstrumentIndex >= 0
+            ? _plugins[SelectedInstrumentIndex].PluginId
+            : "manual-entry";
 
     // ── Project information ───────────────────────────────────────────────────
 
@@ -421,7 +443,7 @@ public sealed partial class ProjectSetupViewModel : ViewModelBase
                 Label        = $"Measurement {project.Measurements.Count + 1}",
                 TakenAt      = DateTime.UtcNow,
                 Operator     = OperatorName,
-                InstrumentId = "manual-entry",
+                InstrumentId = ActiveInstrumentId,
                 StrategyId   = strategy.StrategyId,
                 InitialRound = new MeasurementRound { Steps = steps }
             };
@@ -436,7 +458,7 @@ public sealed partial class ProjectSetupViewModel : ViewModelBase
                 Label        = "Measurement 1",
                 TakenAt      = DateTime.UtcNow,
                 Operator     = OperatorName,
-                InstrumentId = "manual-entry",
+                InstrumentId = ActiveInstrumentId,
                 StrategyId   = strategy.StrategyId,
                 InitialRound = new MeasurementRound { Steps = steps }
             };

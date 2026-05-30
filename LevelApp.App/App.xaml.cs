@@ -1,9 +1,10 @@
 using LevelApp.App.Navigation;
-using LevelApp.Core.Instruments.ManualEntry;
 using LevelApp.App.Services;
+using LevelApp.Core.Instruments;
 using LevelApp.Core.Interfaces;
 using LevelApp.App.ViewModels;
 using LevelApp.Core.Geometry.ParallelWays;
+using LevelApp.Instruments.Manual;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 
@@ -30,8 +31,17 @@ public partial class App : Application
         // Localisation
         services.AddSingleton<ILocalisationService, LocalisationService>();
 
-        // Instrument provider
-        services.AddSingleton<IInstrumentProvider, ManualEntryProvider>();
+        // Instrument plugins
+        services.AddSingleton<IInstrumentPlugin, ManualEntryPlugin>();
+
+        // Device registry — persists to %LOCALAPPDATA%\LevelApp\devices.json
+        services.AddSingleton<IDeviceRegistry>(_ =>
+        {
+            var path = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "LevelApp", "devices.json");
+            return new DeviceRegistry(path);
+        });
 
         // Services
         services.AddSingleton<IProjectFileService, ProjectFileService>();
@@ -59,6 +69,11 @@ public partial class App : Application
 
         // Load persisted settings before any UI is created
         Services.GetRequiredService<ISettingsService>().Load();
+
+        // Ensure the built-in manual device is always present in the registry
+        var registry = Services.GetRequiredService<IDeviceRegistry>();
+        if (registry.GetKnownDevices("manual-entry").Count == 0)
+            registry.RegisterDevice(ManualEntryProvider.BuiltInDevice);
 
         this.InitializeComponent();
     }

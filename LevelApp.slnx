@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="LevelApp.Core/LevelApp.Core.csproj" />
+  <Project Path="LevelApp.Instruments.Manual/LevelApp.Instruments.Manual.csproj" />
   <Project Path="LevelApp.Tests/LevelApp.Tests.csproj" />
   <Project Path="LevelApp.App/LevelApp.App.csproj">
     <Platform Project="x64" />

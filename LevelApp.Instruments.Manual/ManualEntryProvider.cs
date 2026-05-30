@@ -1,7 +1,8 @@
+using LevelApp.Core.Instruments;
 using LevelApp.Core.Interfaces;
 using LevelApp.Core.Models;
 
-namespace LevelApp.Core.Instruments.ManualEntry;
+namespace LevelApp.Instruments.Manual;
 
 /// <summary>
 /// Instrument provider for manual keyboard entry. Always reports as Connected
@@ -13,6 +14,19 @@ namespace LevelApp.Core.Instruments.ManualEntry;
 /// </summary>
 public sealed class ManualEntryProvider : IInstrumentProvider
 {
+    /// <summary>
+    /// Synthetic device record representing the manual-entry instrument.
+    /// Always present in the registry so the rest of the system has a
+    /// consistent device identity even for the no-hardware case.
+    /// </summary>
+    public static readonly KnownDevice BuiltInDevice = new(
+        DeviceId:         "manual-entry-builtin",
+        PluginId:         "manual-entry",
+        TransportId:      "manual",
+        DisplayName:      "Manual Entry",
+        TransportAddress: string.Empty
+    );
+
     public string ProviderId  => "manual-entry";
     public string DisplayName => "Manual Entry";
 

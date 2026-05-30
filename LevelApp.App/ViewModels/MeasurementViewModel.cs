@@ -7,6 +7,7 @@ using LevelApp.Core.Geometry.ParallelWays;
 using LevelApp.Core.Instruments;
 using LevelApp.Core.Interfaces;
 using LevelApp.Core.Models;
+using LevelApp.Instruments.Manual;
 using Microsoft.UI.Xaml;
 using InfoBarSeverity = Microsoft.UI.Xaml.Controls.InfoBarSeverity;
 
@@ -14,28 +15,31 @@ namespace LevelApp.App.ViewModels;
 
 public sealed partial class MeasurementViewModel : ViewModelBase
 {
-    private readonly INavigationService     _navigation;
-    private readonly MainViewModel          _mainViewModel;
-    private readonly ParallelWaysCalculator _pwCalculator;
-    private readonly ILocalisationService   _loc;
-    private readonly IInstrumentProvider    _provider;
+    private readonly INavigationService              _navigation;
+    private readonly MainViewModel                   _mainViewModel;
+    private readonly ParallelWaysCalculator          _pwCalculator;
+    private readonly ILocalisationService            _loc;
+    private readonly IEnumerable<IInstrumentPlugin>  _plugins;
+    private readonly IDeviceRegistry                 _registry;
 
-    private Project            _project    = null!;
-    private MeasurementSession _session    = null!;
-    private List<MeasurementStep> _steps   = [];
-    private ObjectDefinition   _definition = null!;
+    // Set in Initialize() once the session's instrumentId is known.
+    private IInstrumentProvider? _provider;
+
+    private Project               _project    = null!;
+    private MeasurementSession    _session    = null!;
+    private List<MeasurementStep> _steps      = [];
+    private ObjectDefinition      _definition = null!;
 
     public MeasurementViewModel(INavigationService navigation, MainViewModel mainViewModel,
                                 ParallelWaysCalculator pwCalculator, ILocalisationService loc,
-                                IInstrumentProvider provider)
+                                IEnumerable<IInstrumentPlugin> plugins, IDeviceRegistry registry)
     {
         _navigation    = navigation;
         _mainViewModel = mainViewModel;
         _pwCalculator  = pwCalculator;
         _loc           = loc;
-        _provider      = provider;
-
-        _provider.ConnectionStateChanged += OnConnectionStateChanged;
+        _plugins       = plugins;
+        _registry      = registry;
     }
 
     private void OnConnectionStateChanged(object? sender, InstrumentConnectionState state)
@@ -58,6 +62,20 @@ public sealed partial class MeasurementViewModel : ViewModelBase
         _session    = args.Session;
         _steps      = _session.InitialRound.Steps;
         _definition = _project.ObjectDefinition;
+
+        // Resolve the active provider from the plugin matching the session's instrumentId.
+        var plugin = _plugins.FirstOrDefault(p => p.PluginId == _session.InstrumentId)
+                  ?? _plugins.First();
+        var device = _registry.GetPreferredDevice(plugin.PluginId)
+                  ?? _registry.GetKnownDevices(plugin.PluginId).FirstOrDefault()
+                  ?? ManualEntryProvider.BuiltInDevice;
+
+        // Detach from previous provider (if this VM is re-used).
+        if (_provider is not null)
+            _provider.ConnectionStateChanged -= OnConnectionStateChanged;
+
+        _provider = plugin.CreateProvider(device);
+        _provider.ConnectionStateChanged += OnConnectionStateChanged;
 
         IsParallelWays = _definition.GeometryModuleId == "ParallelWays";
 
@@ -132,10 +150,10 @@ public sealed partial class MeasurementViewModel : ViewModelBase
 
     public string OrientationArrow => CurrentStep?.Orientation switch
     {
-        Orientation.North => "\u2191",
-        Orientation.South => "\u2193",
-        Orientation.East  => "\u2192",
-        Orientation.West  => "\u2190",
+        Orientation.North => "↑",
+        Orientation.South => "↓",
+        Orientation.East  => "→",
+        Orientation.West  => "←",
         _ => "?"
     };
 
@@ -146,16 +164,19 @@ public sealed partial class MeasurementViewModel : ViewModelBase
 
     // ── Connection status ─────────────────────────────────────────────────────
 
+    private InstrumentConnectionState ProviderState =>
+        _provider?.ConnectionState ?? InstrumentConnectionState.Disconnected;
+
     public bool ShowConnectionWarning =>
-        _provider.ConnectionState != InstrumentConnectionState.Connected;
+        ProviderState != InstrumentConnectionState.Connected;
 
     public InfoBarSeverity ConnectionSeverity =>
-        _provider.ConnectionState == InstrumentConnectionState.Error
+        ProviderState == InstrumentConnectionState.Error
             ? InfoBarSeverity.Error
             : InfoBarSeverity.Warning;
 
     public string ConnectionStatusMessage =>
-        _provider.ConnectionState switch
+        ProviderState switch
         {
             InstrumentConnectionState.Disconnected => "Instrument disconnected",
             InstrumentConnectionState.Connecting   => "Connecting to instrument…",
@@ -222,7 +243,7 @@ public sealed partial class MeasurementViewModel : ViewModelBase
 
     private bool CanAcceptReading()
     {
-        var state = _provider.ConnectionState;
+        var state = ProviderState;
         bool connectionOk = state != InstrumentConnectionState.Disconnected
                          && state != InstrumentConnectionState.Error;
         return !IsCalculating && !double.IsNaN(Reading) && connectionOk;

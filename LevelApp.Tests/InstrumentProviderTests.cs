@@ -1,5 +1,5 @@
 using LevelApp.Core.Instruments;
-using LevelApp.Core.Instruments.ManualEntry;
+using LevelApp.Instruments.Manual;
 
 namespace LevelApp.Tests;
 
