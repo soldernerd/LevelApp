@@ -1,4 +1,5 @@
 using LevelApp.App.Navigation;
+using LevelApp.Core.Instruments.ManualEntry;
 using LevelApp.App.Services;
 using LevelApp.Core.Interfaces;
 using LevelApp.App.ViewModels;
@@ -28,6 +29,9 @@ public partial class App : Application
 
         // Localisation
         services.AddSingleton<ILocalisationService, LocalisationService>();
+
+        // Instrument provider
+        services.AddSingleton<IInstrumentProvider, ManualEntryProvider>();
 
         // Services
         services.AddSingleton<IProjectFileService, ProjectFileService>();

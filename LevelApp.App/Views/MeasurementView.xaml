@@ -4,7 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
-    <Grid RowDefinitions="Auto,*,Auto">
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
 
         <!-- ── Header: progress bar ──────────────────────────────────────── -->
         <Grid Grid.Row="0" Padding="24,16,24,12"
@@ -22,8 +22,17 @@
                          VerticalAlignment="Center"/>
         </Grid>
 
+        <!-- ── Connection status InfoBar ─────────────────────────────────── -->
+        <InfoBar Grid.Row="1"
+                 x:Name="ConnectionStatusBar"
+                 IsOpen="{x:Bind ViewModel.ShowConnectionWarning, Mode=OneWay}"
+                 Severity="{x:Bind ViewModel.ConnectionSeverity, Mode=OneWay}"
+                 Title="{x:Bind ViewModel.ConnectionStatusMessage, Mode=OneWay}"
+                 IsClosable="False"
+                 Margin="24,0,24,0"/>
+
         <!-- ── Main content ───────────────────────────────────────────────── -->
-        <Grid Grid.Row="1"
+        <Grid Grid.Row="2"
               ColumnDefinitions="*,320"
               Padding="24,0,24,24"
               ColumnSpacing="24">
@@ -131,7 +140,7 @@
         </Grid>
 
         <!-- ── Calculating overlay ────────────────────────────────────────── -->
-        <Border Grid.Row="2"
+        <Border Grid.Row="3"
                 Visibility="{x:Bind ViewModel.CalculatingVisibility, Mode=OneWay}"
                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 CornerRadius="8"

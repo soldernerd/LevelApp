@@ -1,25 +1,28 @@
+using LevelApp.Core.Instruments;
 using LevelApp.Core.Models;
 
 namespace LevelApp.Core.Interfaces;
 
-/// <summary>
-/// Abstraction for a hardware electronic level instrument.
-/// Concrete implementations (Bluetooth, USB, simulation) are resolved via DI.
-///
-/// The optional <see cref="RecordingTarget"/> hook causes each successful
-/// <see cref="ReadAsync"/> call to forward the reading to the activity logger,
-/// enabling replay testing from recorded sessions.
-/// Set it when a measurement session starts; clear it (set to <c>null</c>) when
-/// the session ends.
-/// </summary>
 public interface IInstrumentProvider
 {
-    /// <summary>
-    /// When set, each successful <see cref="ReadAsync"/> calls
-    /// <see cref="IActivityLogger.AttachInstrumentRecording"/> with the reading.
-    /// </summary>
-    IActivityLogger? RecordingTarget { get; set; }
+    string ProviderId { get; }
+    string DisplayName { get; }
+    InstrumentCapabilities Capabilities { get; }
+    InstrumentConnectionState ConnectionState { get; }
+    event EventHandler<InstrumentConnectionState> ConnectionStateChanged;
 
-    /// <summary>Reads a single measurement from the instrument.</summary>
-    Task<InstrumentReading> ReadAsync(CancellationToken ct = default);
+    /// <summary>
+    /// Establish connection to the instrument. No-op for providers that
+    /// are always connected (e.g. ManualEntry).
+    /// </summary>
+    Task ConnectAsync(CancellationToken ct = default);
+
+    /// <summary>Release the connection. No-op for always-connected providers.</summary>
+    Task DisconnectAsync();
+
+    /// <summary>
+    /// Request a single reading. Valid when Capabilities includes SingleMeasurement.
+    /// For ContinuousStream-only providers, returns the most recently received value.
+    /// </summary>
+    Task<double> GetReadingAsync(MeasurementStep step, CancellationToken ct);
 }

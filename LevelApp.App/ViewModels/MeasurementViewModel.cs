@@ -4,8 +4,11 @@ using LevelApp.App.Navigation;
 using LevelApp.App.Services;
 using LevelApp.Core.Geometry;
 using LevelApp.Core.Geometry.ParallelWays;
+using LevelApp.Core.Instruments;
+using LevelApp.Core.Interfaces;
 using LevelApp.Core.Models;
 using Microsoft.UI.Xaml;
+using InfoBarSeverity = Microsoft.UI.Xaml.Controls.InfoBarSeverity;
 
 namespace LevelApp.App.ViewModels;
 
@@ -15,6 +18,7 @@ public sealed partial class MeasurementViewModel : ViewModelBase
     private readonly MainViewModel          _mainViewModel;
     private readonly ParallelWaysCalculator _pwCalculator;
     private readonly ILocalisationService   _loc;
+    private readonly IInstrumentProvider    _provider;
 
     private Project            _project    = null!;
     private MeasurementSession _session    = null!;
@@ -22,12 +26,24 @@ public sealed partial class MeasurementViewModel : ViewModelBase
     private ObjectDefinition   _definition = null!;
 
     public MeasurementViewModel(INavigationService navigation, MainViewModel mainViewModel,
-                                ParallelWaysCalculator pwCalculator, ILocalisationService loc)
+                                ParallelWaysCalculator pwCalculator, ILocalisationService loc,
+                                IInstrumentProvider provider)
     {
         _navigation    = navigation;
         _mainViewModel = mainViewModel;
         _pwCalculator  = pwCalculator;
         _loc           = loc;
+        _provider      = provider;
+
+        _provider.ConnectionStateChanged += OnConnectionStateChanged;
+    }
+
+    private void OnConnectionStateChanged(object? sender, InstrumentConnectionState state)
+    {
+        OnPropertyChanged(nameof(ShowConnectionWarning));
+        OnPropertyChanged(nameof(ConnectionSeverity));
+        OnPropertyChanged(nameof(ConnectionStatusMessage));
+        AcceptReadingCommand.NotifyCanExecuteChanged();
     }
 
     // ── Initialisation ────────────────────────────────────────────────────────
@@ -128,6 +144,26 @@ public sealed partial class MeasurementViewModel : ViewModelBase
     public bool       IsInputEnabled       => !IsCalculating;
     public Visibility CalculatingVisibility => IsCalculating ? Visibility.Visible : Visibility.Collapsed;
 
+    // ── Connection status ─────────────────────────────────────────────────────
+
+    public bool ShowConnectionWarning =>
+        _provider.ConnectionState != InstrumentConnectionState.Connected;
+
+    public InfoBarSeverity ConnectionSeverity =>
+        _provider.ConnectionState == InstrumentConnectionState.Error
+            ? InfoBarSeverity.Error
+            : InfoBarSeverity.Warning;
+
+    public string ConnectionStatusMessage =>
+        _provider.ConnectionState switch
+        {
+            InstrumentConnectionState.Disconnected => "Instrument disconnected",
+            InstrumentConnectionState.Connecting   => "Connecting to instrument…",
+            InstrumentConnectionState.Degraded     => "Instrument signal degraded",
+            InstrumentConnectionState.Error        => "Instrument connection error",
+            _                                      => string.Empty
+        };
+
     /// <summary>Read-only view of the step list for the canvas renderer.</summary>
     public IReadOnlyList<MeasurementStep> Steps => _steps;
 
@@ -184,5 +220,11 @@ public sealed partial class MeasurementViewModel : ViewModelBase
         }
     }
 
-    private bool CanAcceptReading() => !IsCalculating && !double.IsNaN(Reading);
+    private bool CanAcceptReading()
+    {
+        var state = _provider.ConnectionState;
+        bool connectionOk = state != InstrumentConnectionState.Disconnected
+                         && state != InstrumentConnectionState.Error;
+        return !IsCalculating && !double.IsNaN(Reading) && connectionOk;
+    }
 }
