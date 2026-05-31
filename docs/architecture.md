@@ -4,7 +4,7 @@
 
 > Living document. Update as the project evolves.
 
-> Last updated: 2026-05-27 *(revised to reflect v0.13.2)*
+> Last updated: 2026-05-31 *(revised to reflect v0.18.0)*
 
 
 
@@ -64,9 +64,23 @@ LevelApp/
 │   ├── AppVersion.cs              ← Single source of truth for Major.Minor.Patch
 │   ├── Interfaces/
 │   │   ├── IMeasurementStrategy.cs
-│   │   ├── ISurfaceCalculator.cs  ← single calculator interface (MethodId, Calculate)
-│   │   ├── IActivityLogger.cs     ← Log(), AttachProjectSnapshot(), AttachInstrumentRecording(), IsEnabled
-│   │   └── IInstrumentProvider.cs ← ReadAsync(), RecordingTarget (IActivityLogger?)
+│   │   ├── ISurfaceCalculator.cs       ← single calculator interface (MethodId, Calculate)
+│   │   ├── IActivityLogger.cs          ← Log(), AttachProjectSnapshot(), AttachInstrumentRecording(), IsEnabled
+│   │   ├── IInstrumentProvider.cs      ← ProviderId, Capabilities, ConnectionState, ConnectAsync, GetReadingAsync
+│   │   ├── ITransport.cs               ← TransportId, DisplayName, Capabilities
+│   │   ├── IDeviceScanner.cs           ← Transport, ScanAsync(timeout, ct) → IAsyncEnumerable<DeviceCandidate>
+│   │   ├── IDeviceRegistry.cs          ← GetKnownDevices, RegisterDevice, ForgetDevice, GetPreferredDevice
+│   │   ├── IFirmwareUpdater.cs         ← RequiredTransport, IsReady, GetCurrentFirmwareAsync, PerformUpdateAsync
+│   │   ├── ICalibrationWorkflow.cs     ← DisplayName, CreateView() → object
+│   │   └── IInstrumentPlugin.cs        ← root plugin contract; CreateProvider, CreateScanners, optional capabilities
+│   ├── Instruments/                    ← Instrument-related enums and value types (no UI dependencies)
+│   │   ├── InstrumentConnectionState.cs  ← Disconnected, Connecting, Connected, Degraded, Error
+│   │   ├── InstrumentCapabilities.cs     ← [Flags]: SingleMeasurement, ContinuousStream
+│   │   ├── TransportCapabilities.cs      ← [Flags]: SingleReading, ContinuousStream, Bidirectional
+│   │   ├── TransportRequirement.cs       ← None, Any, BleOnly, UsbOnly, UsbOrBle
+│   │   ├── KnownDevice.cs               ← record(DeviceId, PluginId, TransportId, DisplayName, TransportAddress)
+│   │   ├── FirmwareInfo.cs              ← record(Version, ReleaseNotes?, DownloadUrl?)
+│   │   └── DeviceCandidate.cs           ← record(CandidateId, TransportId, DisplayName, SignalStrength?)
 │   ├── Models/
 │   │   ├── InstrumentReading.cs   ← Timestamp, Value; serialised to .instrument log files
 │   │   ├── Project.cs
@@ -102,9 +116,30 @@ LevelApp/
 │       ├── ProjectSerializer.cs
 │       ├── ObjectValueConverter.cs
 │       └── OrientationConverter.cs   ← reads/writes Orientation as string enum
+├── LevelApp.Instruments.Manual/   ← Manual-entry instrument plugin (no hardware)
+│   ├── ManualTransport.cs         ← ITransport, TransportId = "manual"
+│   ├── ManualEntryScanner.cs      ← IDeviceScanner (yields nothing — no scan needed)
+│   ├── ManualEntryProvider.cs     ← IInstrumentProvider (always Connected; prompts user)
+│   └── ManualEntryPlugin.cs       ← IInstrumentPlugin root; exposes BuiltInDevice constant
+├── LevelApp.Instruments.BLE/      ← BLE transport infrastructure (no instrument-specific code)
+│   ├── BleTransport.cs            ← ITransport, TransportId = "ble"
+│   ├── BleDeviceScanner.cs        ← IDeviceScanner via BluetoothLEAdvertisementWatcher; Guid[] filter
+│   ├── BleInstrumentProviderBase.cs ← abstract IInstrumentProvider; exponential-backoff reconnect (1s→30s)
+│   └── Internal/
+│       └── BleConnectionManager.cs  ← BluetoothLEDevice + GattSession lifetime; MaintainConnection=true
+├── LevelApp.Instruments.UsbHid/   ← USB HID transport infrastructure + STM32 DFU subsystem
+│   ├── UsbHidTransport.cs         ← ITransport, TransportId = "usb-hid"
+│   ├── UsbHidDeviceScanner.cs     ← IDeviceScanner; FindAllAsync + DeviceWatcher; VID/PID AQS filter
+│   ├── UsbHidInstrumentProviderBase.cs ← abstract IInstrumentProvider; HidDevice.FromIdAsync; InputReportReceived
+│   └── Dfu/
+│       ├── DfuConnectionDetector.cs   ← waits for WinUSB device with VID+DFU PID; 10-second timeout
+│       ├── DfuSession.cs              ← STM32 DFU download via P/Invoke WinUsb.dll; pageSize configurable
+│       └── Internal/
+│           ├── IUsbControlTransport.cs   ← testable abstraction over USB control transfers
+│           └── WinUsbControlTransport.cs ← P/Invoke: WinUsb_Initialize, WinUsb_ControlTransfer, WinUsb_Free
 ├── LevelApp.App/                  ← WinUI 3 application
-│   ├── App.xaml / App.xaml.cs     ← DI container setup; merges resource dictionaries
-│   ├── MainWindow.xaml / .cs      ← Menu bar (File, Edit, Help); wires IThemeService to RootFrame
+│   ├── App.xaml / App.xaml.cs     ← DI container setup; registers IInstrumentPlugin(s), IDeviceRegistry
+│   ├── MainWindow.xaml / .cs      ← Menu bar (File, Edit, Instruments, Help); wires IThemeService to RootFrame
 │   ├── Helpers/
 │   │   └── ThemeHelper.cs         ← GetColor, GetBrush, PlotRamp, InterpolateRamp (shared by all renderers)
 │   ├── Strings/
@@ -116,7 +151,7 @@ LevelApp/
 │   │   ├── ControlStyles.xaml     ← Implicit Button style; CardStyle; CompactCardStyle
 │   │   └── HelpButtonStyle.xaml   ← ⓘ info button (Segoe MDL2 Assets U+E946, 24×24, transparent)
 │   ├── Navigation/
-│   │   ├── PageKey.cs             ← Enum: ProjectSetup, Measurement, Results, Correction
+│   │   ├── PageKey.cs             ← Enum: ProjectSetup, Measurement, Results, Correction, Instruments
 │   │   ├── INavigationService.cs
 │   │   ├── NavigationService.cs
 │   │   ├── MeasurementArgs.cs     ← record(Project, Session)
@@ -133,28 +168,36 @@ LevelApp/
 │   │   ├── ILocalisationService.cs   ← Get(key) → string
 │   │   ├── LocalisationService.cs    ← wraps ResourceLoader; singleton
 │   │   ├── IUpdateService.cs         ← CheckForUpdateAsync(), DownloadUpdateAsync()
-│   │   └── UpdateService.cs          ← polls GitHub Releases API; downloads zip to %TEMP%
+│   │   ├── UpdateService.cs          ← polls GitHub Releases API; downloads zip to %TEMP%
+│   │   └── DeviceRegistry.cs         ← IDeviceRegistry; persists to %LOCALAPPDATA%\LevelApp\devices.json
 │   ├── Converters/
 │   │   └── BoolToVisibilityConverter.cs
 │   ├── Views/
 │   │   ├── ProjectSetupView.xaml
-│   │   ├── MeasurementView.xaml
+│   │   ├── MeasurementView.xaml        ← includes ConnectionStatusBar InfoBar (WP0.14)
 │   │   ├── ResultsView.xaml
 │   │   ├── CorrectionView.xaml
+│   │   ├── InstrumentsPage.xaml        ← TabView; one tab per registered IInstrumentPlugin (WP0.16)
+│   │   ├── InstrumentPluginTabView.xaml ← UserControl; device list, Add/Calibrate/Update buttons (WP0.16)
 │   │   └── Dialogs/
-│   │       ├── PreferencesDialog.xaml   ← default folder, theme selector, activity logging toggle
+│   │       ├── PreferencesDialog.xaml      ← default folder, theme selector, activity logging toggle
 │   │       ├── NewMeasurementDialog.xaml
-│   │       ├── RecalculateDialog.xaml   ← recalculation parameters + save option
-│   │       ├── AboutDialog.xaml         ← version, copyright, license, GitHub link
-│   │       └── UpdateDialog.xaml        ← download progress, confirmation prompt, launches LevelApp.Updater
+│   │       ├── RecalculateDialog.xaml      ← recalculation parameters + save option
+│   │       ├── AboutDialog.xaml            ← version, copyright, license, GitHub link
+│   │       ├── UpdateDialog.xaml           ← download progress, confirmation prompt, launches LevelApp.Updater
+│   │       ├── ScanForDevicesDialog.xaml   ← runs IDeviceScanner, lists candidates, registers chosen device (WP0.16)
+│   │       └── FirmwareUpdateDialog.xaml   ← checks for update, shows progress bar, calls IFirmwareUpdater (WP0.16)
 │   ├── ViewModels/
-│   │   ├── ViewModelBase.cs       ← inherits ObservableObject
-│   │   ├── MainViewModel.cs       ← shell state: window title, dirty flag, unsaved-changes dialog
+│   │   ├── ViewModelBase.cs             ← inherits ObservableObject
+│   │   ├── MainViewModel.cs             ← shell state: window title, dirty flag, unsaved-changes dialog
 │   │   ├── ProjectSetupViewModel.cs
-│   │   ├── MeasurementViewModel.cs
+│   │   ├── MeasurementViewModel.cs      ← injects IInstrumentPlugin list + IDeviceRegistry; connection status
 │   │   ├── ResultsViewModel.cs
 │   │   ├── CorrectionViewModel.cs
-│   │   └── FlaggedStepItem.cs     ← display DTO for flagged step list
+│   │   ├── FlaggedStepItem.cs           ← display DTO for flagged step list
+│   │   ├── InstrumentsViewModel.cs      ← builds InstrumentPluginTabViewModel list from registered plugins (WP0.16)
+│   │   ├── InstrumentPluginTabViewModel.cs ← ObservableCollection<KnownDeviceViewModel>; scan/calibrate/update commands
+│   │   └── KnownDeviceViewModel.cs      ← display wrapper for KnownDevice (WP0.16)
 │   └── DisplayModules/
 │       ├── SurfacePlot3D/
 │       │   └── SurfacePlot3DDisplay.cs
@@ -170,7 +213,16 @@ LevelApp/
 │   ├── LeastSquaresCalculatorTests.cs
 │   ├── ParallelWaysStrategyTests.cs
 │   ├── ParallelWaysCalculatorTests.cs
-│   ├── ProjectReplayTests.cs          ← [Theory] loading docs/sampleProjects/*.levelproj
+│   ├── ProjectReplayTests.cs           ← [Theory] loading docs/sampleProjects/*.levelproj
+│   ├── InstrumentProviderTests.cs      ← ManualEntryProvider contract tests (WP0.14)
+│   ├── PluginArchitectureTests.cs      ← ManualEntryPlugin + DeviceRegistry tests (WP0.15)
+│   ├── BLE/
+│   │   ├── BleTransportTests.cs        ← property + capability checks
+│   │   └── BleInstrumentProviderBaseTests.cs ← state machine, backoff, cancellation (WP0.17)
+│   ├── UsbHid/
+│   │   ├── UsbHidTransportTests.cs     ← property + capability checks
+│   │   ├── UsbHidDeviceScannerTests.cs ← timeout + cancellation behaviour (WP0.18)
+│   │   └── DfuSessionTests.cs          ← progress reporting + cancellation via mock transport (WP0.18)
 │   ├── Replay/
 │   │   ├── IReplayTarget.cs               ← minimal ViewModel abstraction for replay runner
 │   │   ├── EndOfRecordingException.cs
@@ -243,6 +295,97 @@ public static IMeasurementStrategy Create(string strategyId);
 
 // Core/Geometry/CalculatorFactory.cs
 public static ISurfaceCalculator Create(string methodId, IMeasurementStrategy strategy);
+```
+
+
+
+### IInstrumentProvider
+
+The reading-provider contract. Each connected instrument is driven through this interface.
+
+```csharp
+public interface IInstrumentProvider
+{
+    string ProviderId { get; }
+    string DisplayName { get; }
+    InstrumentCapabilities Capabilities { get; }
+    InstrumentConnectionState ConnectionState { get; }
+    event EventHandler<InstrumentConnectionState> ConnectionStateChanged;
+
+    Task ConnectAsync(CancellationToken ct = default);
+    Task DisconnectAsync();
+    Task<double> GetReadingAsync(MeasurementStep step, CancellationToken ct);
+}
+```
+
+
+
+### IInstrumentPlugin
+
+The root contract that each instrument project implements exactly once. The app resolves all registered plugins via DI (`IEnumerable<IInstrumentPlugin>`).
+
+```csharp
+public interface IInstrumentPlugin
+{
+    string PluginId { get; }
+    string DisplayName { get; }
+    InstrumentCapabilities Capabilities { get; }
+    IReadOnlyList<ITransport> SupportedTransports { get; }
+
+    IReadOnlyList<IDeviceScanner> CreateScanners();
+    IInstrumentProvider CreateProvider(KnownDevice device);
+
+    // Optional — null means not supported by this instrument
+    ICalibrationWorkflow? CreateCalibrationWorkflow(KnownDevice device);
+    IFirmwareUpdater?     CreateFirmwareUpdater(KnownDevice device);
+    object?               CreateDeviceManagementView(IDeviceRegistry registry);
+}
+```
+
+
+
+### ITransport / IDeviceScanner / IDeviceRegistry
+
+```csharp
+public interface ITransport
+{
+    string TransportId { get; }       // "ble", "usb-hid", "manual"
+    string DisplayName { get; }
+    TransportCapabilities Capabilities { get; }
+}
+
+public interface IDeviceScanner
+{
+    ITransport Transport { get; }
+    IAsyncEnumerable<DeviceCandidate> ScanAsync(TimeSpan timeout, CancellationToken ct);
+}
+
+public interface IDeviceRegistry
+{
+    IReadOnlyList<KnownDevice> GetKnownDevices(string pluginId);
+    IReadOnlyList<KnownDevice> GetAllKnownDevices();
+    void RegisterDevice(KnownDevice device);
+    void ForgetDevice(string deviceId);
+    KnownDevice? GetPreferredDevice(string pluginId);
+    void SetPreferredDevice(string pluginId, string deviceId);
+}
+```
+
+
+
+### IFirmwareUpdater
+
+```csharp
+public interface IFirmwareUpdater
+{
+    TransportRequirement RequiredTransport { get; }
+    bool IsReady { get; }
+    event EventHandler IsReadyChanged;
+
+    Task<FirmwareInfo>  GetCurrentFirmwareAsync(CancellationToken ct = default);
+    Task<FirmwareInfo?> CheckForUpdateAsync(CancellationToken ct = default);
+    Task PerformUpdateAsync(IProgress<double> progress, CancellationToken ct);
+}
 ```
 
 
@@ -668,6 +811,13 @@ The vertical exaggeration (`maxZPixels`) is computed per render as `max(10, (col
 | `ThemeHelper` in `LevelApp.App/Helpers/` | Single shared helper (`GetColor`, `GetBrush`, `PlotRamp`, `InterpolateRamp`) eliminates copy-pasted lookup methods across all four display modules and two views; the `PlotRamp` struct is resolved once per render pass to avoid repeated dictionary lookups inside node loops |
 | `IThemeService` / `ThemeService` singleton | Decouples live theme switching from `MainWindow`; `PreferencesDialog` calls `_theme.Apply()` directly without holding a reference to the window; `ThemeService.SetTarget(RootFrame)` is called once on startup by `MainWindow` |
 | Plot canvas rebuild on theme change | `ResultsViewModel.RebuildPlotCanvas()` reconstructs the `Canvas` from cached session/result data; `ResultsView.OnActualThemeChanged` swaps `PlotContainer.Content` — avoids storing mutable brushes on a live canvas |
+| `IInstrumentPlugin` as root plugin contract | Each instrument project exposes one `IInstrumentPlugin` implementation. The app resolves all registered plugins via `IEnumerable<IInstrumentPlugin>` (DI). `CreateProvider`, `CreateScanners`, and optional capabilities are factory methods — not singletons — so a plugin can create multiple independent providers/scanners for different known devices |
+| `DeviceRegistry` persists to `devices.json` | Separate file from `settings.json` keeps device bookkeeping isolated; `%LOCALAPPDATA%\LevelApp\devices.json` is reliable for unpackaged apps and is human-readable JSON |
+| Instrument transport projects target `net8.0-windows10.0.19041.0` | WinRT Bluetooth and HID APIs (`Windows.Devices.Bluetooth`, `Windows.Devices.HumanInterfaceDevice`) are built into the Windows-targeted TFM. No `Microsoft.Windows.SDK.Contracts` NuGet is needed — and indeed that package is incompatible with .NET 5+ |
+| BLE reconnect via `BleInstrumentProviderBase` | Exponential backoff (1 s → 2 s → 4 s … capped at 30 s) runs inside the base class. Concrete subclasses implement only `DoConnectAsync` and `DoDisconnectAsync`. `OnUnexpectedDisconnect()` starts a background reconnect loop that is cancelled cleanly by `DisconnectAsync()` |
+| DFU over P/Invoke to `WinUsb.dll` rather than WinRT USB | `Windows.Devices.Usb.UsbDevice` requires the `usbDevice` capability in an app package manifest. LevelApp is unpackaged (no MSIX), so this API is unavailable. `WinUsb.dll` P/Invoke works from any process, requires no capability declaration, and provides full control over USB control transfers which is all DFU needs. The decision is documented in a comment block at the top of `DfuSession.cs` |
+| `IUsbControlTransport` internal interface in `LevelApp.Instruments.UsbHid` | Separates the P/Invoke WinUSB layer from `DfuSession`'s protocol logic, enabling unit tests to inject a mock transport without real hardware. `[assembly: InternalsVisibleTo("LevelApp.Tests")]` exposes it to the test project |
+| `DfuSession.pageSize` as constructor parameter | Different STM32 targets use different internal flash page sizes. The default of 2 048 bytes covers the most common targets; concrete instrument projects override it when needed |
 
 
 
@@ -786,11 +936,53 @@ The vertical exaggeration (`maxZPixels`) is computed per render as `max(10, (col
 - Discovery walks up from `AppContext.BaseDirectory` until `LevelApp.slnx` is found; yields no test cases (no failure) when the folder is absent
 - 5 sample project files in `docs/sampleProjects/` produce 5 Theory test cases in CI; covered by the existing "Run unit tests" CI step with no new step required
 
+### WP0.14 — Extended Instrument Provider Interface ✓ Complete (v0.14.0)
+- `InstrumentConnectionState` enum: `Disconnected`, `Connecting`, `Connected`, `Degraded`, `Error`
+- `InstrumentCapabilities` [Flags] enum: `SingleMeasurement`, `ContinuousStream`
+- `IInstrumentProvider` extended with `Capabilities`, `ConnectionState`, `ConnectionStateChanged`, `ConnectAsync()`, `DisconnectAsync()`
+- `ManualEntryProvider` migrated to the new interface (always `Connected`, capabilities `SingleMeasurement`)
+- `MeasurementView` gains a `ConnectionStatusBar` `InfoBar` driven by `MeasurementViewModel.ShowConnectionWarning`
+
+### WP0.15 — Instrument Plugin Architecture ✓ Complete (v0.15.0)
+- New interfaces in `LevelApp.Core/Interfaces/`: `ITransport`, `IDeviceScanner`, `IDeviceRegistry`, `IFirmwareUpdater`, `ICalibrationWorkflow`, `IInstrumentPlugin`
+- New enums: `TransportCapabilities`, `TransportRequirement`
+- New value types: `KnownDevice`, `FirmwareInfo`, `DeviceCandidate` in `LevelApp.Core/Instruments/`
+- New project `LevelApp.Instruments.Manual`: `ManualTransport`, `ManualEntryScanner`, `ManualEntryProvider`, `ManualEntryPlugin`
+- `DeviceRegistry` service in `LevelApp.App/Services/`: persists known devices to `%LOCALAPPDATA%\LevelApp\devices.json`
+- DI registration updated: `IInstrumentPlugin`, `IDeviceRegistry`; `MeasurementViewModel` resolves active provider via plugin + registry
+
+### WP0.16 — Instrument Management UI ✓ Complete (v0.16.0)
+- `Instruments` menu item added to `MainWindow.xaml`; navigates to `InstrumentsPage`
+- `InstrumentsPage` — `TabView` with one tab per registered `IInstrumentPlugin`
+- `InstrumentPluginTabView` — `UserControl` showing known-device list; Add Device / Calibrate / Update Firmware buttons
+- `ScanForDevicesDialog` — runs `IDeviceScanner`, lists `DeviceCandidate` items, registers the chosen device
+- `FirmwareUpdateDialog` — checks for update via `IFirmwareUpdater`, shows progress bar, handles up-to-date case
+- `PageKey.Instruments` added to navigation enum
+- `InstrumentsViewModel`, `InstrumentPluginTabViewModel`, `KnownDeviceViewModel` added
+
+### WP0.17 — BLE Transport Infrastructure ✓ Complete (v0.17.0)
+- New project `LevelApp.Instruments.BLE` (`net8.0-windows10.0.19041.0`; WinRT BLE types built into TFM)
+- `BleTransport` (`ITransport`, `TransportId = "ble"`)
+- `BleDeviceScanner` (`IDeviceScanner`) — `BluetoothLEAdvertisementWatcher` with `Guid[]` service-UUID filter; deduplication by address; clean completion on timeout
+- `BleInstrumentProviderBase` (abstract `IInstrumentProvider`) — full connection state machine; exponential backoff reconnect 1 s → 2 s → … capped at 30 s; `OnUnexpectedDisconnect()` background reconnect loop
+- `Internal/BleConnectionManager` — `BluetoothLEDevice` + `GattSession` lifetime; `MaintainConnection = true`
+- 11 unit tests covering state transitions, retry, error states, cancellation, unexpected-disconnect recovery
+
+### WP0.18 — USB HID Transport Infrastructure ✓ Complete (v0.18.0)
+- New project `LevelApp.Instruments.UsbHid` (`net8.0-windows10.0.19041.0`)
+- `UsbHidTransport` (`ITransport`, `TransportId = "usb-hid"`)
+- `UsbHidDeviceScanner` (`IDeviceScanner`) — `DeviceInformation.FindAllAsync` + `DeviceWatcher`; HID AQS selector with VID/PID filter; guards `DeviceWatcher.Stop()` against double-call
+- `UsbHidInstrumentProviderBase` (abstract `IInstrumentProvider`) — opens `HidDevice.FromIdAsync`, wires `InputReportReceived`; no reconnect loop (USB is stable while plugged in)
+- `Dfu/DfuConnectionDetector` — waits up to 10 s for a WinUSB device with VID+DFU PID to appear after `DFU_DETACH`
+- `Dfu/DfuSession` — STM32 DFU download via P/Invoke to `WinUsb.dll`; `DFU_DNLOAD` loop + `DFU_GETSTATUS` polling; `pageSize` constructor parameter (default 2 048 bytes); testable via `IUsbControlTransport` internal interface
+- `Dfu/Internal/WinUsbControlTransport` — P/Invoke: `WinUsb_Initialize`, `WinUsb_ControlTransfer`, `WinUsb_Free`
+- 14 unit tests covering transport properties, scanner timeout/cancel, DFU progress, cancellation, disposal
+
 ### Future phases
+- Concrete instrument plugin (e.g. Wyler BT-Level) using `LevelApp.Instruments.BLE`
+- Concrete instrument plugin using `LevelApp.Instruments.UsbHid` + DFU firmware update
 - Additional display modules (heat map, numerical table, residuals chart)
 - Parallel Ways: correction workflow (currently Surface Plate only)
-- Bluetooth LE instrument provider
-- USB HID instrument provider
 - Additional geometry modules (straightness, squareness, etc.)
 - Reporting / PDF export
 
@@ -812,7 +1004,7 @@ The vertical exaggeration (`maxZPixels`) is computed per render as `max(10, (col
 public static class AppVersion
 {
     public const int Major = 0;
-    public const int Minor = 13;
+    public const int Minor = 18;
     public const int Patch = 0;
 
     public static string Full    => $"{Major}.{Minor}.{Patch}";
