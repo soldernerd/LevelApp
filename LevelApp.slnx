@@ -2,6 +2,7 @@
   <Project Path="LevelApp.Core/LevelApp.Core.csproj" />
   <Project Path="LevelApp.Instruments.Manual/LevelApp.Instruments.Manual.csproj" />
   <Project Path="LevelApp.Instruments.BLE/LevelApp.Instruments.BLE.csproj" />
+  <Project Path="LevelApp.Instruments.UsbHid/LevelApp.Instruments.UsbHid.csproj" />
   <Project Path="LevelApp.Tests/LevelApp.Tests.csproj" />
   <Project Path="LevelApp.App/LevelApp.App.csproj">
     <Platform Project="x64" />

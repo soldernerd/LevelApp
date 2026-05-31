@@ -24,6 +24,7 @@
     <ProjectReference Include="..\LevelApp.Core\LevelApp.Core.csproj" />
     <ProjectReference Include="..\LevelApp.Instruments.Manual\LevelApp.Instruments.Manual.csproj" />
     <ProjectReference Include="..\LevelApp.Instruments.BLE\LevelApp.Instruments.BLE.csproj" />
+    <ProjectReference Include="..\LevelApp.Instruments.UsbHid\LevelApp.Instruments.UsbHid.csproj" />
   </ItemGroup>
 
   <ItemGroup>
