@@ -1,206 +1,352 @@
-<!-- refreshed: 2026-05-31 -->
+<!-- refreshed: 2026-06-02 -->
 # Architecture
 
-**Analysis Date:** 2026-05-31
+**Analysis Date:** 2026-06-02
 
 ## System Overview
 
+LevelApp is a WinUI 3 MVVM desktop application for evaluating precision electronic level measurements. It is organized as a multi-project .NET 8 solution with strict separation between a UI-free core library, instrument transport infrastructure, the WinUI 3 app shell, and a standalone updater executable.
+
 ```text
-┌──────────────────────────────────────────────────────────────────────┐
-│                      LevelApp.App (WinUI 3)                          │
-│  Views/         ViewModels/       Services/        DisplayModules/   │
-│  *.xaml         *ViewModel.cs     *Service.cs       *Renderer.cs     │
-└────────┬─────────────┬────────────────┬──────────────────┬──────────┘
-         │             │                │                  │
-         ▼             ▼                ▼                  │
-┌──────────────────────────────────────────────────────┐  │
-│                   LevelApp.Core                      │  │
-│  Interfaces/   Models/   Geometry/   Serialization/  │◄─┘
-│  I*.cs         *.cs      *.cs        *.cs            │
-└──────────────────────┬───────────────────────────────┘
-                       │ (interfaces only)
-         ┌─────────────┼──────────────────┐
-         ▼             ▼                  ▼
-┌──────────────┐ ┌──────────────┐ ┌──────────────────┐
-│ Instruments  │ │ Instruments  │ │   Instruments    │
-│ .Manual      │ │ .BLE         │ │   .UsbHid        │
-│ (IInstrument │ │ (BLE infra + │ │ (USB HID infra + │
-│  Plugin)     │ │  reconnect)  │ │  STM32 DFU)      │
-└──────────────┘ └──────────────┘ └──────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                         LevelApp.App (WinUI 3)                           │
+│  Views/  ←x:Bind→  ViewModels/  ←DI→  Services/  Navigation/            │
+│  DisplayModules/ (static renderers)    Styles/ Strings/ Converters/      │
+└───────┬────────────────────┬──────────────────────────────────┬──────────┘
+        │ ProjectReference   │ ProjectReference                 │ (none —
+        ▼                    ▼                                  │  standalone)
+┌──────────────────┐  ┌──────────────────────┐           ┌─────▼──────────┐
+│ LevelApp.Core    │  │LevelApp.Instruments   │           │LevelApp.Updater│
+│  Interfaces/     │  │  .Manual             │           │  Program.cs    │
+│  Models/         │  │  .BLE  (infra only)  │           │(net8.0, no UI) │
+│  Geometry/       │  │  .UsbHid (infra only)│           └────────────────┘
+│  Instruments/    │  └──────────────────────┘
+│  Serialization/  │      all reference LevelApp.Core
+│  AppVersion.cs   │
+└──────────────────┘
+        ↑
+LevelApp.Tests (references Core + all Instrument projects)
 ```
 
 ## Component Responsibilities
 
-| Component | Responsibility | Location |
+| Component | Responsibility | Key Path |
 |-----------|----------------|----------|
-| `LevelApp.Core` | Domain models, interfaces, geometry algorithms, serialization. Zero UI deps. | `LevelApp.Core/` |
-| `LevelApp.App` | WinUI 3 shell, MVVM, services, navigation, display modules | `LevelApp.App/` |
-| `LevelApp.Instruments.Manual` | Manual-entry instrument plugin (no hardware) | `LevelApp.Instruments.Manual/` |
-| `LevelApp.Instruments.BLE` | BLE transport infrastructure, abstract provider base | `LevelApp.Instruments.BLE/` |
-| `LevelApp.Instruments.UsbHid` | USB HID transport infrastructure + STM32 DFU subsystem | `LevelApp.Instruments.UsbHid/` |
-| `LevelApp.Tests` | xUnit tests for Core algorithms and instrument infrastructure | `LevelApp.Tests/` |
-| `LevelApp.Updater` | Standalone copy-to-temp updater, extracts zip and relaunches app | `LevelApp.Updater/` |
+| `LevelApp.Core` | Domain models, all interfaces, geometry algorithms, JSON serialization. Zero UI dependencies. | `LevelApp.Core/` |
+| `LevelApp.App` | WinUI 3 shell — Views, ViewModels, Services, Navigation, DI composition root | `LevelApp.App/` |
+| `LevelApp.Instruments.Manual` | Manual-entry instrument plugin. Sole registered `IInstrumentPlugin` in current DI container. | `LevelApp.Instruments.Manual/` |
+| `LevelApp.Instruments.BLE` | BLE transport infrastructure (abstract base, scanner, connection manager). Not registered as plugin. | `LevelApp.Instruments.BLE/` |
+| `LevelApp.Instruments.UsbHid` | USB HID transport infrastructure + full STM32 DFU subsystem. Not registered as plugin. | `LevelApp.Instruments.UsbHid/` |
+| `LevelApp.Tests` | xUnit test project. References Core + all instrument projects. | `LevelApp.Tests/` |
+| `LevelApp.Updater` | Standalone self-contained exe. Copy-to-temp update pattern. No shared project reference to App. | `LevelApp.Updater/` |
 
 ## Pattern Overview
 
-**Overall:** Layered MVVM with interface-based dependency injection
+**Overall:** Layered MVVM with interface-driven DI, strategy + factory patterns for domain algorithms, and a plugin architecture for instruments.
 
 **Key Characteristics:**
-- `LevelApp.Core` has zero UI dependencies — fully unit-testable
-- All services and ViewModels are resolved from `App.Services` (Microsoft.Extensions.DependencyInjection)
-- ViewModels never reference View types; navigation uses `PageKey` enum + typed nav-args records
-- Instrument plugins are registered via `IEnumerable<IInstrumentPlugin>` DI; app resolves all at runtime
-- CommunityToolkit.Mvvm 8.3.2 provides source-generated `ObservableProperty`, `RelayCommand`, `ObservableObject`
+- `LevelApp.Core` has zero UI dependencies — fully testable without a running WinUI app
+- All service and ViewModel wiring goes through `Microsoft.Extensions.DependencyInjection` registered in `App.xaml.cs`
+- ViewModels trigger navigation via `INavigationService` / `PageKey` enum — no compile-time dependency on View types
+- Instrument support is additive: add a project, subclass a base, register one `IInstrumentPlugin` in `App.xaml.cs`
+- Static factory classes (`StrategyFactory`, `CalculatorFactory`) centralise instantiation of domain strategies and calculators
 
 ## Layers
 
-**Core (Domain):**
-- Purpose: Domain models, calculation interfaces and implementations, serialization
+**Core Domain Layer (`LevelApp.Core`):**
+- Purpose: All business logic, data models, interfaces, geometry algorithms, and serialization
 - Location: `LevelApp.Core/`
-- Contains: `Models/`, `Interfaces/`, `Geometry/`, `Serialization/`, `Instruments/` (enums/value types), `AppVersion.cs`
-- Depends on: Nothing (no NuGet except System.Text.Json; no UI)
-- Used by: All other projects
+- Contains: Interfaces, Models, Geometry strategies and calculators, Instrument enums/value types, DeviceRegistry, Serialization helpers
+- Depends on: Nothing (net8.0, no Windows or UI APIs)
+- Used by: `LevelApp.App`, all `LevelApp.Instruments.*`, `LevelApp.Tests`
 
-**Application (UI + Services):**
-- Purpose: WinUI 3 shell, MVVM, page navigation, file I/O, settings, theming, activity logging
+**Instrument Infrastructure Layer (`LevelApp.Instruments.*`):**
+- Purpose: Transport-specific hardware abstraction (BLE, USB HID) and the manual-entry plugin
+- Location: `LevelApp.Instruments.Manual/`, `LevelApp.Instruments.BLE/`, `LevelApp.Instruments.UsbHid/`
+- Contains: `ITransport` implementations, `IDeviceScanner` implementations, abstract `IInstrumentProvider` base classes, STM32 DFU subsystem
+- Depends on: `LevelApp.Core`; BLE and UsbHid additionally target `net8.0-windows10.0.19041.0` for WinRT APIs
+- Used by: `LevelApp.App` (only Manual is referenced), `LevelApp.Tests`
+
+**Application Shell Layer (`LevelApp.App`):**
+- Purpose: WinUI 3 UI, MVVM wiring, DI composition root, application services
 - Location: `LevelApp.App/`
-- Contains: `Views/`, `ViewModels/`, `Services/`, `Navigation/`, `DisplayModules/`, `Helpers/`, `Styles/`, `Strings/`, `Converters/`
+- Contains: Views (XAML + code-behind), ViewModels, Services, Navigation, DisplayModules, Styles, Strings (`.resw`)
 - Depends on: `LevelApp.Core`, `LevelApp.Instruments.Manual`
-- Used by: Nothing (entry point)
+- Used by: Nothing (top-level executable)
 
-**Instrument Plugins:**
-- Purpose: Hardware transport implementations, each exposing `IInstrumentPlugin`
-- Locations: `LevelApp.Instruments.Manual/`, `LevelApp.Instruments.BLE/`, `LevelApp.Instruments.UsbHid/`
-- Depends on: `LevelApp.Core` interfaces only
-- Used by: `LevelApp.App` (registered in DI container in `App.xaml.cs`)
+**Test Layer (`LevelApp.Tests`):**
+- Purpose: Unit and integration tests for Core algorithms, instrument infrastructure, and replay testing
+- Location: `LevelApp.Tests/`
+- Contains: Strategy tests, calculator tests, instrument provider tests, plugin architecture tests, DFU session tests, replay runner
+- Depends on: All four projects (`Core`, `Manual`, `BLE`, `UsbHid`)
+
+## DI Container Wiring
+
+The DI container is built and stored as `App.Services` (a `public static IServiceProvider`) in `LevelApp.App/App.xaml.cs`. All registrations happen in `BuildServiceProvider()`.
+
+```csharp
+// Singletons
+services.AddSingleton<IWindowContext, WindowContext>();
+services.AddSingleton<ISettingsService, SettingsService>();
+services.AddSingleton<IThemeService, ThemeService>();
+services.AddSingleton<INavigationService, NavigationService>();
+services.AddSingleton<ILocalisationService, LocalisationService>();
+services.AddSingleton<IInstrumentPlugin, ManualEntryPlugin>();   // one per plugin type
+services.AddSingleton<IDeviceRegistry>(_ => new DeviceRegistry(path));
+services.AddSingleton<IProjectFileService, ProjectFileService>();
+services.AddSingleton<IActivityLogger, ActivityLogger>();
+services.AddSingleton<IUpdateService, UpdateService>();
+services.AddSingleton<MainViewModel>();
+
+// Transients (fresh instance per navigation)
+services.AddTransient<ParallelWaysCalculator>();
+services.AddTransient<ProjectSetupViewModel>();
+services.AddTransient<MeasurementViewModel>();
+services.AddTransient<ResultsViewModel>();
+services.AddTransient<CorrectionViewModel>();
+services.AddTransient<InstrumentsViewModel>();
+```
+
+**Critical constraint:** `MainWindow` is created with `new MainWindow()` in `App.OnLaunched` — it is NOT resolved from DI. All `App.Services.GetRequiredService<>()` calls in `MainWindow.cs` are intentionally concentrated in the constructor block with a comment documenting this. XAML code-behind pages (created by `Frame.Navigate`, not DI) also carry explanatory comments at each call site.
+
+**Rule:** Never add `App.Services.GetRequiredService<>()` without a comment explaining why constructor injection is unavailable.
+
+## MVVM Structure
+
+```text
+View (XAML + minimal code-behind)
+  ├── x:Bind → ViewModel properties and commands
+  ├── OnNavigatedTo → calls ViewModel.Initialize(args)
+  └── ActualThemeChanged → triggers canvas re-render
+
+ViewModel (inherits ViewModelBase → ObservableObject via CommunityToolkit.Mvvm)
+  ├── [ObservableProperty] → source-generated INotifyPropertyChanged
+  ├── [RelayCommand] → source-generated ICommand
+  └── Constructor injection of: INavigationService, MainViewModel,
+       ILocalisationService, IInstrumentPlugin list, IDeviceRegistry, etc.
+
+MainViewModel (singleton)
+  └── Owns: ActiveProject, CurrentFilePath, IsDirty, WindowTitle
+      Injected into all page ViewModels so they share project state
+```
+
+**`ViewModelBase`:** `LevelApp.App/ViewModels/ViewModelBase.cs` — inherits `ObservableObject`; all page ViewModels inherit from it.
+
+**`MainViewModel`** (`LevelApp.App/ViewModels/MainViewModel.cs`) is the singleton shell ViewModel. It owns the active `Project` object and dirty flag. Page ViewModels call `_mainViewModel.SetActiveProject()` and `_mainViewModel.MarkDirty()`. Injected dependencies: `INavigationService`, `IProjectFileService`, `IActivityLogger`, `IWindowContext`.
+
+## Navigation Pattern
+
+Navigation is abstracted behind `INavigationService` / `PageKey` so ViewModels have no compile-time dependency on View types.
+
+```csharp
+// In ViewModels — no reference to concrete page types:
+_navigation.NavigateTo(PageKey.Results, new ResultsArgs(project, session));
+
+// NavigationService maps PageKey to concrete Page type:
+private static readonly Dictionary<PageKey, Type> PageMap = new()
+{
+    [PageKey.ProjectSetup] = typeof(ProjectSetupView),
+    [PageKey.Measurement]  = typeof(MeasurementView),
+    [PageKey.Results]      = typeof(ResultsView),
+    [PageKey.Correction]   = typeof(CorrectionView),
+    [PageKey.Instruments]  = typeof(InstrumentsPage)
+};
+```
+
+- `INavigationService` interface: `LevelApp.App/Navigation/INavigationService.cs`
+- `NavigationService` implementation: `LevelApp.App/Navigation/NavigationService.cs`
+- `PageKey` enum: `LevelApp.App/Navigation/PageKey.cs`
+- Navigation args (typed records): `LevelApp.App/Navigation/MeasurementArgs.cs`, `ResultsArgs.cs`, `CorrectionArgs.cs`
+- `NavigationService.Attach(Frame)` is called once from `MainWindow` constructor
 
 ## Data Flow
 
 ### Primary Measurement Path
 
-1. User configures project in `ProjectSetupView` → `ProjectSetupViewModel` builds `Project` + `ObjectDefinition`, calls `MainViewModel` to store it.
-2. Navigate to `MeasurementView` via `INavigationService.NavigateTo(PageKey.Measurement, MeasurementArgs)`.
-3. `MeasurementViewModel.Initialize(MeasurementArgs)` resolves `IInstrumentPlugin` + `IDeviceRegistry` to obtain an `IInstrumentProvider`, calls `ConnectAsync()`.
-4. `IMeasurementStrategy.GenerateSteps(ObjectDefinition)` produces the ordered step list (via `StrategyFactory.Create`).
-5. For each step, `IInstrumentProvider.GetReadingAsync(step, ct)` returns a `double` (mm/m reading). Step is stored as `MeasurementStep.Reading`.
-6. When all steps complete, `CalculatorFactory.Create(methodId, strategy).Calculate(steps, definition, parameters)` runs on a background thread → `SurfaceResult`.
-7. For Parallel Ways sessions, `ParallelWaysCalculator.Calculate(...)` is called directly (not via `ISurfaceCalculator`) → `ParallelWaysResult`.
-8. Navigate to `ResultsView` via `ResultsArgs(project, session)`.
-9. `ResultsViewModel` exposes results; display modules (`SurfacePlot3DDisplay`, `MeasurementsGridRenderer`, `ParallelWaysDisplay`) render onto `Canvas` elements.
-10. User saves via `IProjectFileService.SaveAsync` → `ProjectSerializer.Serialize` → `.levelproj` JSON file.
+1. **ProjectSetupViewModel** (`LevelApp.App/ViewModels/ProjectSetupViewModel.cs`) — operator defines object geometry, selects strategy; calls `_navigation.NavigateTo(PageKey.Measurement, new MeasurementArgs(project, session))`
+2. **`MeasurementView.OnNavigatedTo`** → calls `MeasurementViewModel.Initialize(args)`; ViewModel resolves `IInstrumentProvider` from `IInstrumentPlugin` list via `IDeviceRegistry`
+3. **`MeasurementViewModel`** (`LevelApp.App/ViewModels/MeasurementViewModel.cs`) — steps through `IMeasurementStrategy.GenerateSteps()`, calls `_provider.GetReadingAsync()` per step, stores reading on `MeasurementStep`
+4. **On completion** — calls `CalculatorFactory.Create(methodId, strategy)` then `calculator.Calculate(steps, definition, parameters)` on background thread; result stored as `SurfaceResult` on `MeasurementRound`; navigates to Results
+5. **`ResultsViewModel`** (`LevelApp.App/ViewModels/ResultsViewModel.cs`) — displays `SurfaceResult` via `SurfacePlot3DDisplay`, `MeasurementsGridRenderer`; exposes correction workflow commands
+6. **`CorrectionViewModel`** (`LevelApp.App/ViewModels/CorrectionViewModel.cs`) — guided re-measurement of flagged steps only; stores new readings as `CorrectionRound`; re-runs calculator; navigates back to Results
 
-### Correction Workflow
+### Parallel Ways Path
 
-1. `ResultsView` shows flagged steps from `SurfaceResult.FlaggedStepIndices`.
-2. User starts correction → navigate to `CorrectionView` via `CorrectionArgs(project, session)`.
-3. `CorrectionViewModel` guides user through flagged steps only; stores `CorrectionRound.ReplacedSteps`.
-4. On completion, `MeasurementRound.MergeWithReplacements(initialSteps, corrections)` merges originals + replacements.
-5. Full recalculation runs; new `SurfaceResult` stored on `CorrectionRound.Result`; navigate back to Results.
-6. Original readings are never overwritten.
+`MeasurementViewModel` detects `ObjectDefinition.GeometryModuleId == "ParallelWays"` and dispatches to the injected `ParallelWaysCalculator` (registered Transient in DI) instead of using `CalculatorFactory`. Results are stored as `ParallelWaysResult` on `MeasurementRound` (separate field from `SurfaceResult`).
 
-### Plugin Resolution at Startup
+### Persistence Path
 
-1. `App.xaml.cs` `BuildServiceProvider()` registers `IInstrumentPlugin` singletons (e.g., `ManualEntryPlugin`).
-2. App ensures built-in manual device is present in `IDeviceRegistry`.
-3. `MeasurementViewModel` receives `IEnumerable<IInstrumentPlugin>` via constructor injection.
-4. Active plugin is selected by matching `session.InstrumentId` against `plugin.PluginId`.
+1. `MainViewModel` calls `IProjectFileService.SaveAsync(project, path)` or `LoadAsync(path)`
+2. `ProjectFileService` (`LevelApp.App/Services/ProjectFileService.cs`) invokes Win32 COM file dialogs (`IFileOpenDialog`/`IFileSaveDialog`) for path selection (bypasses WinRT pickers due to unreliable `SetFolder` behavior)
+3. Serialization by `ProjectSerializer` (`LevelApp.Core/Serialization/ProjectSerializer.cs`) using `System.Text.Json` + `ObjectValueConverter` + `JsonStringEnumConverter`
+4. File written as `.levelproj` (indented JSON, camelCase, schema version `"1.1"`)
 
-**State Management:**
-- `MainViewModel` (singleton) holds the currently-open `Project` and dirty flag; shared across all page ViewModels.
-- Page ViewModels are transient — a fresh instance is created on each navigation.
-- Persistent state lives in `%LOCALAPPDATA%\LevelApp\settings.json` (settings) and `devices.json` (device registry).
+### Update Path
+
+1. `MainWindow` triggers `UpdateService.CheckForUpdateAsync()` after `RootFrame.Loaded`
+2. `UpdateService` (`LevelApp.App/Services/UpdateService.cs`) polls GitHub Releases API; `HttpClient.Timeout = 10s`
+3. If update found, `UpdateDialog` is shown; downloads zip to `%TEMP%`
+4. `UpdateDialog.xaml.cs` strips trailing backslash from `AppContext.BaseDirectory` then launches `LevelApp.Updater.exe` with four positional args defined by `UpdaterContract.cs` constants
+5. `LevelApp.Updater/Program.cs` uses copy-to-temp pattern, waits for app exit, extracts zip over install folder, relaunches app
+
+## Instrument Plugin Architecture
+
+Three-tier hierarchy defined entirely in `LevelApp.Core/Interfaces/`:
+
+```text
+IInstrumentPlugin               (root — one per instrument type)
+  ├── ITransport[]              (transport descriptor: "manual", "ble", "usb-hid")
+  ├── IDeviceScanner[]          (yields DeviceCandidate via IAsyncEnumerable)
+  └── IInstrumentProvider       (drives measurement loop per connected device)
+        IFirmwareUpdater?       (optional DFU; null = not supported)
+        ICalibrationWorkflow?   (optional calibration UI; null = not supported)
+```
+
+**Adding a new hardware plugin:**
+1. Create a new project referencing `LevelApp.Instruments.BLE` or `LevelApp.Instruments.UsbHid`
+2. Subclass `BleInstrumentProviderBase` or `UsbHidInstrumentProviderBase`
+3. Implement `IInstrumentPlugin`
+4. Register `services.AddSingleton<IInstrumentPlugin, YourPlugin>()` in `App.xaml.cs`
+
+**Currently registered plugins:**
+
+| Plugin | File | PluginId | FirmwareUpdater | CalibrationWorkflow |
+|--------|------|----------|-----------------|---------------------|
+| `ManualEntryPlugin` | `LevelApp.Instruments.Manual/ManualEntryPlugin.cs` | `"manual-entry"` | `null` | `null` |
+
+`IFirmwareUpdater` and `ICalibrationWorkflow` are defined in `LevelApp.Core/Interfaces/` but have no concrete implementations. Returning `null` from plugin factory methods is the correct, intentional signal that the capability is absent.
+
+**Infrastructure-only projects** (`LevelApp.Instruments.BLE`, `LevelApp.Instruments.UsbHid`) are compiled and tested but not registered as plugins — they contain no instrument-specific code.
+
+## Strategy and Calculator Pattern
+
+Both geometry strategies and surface calculators use a static factory + interface pattern defined in `LevelApp.Core/Geometry/`.
+
+```csharp
+// LevelApp.Core/Geometry/StrategyFactory.cs
+// Adding a strategy = one new class + one line here
+public static IMeasurementStrategy Create(string strategyId) => strategyId switch
+{
+    "UnionJack"    => new UnionJackStrategy(),
+    "ParallelWays" => new ParallelWaysStrategy(),
+    _              => new FullGridStrategy()
+};
+
+// LevelApp.Core/Geometry/CalculatorFactory.cs
+// Adding a calculator = one new class + one line here
+public static ISurfaceCalculator Create(string methodId, IMeasurementStrategy strategy) =>
+    methodId == "SequentialIntegration"
+        ? new SequentialIntegrationCalculator(strategy)
+        : new LeastSquaresCalculator(strategy);
+```
+
+**`IMeasurementStrategy`** (`LevelApp.Core/Interfaces/IMeasurementStrategy.cs`) — generates ordered step list, provides node positions for rendering. Implementations: `FullGridStrategy`, `UnionJackStrategy`, `ParallelWaysStrategy` in `LevelApp.Core/Geometry/`.
+
+**`ISurfaceCalculator`** (`LevelApp.Core/Interfaces/ISurfaceCalculator.cs`) — runs calculation, returns `SurfaceResult`. Implementations: `LeastSquaresCalculator`, `SequentialIntegrationCalculator` in `LevelApp.Core/Geometry/Calculators/`.
+
+**`ParallelWaysCalculator`** (`LevelApp.Core/Geometry/ParallelWays/ParallelWaysCalculator.cs`) — standalone class, NOT `ISurfaceCalculator`. Registered as Transient in DI and injected into `MeasurementViewModel` directly.
 
 ## Key Abstractions
 
-**IMeasurementStrategy:**
-- Purpose: Generates ordered step list for a given `ObjectDefinition`; knows nothing about calculation
-- Examples: `LevelApp.Core/Geometry/SurfacePlate/Strategies/FullGridStrategy.cs`, `UnionJackStrategy.cs`, `LevelApp.Core/Geometry/ParallelWays/Strategies/ParallelWaysStrategy.cs`
-- Pattern: Created via `StrategyFactory.Create(strategyId)` in `LevelApp.Core/Geometry/StrategyFactory.cs`
+**`IWindowContext` / `WindowContext`** (`LevelApp.App/Services/IWindowContext.cs`, `WindowContext.cs`):
+- Provides `XamlRoot?` and `Hwnd` to ViewModels that need to show `ContentDialog`
+- Registered as singleton; `MainWindow` sets `Hwnd` and `XamlRoot` after construction via the `(WindowContext)` cast
+- Prevents post-construction property assignments on ViewModels; keeps them testable
 
-**ISurfaceCalculator:**
-- Purpose: Computes `SurfaceResult` from steps, definition, and parameters
-- Examples: `LevelApp.Core/Geometry/Calculators/LeastSquaresCalculator.cs`, `SequentialIntegrationCalculator.cs`
-- Pattern: Created via `CalculatorFactory.Create(methodId, strategy)` in `LevelApp.Core/Geometry/CalculatorFactory.cs`
+**`IDeviceRegistry` / `DeviceRegistry`** (`LevelApp.Core/Interfaces/IDeviceRegistry.cs`, `LevelApp.Core/Instruments/DeviceRegistry.cs`):
+- Persists `KnownDevice` records to `%LOCALAPPDATA%\LevelApp\devices.json`
+- Exposes `LoadError` (non-null if `devices.json` was corrupt on startup — file backed up to `.corrupt`, warning shown in InstrumentsPage `InfoBar`)
+- Registered as singleton with explicit factory lambda in `App.xaml.cs`
 
-**IInstrumentPlugin:**
-- Purpose: Root plugin contract; factory for `IInstrumentProvider`, `IDeviceScanner`, optional `IFirmwareUpdater` and `ICalibrationWorkflow`
-- Examples: `LevelApp.Instruments.Manual/ManualEntryPlugin.cs`
-- Pattern: Registered as `IInstrumentPlugin` singletons in DI; app resolves `IEnumerable<IInstrumentPlugin>`
+**`UpdaterContract`** (`LevelApp.App/Services/UpdaterContract.cs`, `LevelApp.Updater/UpdaterContract.cs`):
+- Named constants for the cross-process argument contract between `UpdateDialog` and `LevelApp.Updater.exe`
+- Duplicated verbatim in both projects with a sync comment (cannot share — `LevelApp.Updater` targets `net8.0` without Windows TFM and cannot reference `LevelApp.App`)
 
-**IInstrumentProvider:**
-- Purpose: Provides instrument readings, exposes connection state
-- Examples: `LevelApp.Instruments.Manual/ManualEntryProvider.cs`, `LevelApp.Instruments.BLE/BleInstrumentProviderBase.cs` (abstract), `LevelApp.Instruments.UsbHid/UsbHidInstrumentProviderBase.cs` (abstract)
-- Pattern: Created per-device via `IInstrumentPlugin.CreateProvider(KnownDevice)`
+## Display Modules
 
-**IDeviceRegistry:**
-- Purpose: Persists known devices across sessions; supports preferred device selection per plugin
-- Implementation: `LevelApp.App/Services/DeviceRegistry.cs` → `%LOCALAPPDATA%\LevelApp\devices.json`
+Four static renderer classes in `LevelApp.App/DisplayModules/`. Each receives data and returns a rendered `UIElement` placed by the caller's View.
 
-## Entry Points
+| Module | File | Input |
+|--------|------|-------|
+| `SurfacePlot3DDisplay` | `LevelApp.App/DisplayModules/SurfacePlot3D/SurfacePlot3DDisplay.cs` | `SurfaceResult`, strategy, definition, steps |
+| `MeasurementsGridRenderer` | `LevelApp.App/DisplayModules/MeasurementsGrid/MeasurementsGridRenderer.cs` | Steps, result, strategy |
+| `StrategyPreviewRenderer` | `LevelApp.App/DisplayModules/StrategyPreview/StrategyPreviewRenderer.cs` | Strategy, definition |
+| `ParallelWaysDisplay` | `LevelApp.App/DisplayModules/ParallelWaysDisplay/ParallelWaysDisplay.cs` | `ParallelWaysResult`, strategy parameters |
 
-**Application Entry:**
-- Location: `LevelApp.App/App.xaml.cs`
-- Triggers: WinUI 3 `Application.OnLaunched`
-- Responsibilities: Build DI container, load settings, bootstrap manual device in registry, create `MainWindow`
+All four resolve colors via `ThemeHelper` (`LevelApp.App/Helpers/ThemeHelper.cs`) — `GetColor`, `GetBrush`, `GetPlotRamp`, `InterpolateRamp`. Views subscribe to `ActualThemeChanged` and re-render on theme switch.
 
-**MainWindow:**
-- Location: `LevelApp.App/MainWindow.xaml` / `MainWindow.xaml.cs`
-- Responsibilities: Menu bar (File, Edit, Instruments, Help), root navigation frame, theme wiring via `IThemeService`
+**Active technical debt:** These four modules share no common interface. A fifth renderer must NOT be added as a static class — define `IDisplayModule` first and migrate existing modules.
 
-**Navigation Bootstrap:**
-- Location: `LevelApp.App/Navigation/NavigationService.cs`
-- Responsibilities: Maps `PageKey` enum to concrete `Page` types; `Attach(Frame)` called once from `MainWindow`
+## Data Model Hierarchy
 
-## Architectural Constraints
+Root model is `Project` (`LevelApp.Core/Models/Project.cs`). Full tree:
 
-- **Threading:** UI runs on WinUI 3 dispatcher thread; calculations dispatched to background thread via `Task.Run`; `IInstrumentProvider.GetReadingAsync` is async-safe
-- **Global state:** `App.Services` (static `IServiceProvider`) is the only module-level singleton; `MainViewModel` is a DI singleton holding project state
-- **Core isolation:** `LevelApp.Core` must never reference any UI assembly — this is enforced by the `.csproj` having no UI dependencies
-- **Transport TFM:** `LevelApp.Instruments.BLE` and `LevelApp.Instruments.UsbHid` target `net8.0-windows10.0.19041.0` to access WinRT BLE/HID APIs without needing `Microsoft.Windows.SDK.Contracts`
-- **Unpackaged app:** No MSIX packaging; WinRT `ApplicationData.Current.LocalFolder` is unavailable; use `Environment.SpecialFolder.LocalApplicationData` for all persistent paths
+```text
+Project                               (LevelApp.Core/Models/Project.cs)
+├── ObjectDefinition                  (Models/ObjectDefinition.cs)
+│   ├── GeometryModuleId              ("SurfacePlate" or "ParallelWays")
+│   └── Parameters                   (Dictionary<string, object>)
+└── Measurements[]
+    └── MeasurementSession            (Models/MeasurementSession.cs)
+        ├── InitialRound (MeasurementRound)  (Models/MeasurementRound.cs)
+        │   ├── Steps[] (MeasurementStep)    (Models/MeasurementStep.cs)
+        │   ├── Result (SurfaceResult?)      (Models/SurfaceResult.cs)
+        │   └── ParallelWaysResult?          (Models/ParallelWaysResult.cs)
+        └── Corrections[]
+            └── CorrectionRound              (Models/CorrectionRound.cs)
+                ├── ReplacedSteps[]
+                └── Result (SurfaceResult?)
+```
 
-## Anti-Patterns
-
-### Hardcoding version strings
-
-**What happens:** Version string appears in XAML, code-behind, or comments outside `AppVersion.cs`
-**Why it's wrong:** Creates divergence from `AppVersion.cs`; CI release step fails if tags mismatch
-**Do this instead:** Always reference `AppVersion.Full` or `AppVersion.Display` from `LevelApp.Core/AppVersion.cs`
-
-### Business logic in Views or code-behind
-
-**What happens:** Calculation or state mutation placed in `*.xaml.cs` files
-**Why it's wrong:** Violates MVVM; prevents unit testing; tightly couples UI to logic
-**Do this instead:** All logic belongs in a ViewModel or a Core service/calculator; Views only bind and forward events
-
-### Direct concrete instantiation of strategies or calculators
-
-**What happens:** `new FullGridStrategy()` or `new LeastSquaresCalculator()` called from a ViewModel
-**Why it's wrong:** Bypasses the factory layer; makes it hard to add strategies without touching call sites
-**Do this instead:** Use `StrategyFactory.Create(strategyId)` (`LevelApp.Core/Geometry/StrategyFactory.cs`) and `CalculatorFactory.Create(methodId, strategy)` (`LevelApp.Core/Geometry/CalculatorFactory.cs`)
-
-### Accessing UI resources directly from renderers
-
-**What happens:** A display module calls `Application.Current.Resources["SomeColor"]` directly
-**Why it's wrong:** Bypasses theme-aware resolution; breaks on theme switch
-**Do this instead:** Use `ThemeHelper.GetColor`, `ThemeHelper.GetBrush`, or `ThemeHelper.GetPlotRamp` from `LevelApp.App/Helpers/ThemeHelper.cs`
+**Key rule:** Raw readings and all intermediate results are always preserved. Nothing is overwritten. `MeasurementRound.MergeWithReplacements` (static helper) merges correction replacements into the original step list for recalculation.
 
 ## Error Handling
 
-**Strategy:** Exceptions from calculations propagate to ViewModels; file I/O exceptions caught and surfaced via dialog; instrument errors surfaced via `InstrumentConnectionState` + `ConnectionStatusBar` InfoBar
+**Strategy:** Errors bubble up through typed exceptions. The `DeviceRegistry` backs up corrupt JSON to `.corrupt` and sets `LoadError`. `UpdateService` catches all network exceptions and returns `null`. Unhandled exceptions are caught in `App.OnLaunched` hooks and written to the activity log (`%LOCALAPPDATA%\LevelApp\Logs\`).
 
 **Patterns:**
-- `IInstrumentProvider.ConnectionStateChanged` event drives `MeasurementViewModel.ShowConnectionWarning`
-- `ProjectSerializer.Deserialize` throws `NotSupportedException` for unrecognised `schemaVersion`
-- Unhandled exceptions logged as `CRASH` / `CRASH.UI` entries via `IActivityLogger`
+- Domain logic throws standard .NET exceptions (e.g., `NotSupportedException` in `ProjectSerializer` for unrecognised schema versions)
+- Services that cannot fail silently return `null` or a `LoadError` property rather than throwing to the caller
+- All `HttpClient` instances must have explicit `Timeout` set — enforced rule since WP0.19
 
 ## Cross-Cutting Concerns
 
-**Logging:** `IActivityLogger` / `ActivityLogger` singleton writes `.jsonl` + `.instrument` files to `%LOCALAPPDATA%\LevelApp\Logs\`; toggleable via `ISettingsService.ActivityLoggingEnabled`
-**Validation:** Input validation in ViewModels via CommunityToolkit.Mvvm observable properties; `CanExecute` guards on `RelayCommand`
-**Localisation:** `.resw` resource files in `LevelApp.App/Strings/en-US/` and `de-DE/`; resolved via `ILocalisationService` / `LocalisationService`; XAML uses `x:Uid` mechanism
-**Theming:** `IThemeService` / `ThemeService` singleton; theme-aware colours in `LevelApp.App/Styles/ThemeColors.xaml`; renderers use `ThemeHelper` at render time; views subscribe to `ActualThemeChanged`
+**Logging:** `IActivityLogger` / `ActivityLogger` (`LevelApp.App/Services/ActivityLogger.cs`) writes `.jsonl` + `.instrument` files to `%LOCALAPPDATA%\LevelApp\Logs\`. Toggleable via `ISettingsService.ActivityLoggingEnabled`. Prunes files older than 14 days on startup.
+
+**Localisation:** `ILocalisationService` / `LocalisationService` wrapping `Windows.ApplicationModel.Resources.ResourceLoader`. `.resw` files at `LevelApp.App/Strings/en-US/Resources.resw` and `de-DE/Resources.resw` (195 keys each). XAML uses `x:Uid`; code uses `_loc.Get(key)`.
+
+**Theming:** `IThemeService` / `ThemeService` singleton. Color tokens in `LevelApp.App/Styles/ThemeColors.xaml` (`ThemeDictionaries` — Light + Dark). `ThemeHelper` provides `GetColor`/`GetBrush`/`GetPlotRamp`/`InterpolateRamp` for all renderers.
+
+**Versioning:** `LevelApp.Core/AppVersion.cs` is the single source of truth. Version strings must never be hardcoded elsewhere. `.csproj` `<Version>`, `<AssemblyVersion>`, `<FileVersion>` fields are kept in sync manually.
+
+## Architectural Constraints
+
+- **UI thread:** WinUI 3 requires UI updates on the dispatcher thread. Calculators run on background threads; results are marshalled back.
+- **Global state:** `App.Services` (`public static IServiceProvider`) is the only module-level singleton. Its use is restricted to documented composition-root sites.
+- **Core purity:** `LevelApp.Core` must never reference any Windows, WinRT, or WinUI APIs. It targets plain `net8.0`.
+- **No circular imports:** `Core` → nothing; `Instruments.*` → `Core`; `App` → `Core` + `Instruments.Manual`; `Tests` → all.
+- **Unpackaged app:** No MSIX packaging. `ApplicationData.Current.LocalFolder` unavailable. All local paths use `Environment.SpecialFolder.LocalApplicationData`. WinRT USB APIs require packaging — hence P/Invoke to `WinUsb.dll` for DFU in `LevelApp.Instruments.UsbHid`.
+
+## Anti-Patterns
+
+### Adding a fifth static display module
+
+**What happens:** A new static class is added to `DisplayModules/` alongside the existing four.
+**Why it's wrong:** Callers must edit View code-behind directly; no polymorphic dispatch; untestable.
+**Do this instead:** Define `IDisplayModule` in `LevelApp.Core` or `LevelApp.App`, migrate existing four modules, then implement the new one against the interface.
+
+### Uncommented `App.Services.GetRequiredService<>()` in new code
+
+**What happens:** A ViewModel or service pulls a dependency from `App.Services` without explanation.
+**Why it's wrong:** Obscures the DI graph; breaks testability; looks like legitimate constructor injection when it is not.
+**Do this instead:** Use constructor injection. If at a genuine composition-root site (e.g., `MainWindow` constructor or XAML code-behind created by `Frame.Navigate`), add a comment explaining why constructor injection is unavailable at that site.
+
+### Post-construction property assignment on ViewModels for UI handles
+
+**What happens:** A ViewModel exposes a settable property for `XamlRoot` or `Hwnd` that a View sets after construction.
+**Why it's wrong:** Temporal coupling; ViewModel is not testable without a live window.
+**Do this instead:** Inject `IWindowContext` via constructor. `WindowContext` (`LevelApp.App/Services/WindowContext.cs`) is the designated pattern.
 
 ---
 
-*Architecture analysis: 2026-05-31*
+*Architecture analysis: 2026-06-02*
