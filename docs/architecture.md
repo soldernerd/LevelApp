@@ -4,7 +4,7 @@
 
 > Living document. Update as the project evolves.
 
-> Last updated: 2026-06-02 *(revised to reflect v0.19.0; WP0.19 technical debt fixes, updated debt table)*
+> Last updated: 2026-06-02 *(revised to reflect v0.19.1; code review remediation for WP0.19)*
 
 
 
@@ -171,8 +171,8 @@ LevelApp/
 │   │   ├── IUpdateService.cs         ← CheckForUpdateAsync(), DownloadUpdateAsync(); UpdateInfo record
 │   │   ├── UpdateService.cs          ← polls GitHub Releases API; downloads zip to %TEMP%; Timeout=10s
 │   │   ├── UpdaterContract.cs        ← argument-position constants for cross-process update contract
-│   │   ├── IWindowContext.cs         ← XamlRoot?, Hwnd — injected into MainViewModel
-│   │   └── WindowContext.cs          ← internal singleton impl; MainWindow sets props after construction
+│   │   ├── IWindowContext.cs         ← XamlRoot?, Hwnd, SetHwnd(), SetXamlRoot() — injected into MainViewModel
+│   │   └── WindowContext.cs          ← internal singleton impl; MainWindow calls SetHwnd/SetXamlRoot after construction
 │   ├── Converters/
 │   │   └── BoolToVisibilityConverter.cs
 │   ├── Views/
@@ -385,6 +385,7 @@ public interface IDeviceScanner
 public interface IDeviceRegistry
 {
     string? LoadError { get; }   // non-null if registry file was unreadable on startup
+    string? SaveError { get; }   // non-null if the most recent Save() call failed
 
     IReadOnlyList<KnownDevice> GetKnownDevices(string pluginId);
     IReadOnlyList<KnownDevice> GetAllKnownDevices();
@@ -837,7 +838,7 @@ The vertical exaggeration (`maxZPixels`) is computed per render as `max(10, (col
 | Plot canvas rebuild on theme change | `ResultsViewModel.RebuildPlotCanvas()` reconstructs the `Canvas` from cached session/result data; `ResultsView.OnActualThemeChanged` swaps `PlotContainer.Content` — avoids storing mutable brushes on a live canvas |
 | `IInstrumentPlugin` as root plugin contract | Each instrument project exposes one `IInstrumentPlugin` implementation. The app resolves all registered plugins via `IEnumerable<IInstrumentPlugin>` (DI). `CreateProvider`, `CreateScanners`, and optional capabilities are factory methods — not singletons — so a plugin can create multiple independent providers/scanners for different known devices |
 | `DeviceRegistry` persists to `devices.json` | Separate file from `settings.json` keeps device bookkeeping isolated; `%LOCALAPPDATA%\LevelApp\devices.json` is reliable for unpackaged apps and is human-readable JSON |
-| `IWindowContext` / `WindowContext` singleton | `MainViewModel` needs `XamlRoot` (for `ContentDialog`) and `Hwnd`, but neither is available at DI construction time. A separate `WindowContext` singleton (settable by `MainWindow` after the window is initialised) breaks the chicken-and-egg dependency while keeping the ViewModel testable and free of post-construction property assignments |
+| `IWindowContext` / `WindowContext` singleton | `MainViewModel` needs `XamlRoot` (for `ContentDialog`) and `Hwnd`, but neither is available at DI construction time. A separate `WindowContext` singleton (populated by `MainWindow` via `SetHwnd`/`SetXamlRoot` after the window is initialised) breaks the chicken-and-egg dependency while keeping the ViewModel testable and free of post-construction property assignments |
 | `UpdaterContract` duplicated in App and Updater | `LevelApp.Updater` targets `net8.0` (no Windows TFM) and cannot reference `LevelApp.App`. Named constants for the cross-process argument contract are therefore duplicated verbatim in both projects with a sync comment rather than shared via a project reference |
 | Instrument transport projects target `net8.0-windows10.0.19041.0` | WinRT Bluetooth and HID APIs (`Windows.Devices.Bluetooth`, `Windows.Devices.HumanInterfaceDevice`) are built into the Windows-targeted TFM. No `Microsoft.Windows.SDK.Contracts` NuGet is needed — and indeed that package is incompatible with .NET 5+ |
 | BLE reconnect via `BleInstrumentProviderBase` | Exponential backoff (1 s → 2 s → 4 s … capped at 30 s) runs inside the base class. Concrete subclasses implement only `DoConnectAsync` and `DoDisconnectAsync`. `OnUnexpectedDisconnect()` starts a background reconnect loop that is cancelled cleanly by `DisconnectAsync()` |
@@ -986,7 +987,7 @@ The items below are acknowledged debt. Do not extend these patterns.
 | `MainViewModel` UI handles | **Resolved (WP0.19).** `XamlRoot` and `Hwnd` internal setters removed. Replaced by `IWindowContext` singleton (`WindowContext`) injected via DI; `MainWindow` populates it after construction. | Re-introduce post-construction property assignments on ViewModels for WinUI handles. |
 | `HttpClient` timeout in `UpdateService` | **Resolved (WP0.19).** `Timeout = TimeSpan.FromSeconds(10)` set on the `HttpClient` instance. | Leave `Timeout` unset on any new `HttpClient`. |
 | No shared rendering contract | **Active.** Display modules (`SurfacePlot3DDisplay`, `MeasurementsGridRenderer`, etc.) are static classes with no common interface. Adding a new renderer requires editing the calling view code-behind. | Add a fifth static renderer module without first defining an `IDisplayModule` interface. |
-| `DeviceRegistry` silent failure | **Resolved (WP0.19).** Corrupt `devices.json` now backs up to `.corrupt`, sets `LoadError`, and shows a warning `InfoBar` on the Instruments page. | Silently swallow `JsonException`/`IOException` from persistence loads elsewhere. |
+| `DeviceRegistry` silent failure | **Resolved (WP0.19/v0.19.1).** Corrupt `devices.json` now backs up to `.corrupt`, sets `LoadError`, and shows a warning `InfoBar` on the Instruments page. `Save()` failures now set `SaveError` on `IDeviceRegistry` rather than silently discarding data. | Silently swallow `JsonException`/`IOException` from persistence loads elsewhere. |
 
 
 
@@ -1147,13 +1148,24 @@ The items below are acknowledged debt. Do not extend these patterns.
 - `Dfu/Internal/WinUsbControlTransport` — P/Invoke: `WinUsb_Initialize`, `WinUsb_ControlTransfer`, `WinUsb_Free`
 - 14 unit tests covering transport properties, scanner timeout/cancel, DFU progress, cancellation, disposal
 
-### WP0.19 — Technical Debt & Reliability Fixes ✓ Complete (v0.19.0)
+### WP0.19 — Technical Debt & Reliability Fixes ✓ Complete (v0.19.1)
 - Fix 1: `UpdateService` — `HttpClient.Timeout = 10 s`; contract tests added
 - Fix 2: `DeviceRegistry` — corrupt `devices.json` backed up to `.corrupt`, `LoadError` exposed on `IDeviceRegistry`, warning `InfoBar` on `InstrumentsPage`; 3 new unit tests
 - Fix 3: `IGeometryCalculator` / `IGeometryModule` / `IResultDisplay` — confirmed already removed in WP0.06; no action required
 - Fix 4: `App.Services` cleanup — `UpdateDialog` now receives `IUpdateService` via constructor; all XAML code-behind lookups carry explanatory comment; `MainWindow` consolidates all composition-root lookups with a single comment block
-- Fix 5: `IWindowContext` — new `IWindowContext` interface and `WindowContext` singleton (settable from `MainWindow`); `MainViewModel` receives it via DI; internal `XamlRoot`/`Hwnd` setters removed
-- Fix 6: `UpdaterContract` — named constants for cross-process argument contract duplicated in `LevelApp.App/Services/` and `LevelApp.Updater/`; `LevelApp.Updater/Program.cs` updated to use constants
+- Fix 5: `IWindowContext` — new `IWindowContext` interface and `WindowContext` singleton (populated from `MainWindow` via `SetHwnd`/`SetXamlRoot`); `MainViewModel` receives it via DI; internal `XamlRoot`/`Hwnd` setters replaced by interface methods eliminating the concrete downcast
+- Fix 6: `UpdaterContract` — named constants for cross-process argument contract duplicated in `LevelApp.App/Services/` and `LevelApp.Updater/`; `LevelApp.Updater/Program.cs` and `UpdateDialog.xaml.cs` updated to use constants (argument string now built via indexed array — positional drift is a compile error)
+
+Code review remediation (v0.19.1 — 9 findings):
+- CR-01: `ConfirmDiscardChangesAsync` null-`XamlRoot` guard added (matches `ShowErrorAsync` pattern)
+- CR-02: `UpdateDialog` now builds arguments via `UpdaterContract` indexed array; App-side contract class is fully referenced
+- WR-01: `IWindowContext` gains `SetHwnd`/`SetXamlRoot` methods; concrete `(WindowContext)` downcast removed from `MainWindow`
+- WR-02: Updater binary existence check added before download; download failures and launch failures produce distinct error messages
+- WR-03: `SaveError` property added to `IDeviceRegistry` and `DeviceRegistry`; `Save()` IOException now recorded rather than silently swallowed
+- WR-04: Misleading comment about `deferral.Complete()` corrected in `UpdateDialog`
+- IN-01: Resolved as consequence of CR-02 (App-side `UpdaterContract` now has callers)
+- IN-02: `LevelApp.Updater/Program.cs` timestamps standardised to `DateTime.UtcNow` with ISO 8601 `"O"` format
+- IN-03: `UpdateServiceTests` HTTP-error test now constructs `HttpClient` with `Timeout = 10 s` to match production code
 
 ### Future phases
 - Concrete instrument plugin (e.g. Wyler BT-Level) using `LevelApp.Instruments.BLE`
@@ -1182,7 +1194,7 @@ public static class AppVersion
 {
     public const int Major = 0;
     public const int Minor = 19;
-    public const int Patch = 0;
+    public const int Patch = 1;
 
     public static string Full    => $"{Major}.{Minor}.{Patch}";
     public static string Display => $"v{Full}";
