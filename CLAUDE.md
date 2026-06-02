@@ -179,6 +179,9 @@ It is deliberate project practice to define Core interfaces before concrete impl
 
 `App.xaml.cs` registers instrument plugins and the device registry. Current state:
 
+**Other key singleton registrations:**
+- `IWindowContext` → `WindowContext` (internal) — populated by `MainWindow` after construction; provides `XamlRoot?` and `Hwnd` to `MainViewModel` without post-construction property assignment.
+
 **Registered `IInstrumentPlugin` implementations:**
 - `ManualEntryPlugin` — always registered; built-in device is seeded into `IDeviceRegistry` on startup.
 
@@ -217,21 +220,15 @@ The items below are acknowledged debt. **Do not extend these patterns.**
 
 ### `App.Services` static service locator
 
-`App.Services` is `public static IServiceProvider`. A handful of internal call sites (e.g. `NavigationService` resolving transient page ViewModels) call `App.Services.GetRequiredService<>()` directly. This breaks pure DI testability.
+`App.Services` is `public static IServiceProvider`. After WP0.19, all remaining call sites are either in `MainWindow` (not DI-managed — this is the genuine composition root) or in XAML code-behind pages (created by `Frame.Navigate`, not DI). Both cases carry explanatory comments.
 
-- **Rule:** Never add new direct `App.Services.GetRequiredService<>()` calls outside the DI composition root (`App.xaml.cs`).
+- **Rule:** Never add a new `App.Services.GetRequiredService<>()` call without a comment explaining why constructor injection is not available at that site.
 
-### `MainViewModel.XamlRoot` / `Hwnd`
+### `HttpClient` timeout on new services
 
-`XamlRoot` and `Hwnd` are `internal` properties set by `MainWindow` after `InitializeComponent()`. They are required by `ContentDialog` and the COM file pickers, and cannot be injected at construction time (the window does not exist yet). This is a WinUI 3 limitation.
+`UpdateService` has `Timeout = TimeSpan.FromSeconds(10)` (fixed in WP0.19). The pattern of leaving timeouts unset was the original debt.
 
-- **Rule:** Do not copy this pattern to other ViewModels. `ContentDialog` should only be shown from `MainViewModel` (or by passing `XamlRoot` explicitly as a parameter where strictly necessary).
-
-### `HttpClient` timeout in `UpdateService`
-
-`UpdateService._http` is a static `HttpClient` with no explicit `Timeout`. A hung GitHub API call could block the app startup path indefinitely.
-
-- **Rule:** Do not leave `Timeout` unset on any new `HttpClient` instances. A future patch should add `Timeout = TimeSpan.FromSeconds(15)` to `UpdateService.CreateHttpClient()`.
+- **Rule:** Always set an explicit `Timeout` on any new `HttpClient` instance. Do not rely on the default (infinite).
 
 ### No shared rendering contract across display modules
 

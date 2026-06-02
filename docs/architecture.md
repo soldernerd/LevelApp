@@ -169,7 +169,10 @@ LevelApp/
 │   │   ├── ILocalisationService.cs   ← Get(key) → string
 │   │   ├── LocalisationService.cs    ← wraps ResourceLoader; singleton
 │   │   ├── IUpdateService.cs         ← CheckForUpdateAsync(), DownloadUpdateAsync(); UpdateInfo record
-│   │   └── UpdateService.cs          ← polls GitHub Releases API; downloads zip to %TEMP%
+│   │   ├── UpdateService.cs          ← polls GitHub Releases API; downloads zip to %TEMP%; Timeout=10s
+│   │   ├── UpdaterContract.cs        ← argument-position constants for cross-process update contract
+│   │   ├── IWindowContext.cs         ← XamlRoot?, Hwnd — injected into MainViewModel
+│   │   └── WindowContext.cs          ← internal singleton impl; MainWindow sets props after construction
 │   ├── Converters/
 │   │   └── BoolToVisibilityConverter.cs
 │   ├── Views/
@@ -218,6 +221,8 @@ LevelApp/
 │   ├── ProjectReplayTests.cs           ← [Theory] loading docs/sampleProjects/*.levelproj
 │   ├── InstrumentProviderTests.cs      ← ManualEntryProvider contract tests (WP0.14)
 │   ├── PluginArchitectureTests.cs      ← ManualEntryPlugin + DeviceRegistry tests (WP0.15)
+│   ├── UpdateServiceTests.cs           ← catch-all error-suppression contract tests (WP0.19)
+│   ├── DeviceRegistryTests.cs          ← corrupt-file handling and backup tests (WP0.19)
 │   ├── BLE/
 │   │   ├── BleTransportTests.cs        ← property + capability checks
 │   │   └── BleInstrumentProviderBaseTests.cs ← state machine, backoff, cancellation (WP0.17)
@@ -234,7 +239,8 @@ LevelApp/
 │   └── TestLogs/
 │       └── .gitkeep                       ← place session bundles here for replay tests
 ├── LevelApp.Updater/
-│   └── Program.cs                    ← copy-to-temp updater: extracts zip, relaunches app
+│   ├── Program.cs                    ← copy-to-temp updater: extracts zip, relaunches app
+│   └── UpdaterContract.cs            ← argument-position constants (duplicate of App copy; see sync comment)
 └── docs/
     ├── architecture.md               ← This file
     ├── levelproj.md                  ← .levelproj JSON format reference
@@ -378,6 +384,8 @@ public interface IDeviceScanner
 
 public interface IDeviceRegistry
 {
+    string? LoadError { get; }   // non-null if registry file was unreadable on startup
+
     IReadOnlyList<KnownDevice> GetKnownDevices(string pluginId);
     IReadOnlyList<KnownDevice> GetAllKnownDevices();
     void RegisterDevice(KnownDevice device);
@@ -829,6 +837,8 @@ The vertical exaggeration (`maxZPixels`) is computed per render as `max(10, (col
 | Plot canvas rebuild on theme change | `ResultsViewModel.RebuildPlotCanvas()` reconstructs the `Canvas` from cached session/result data; `ResultsView.OnActualThemeChanged` swaps `PlotContainer.Content` — avoids storing mutable brushes on a live canvas |
 | `IInstrumentPlugin` as root plugin contract | Each instrument project exposes one `IInstrumentPlugin` implementation. The app resolves all registered plugins via `IEnumerable<IInstrumentPlugin>` (DI). `CreateProvider`, `CreateScanners`, and optional capabilities are factory methods — not singletons — so a plugin can create multiple independent providers/scanners for different known devices |
 | `DeviceRegistry` persists to `devices.json` | Separate file from `settings.json` keeps device bookkeeping isolated; `%LOCALAPPDATA%\LevelApp\devices.json` is reliable for unpackaged apps and is human-readable JSON |
+| `IWindowContext` / `WindowContext` singleton | `MainViewModel` needs `XamlRoot` (for `ContentDialog`) and `Hwnd`, but neither is available at DI construction time. A separate `WindowContext` singleton (settable by `MainWindow` after the window is initialised) breaks the chicken-and-egg dependency while keeping the ViewModel testable and free of post-construction property assignments |
+| `UpdaterContract` duplicated in App and Updater | `LevelApp.Updater` targets `net8.0` (no Windows TFM) and cannot reference `LevelApp.App`. Named constants for the cross-process argument contract are therefore duplicated verbatim in both projects with a sync comment rather than shared via a project reference |
 | Instrument transport projects target `net8.0-windows10.0.19041.0` | WinRT Bluetooth and HID APIs (`Windows.Devices.Bluetooth`, `Windows.Devices.HumanInterfaceDevice`) are built into the Windows-targeted TFM. No `Microsoft.Windows.SDK.Contracts` NuGet is needed — and indeed that package is incompatible with .NET 5+ |
 | BLE reconnect via `BleInstrumentProviderBase` | Exponential backoff (1 s → 2 s → 4 s … capped at 30 s) runs inside the base class. Concrete subclasses implement only `DoConnectAsync` and `DoDisconnectAsync`. `OnUnexpectedDisconnect()` starts a background reconnect loop that is cancelled cleanly by `DisconnectAsync()` |
 | DFU over P/Invoke to `WinUsb.dll` rather than WinRT USB | `Windows.Devices.Usb.UsbDevice` requires the `usbDevice` capability in an app package manifest. LevelApp is unpackaged (no MSIX), so this API is unavailable. `WinUsb.dll` P/Invoke works from any process, requires no capability declaration, and provides full control over USB control transfers which is all DFU needs. The decision is documented in a comment block at the top of `DfuSession.cs` |
@@ -953,6 +963,8 @@ LevelApp.Updater.exe  <zipPath>  <installFolder>  <mainExeName>  [--from-temp]
 | 2 | `installFolder` | Directory where the app is installed — **must not end with a backslash** |
 | 3 | `mainExeName` | Filename of the exe to relaunch (e.g. `LevelApp.App.exe`) |
 | — | `--from-temp` | Internal flag; present when running from the `%TEMP%` copy |
+
+The constants for this contract are defined in `UpdaterContract.cs`, which is duplicated verbatim in `LevelApp.App/Services/` and `LevelApp.Updater/` (they cannot share a project reference — see Section 11). Both copies carry a sync comment.
 
 `UpdateDialog.xaml.cs` is responsible for stripping the trailing backslash from `AppContext.BaseDirectory` before passing it as `installFolder`. Failure to do this causes shell argument mis-parsing on the receiving side.
 
