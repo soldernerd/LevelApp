@@ -19,6 +19,9 @@ public partial class App : Application
     {
         var services = new ServiceCollection();
 
+        // Window context — set by MainWindow after the handle / XamlRoot become available
+        services.AddSingleton<IWindowContext, WindowContext>();
+
         // Settings
         services.AddSingleton<ISettingsService, SettingsService>();
 

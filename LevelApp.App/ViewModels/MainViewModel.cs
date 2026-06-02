@@ -21,6 +21,7 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly INavigationService  _navigation;
     private readonly IProjectFileService _fileService;
     private readonly IActivityLogger     _logger;
+    private readonly IWindowContext      _windowContext;
 
     // ── Global project state ──────────────────────────────────────────────────
 
@@ -42,19 +43,15 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
-    // ── UI context (set from MainWindow after InitializeComponent) ────────────
-
-    internal XamlRoot? XamlRoot { get; set; }
-    internal nint      Hwnd     { get; set; }
-
     // ── Constructor ───────────────────────────────────────────────────────────
 
     public MainViewModel(INavigationService navigation, IProjectFileService fileService,
-                         IActivityLogger logger)
+                         IActivityLogger logger, IWindowContext windowContext)
     {
-        _navigation  = navigation;
-        _fileService = fileService;
-        _logger      = logger;
+        _navigation    = navigation;
+        _fileService   = fileService;
+        _logger        = logger;
+        _windowContext = windowContext;
     }
 
     // ── Public API for page ViewModels ────────────────────────────────────────
@@ -212,7 +209,7 @@ public sealed partial class MainViewModel : ObservableObject
             SecondaryButtonText = "Discard",
             CloseButtonText     = "Cancel",
             DefaultButton       = ContentDialogButton.Primary,
-            XamlRoot            = XamlRoot
+            XamlRoot            = _windowContext.XamlRoot
         };
 
         var result = await dialog.ShowAsync();
@@ -321,13 +318,13 @@ public sealed partial class MainViewModel : ObservableObject
 
     private async Task ShowErrorAsync(string title, string message)
     {
-        if (XamlRoot is null) return;
+        if (_windowContext.XamlRoot is null) return;
         var dialog = new ContentDialog
         {
             Title           = title,
             Content         = message,
             CloseButtonText = "OK",
-            XamlRoot        = XamlRoot
+            XamlRoot        = _windowContext.XamlRoot
         };
         await dialog.ShowAsync();
     }

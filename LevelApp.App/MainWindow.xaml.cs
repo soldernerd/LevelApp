@@ -35,17 +35,18 @@ public sealed partial class MainWindow : Window
         _updateService  = App.Services.GetRequiredService<IUpdateService>();
         _fileService    = App.Services.GetRequiredService<IProjectFileService>();
         _nav            = App.Services.GetRequiredService<INavigationService>();
+        var windowCtx   = (WindowContext)App.Services.GetRequiredService<IWindowContext>();
 
         this.InitializeComponent(); // x:Bind uses ViewModel
 
         _hwnd = WindowNative.GetWindowHandle(this);
+        windowCtx.Hwnd = _hwnd;
 
         // Set the window and taskbar icon
         AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "levelapp.ico"));
 
         // Initialise services that need the window handle
         _fileService.Initialize(_hwnd);
-        ViewModel.Hwnd = _hwnd;
 
         // Attach navigation frame
         ((NavigationService)_nav).Attach(RootFrame);
@@ -66,7 +67,7 @@ public sealed partial class MainWindow : Window
         // kick off the update check at the same point so the window is rendered first.
         RootFrame.Loaded += (_, _) =>
         {
-            ViewModel.XamlRoot = RootFrame.XamlRoot;
+            windowCtx.XamlRoot = RootFrame.XamlRoot;
             CheckForUpdateOnStartup();
         };
 
