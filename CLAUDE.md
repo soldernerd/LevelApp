@@ -22,16 +22,25 @@ Full project details, architecture decisions, data models, and roadmap are in `d
 
 ```
 LevelApp/
-├── LevelApp.sln
-├── Core/                  ← No UI dependencies. Fully unit-testable.
-│   ├── Models/
-│   ├── Interfaces/
-│   └── Geometry/
-├── Instruments/
-├── App/                   ← WinUI 3 application (Views, ViewModels, Services)
+├── LevelApp.slnx
+├── LevelApp.Core/                  ← No UI dependencies. Fully unit-testable.
+│   ├── AppVersion.cs               ← Single source of truth for Major.Minor.Patch
+│   ├── Interfaces/                 ← All Core contracts (instrument, geometry, logging)
+│   ├── Instruments/                ← Enums, value types, and DeviceRegistry impl
+│   ├── Models/                     ← Project data model
+│   ├── Geometry/                   ← Strategies and calculators
+│   └── Serialization/              ← JSON serialization helpers
+├── LevelApp.Instruments.Manual/    ← Manual-entry plugin (IInstrumentPlugin registered in DI)
+├── LevelApp.Instruments.BLE/       ← BLE transport infrastructure only — no IInstrumentPlugin
+├── LevelApp.Instruments.UsbHid/    ← USB HID transport + DFU — no IInstrumentPlugin
+├── LevelApp.App/                   ← WinUI 3 application (Views, ViewModels, Services)
+├── LevelApp.Tests/                 ← xUnit test project
+├── LevelApp.Updater/               ← Standalone update-and-relaunch executable
 └── docs/
-    ├── architecture.md
-    └── workpackages/      ← One markdown file per work package
+    ├── architecture.md             ← Full design reference (read before implementing)
+    ├── levelproj.md                ← .levelproj JSON format reference
+    ├── workpackages/               ← One markdown file per work package
+    └── sampleProjects/             ← .levelproj files for ProjectReplayTests
 ```
 
 ---
@@ -54,7 +63,7 @@ All version information lives in `LevelApp.Core/AppVersion.cs`:
 public static class AppVersion
 {
     public const int Major = 0;
-    public const int Minor = 2;
+    public const int Minor = 18;
     public const int Patch = 0;
 
     public static string Full    => $"{Major}.{Minor}.{Patch}";
@@ -150,6 +159,85 @@ Do **not** push to GitHub unless the user explicitly asks.
 ## Sample Project Files
 
 Sample project files for testing and debugging are located in `docs/sampleProjects/`.
+
+---
+
+## Interfaces Ahead of Implementation
+
+It is deliberate project practice to define Core interfaces before concrete implementations exist. This keeps the architecture contract stable and allows tests to be written against the interface before hardware is available.
+
+**Do NOT stub or fill in these interfaces prematurely.** Returning `null` from `IInstrumentPlugin.CreateCalibrationWorkflow()` / `CreateFirmwareUpdater()` is the correct, intentional signal that the capability is absent for that plugin.
+
+| Interface | Current state | First concrete implementation |
+|---|---|---|
+| `ICalibrationWorkflow` | Defined in `LevelApp.Core/Interfaces/`; all plugins return `null` | First hardware instrument plugin (WP TBD) |
+| `IFirmwareUpdater` | Defined in `LevelApp.Core/Interfaces/`; `ManualEntryPlugin` returns `null`; `FirmwareUpdateDialog` handles `null` gracefully | First hardware instrument plugin with DFU (WP TBD) |
+
+---
+
+## DI Registration — Instrument Projects
+
+`App.xaml.cs` registers instrument plugins and the device registry. Current state:
+
+**Registered `IInstrumentPlugin` implementations:**
+- `ManualEntryPlugin` — always registered; built-in device is seeded into `IDeviceRegistry` on startup.
+
+**Infrastructure-only projects (NOT registered as `IInstrumentPlugin`):**
+- `LevelApp.Instruments.BLE` — provides `BleTransport`, `BleDeviceScanner`, and `BleInstrumentProviderBase`. Not registered because there is no concrete instrument-specific code. Future BLE instrument plugins will reference this project and register their own `IInstrumentPlugin`.
+- `LevelApp.Instruments.UsbHid` — same rationale; provides `UsbHidTransport`, `UsbHidDeviceScanner`, `UsbHidInstrumentProviderBase`, and the full STM32 DFU subsystem.
+
+When adding a new hardware instrument plugin: reference the appropriate transport project, subclass the provider base class, implement `IInstrumentPlugin`, and register it in `App.xaml.cs`.
+
+---
+
+## LevelApp.Updater — Argument Contract
+
+`LevelApp.Updater.exe` is a standalone self-contained executable. It uses a copy-to-temp pattern so the install folder is fully unlocked at extraction time. `UpdateDialog.xaml.cs` is responsible for constructing the arguments correctly.
+
+```
+LevelApp.Updater.exe  <zipPath>  <installFolder>  <mainExeName>  [--from-temp]
+```
+
+| Position | Argument | Description |
+|---|---|---|
+| 1 | `zipPath` | Full path to the downloaded `.zip` in `%TEMP%` |
+| 2 | `installFolder` | Directory where the app is installed — **must NOT end with a backslash** |
+| 3 | `mainExeName` | Filename of the exe to relaunch (e.g. `LevelApp.App.exe`) |
+| — | `--from-temp` | Internal flag; present when already running from the `%TEMP%` copy |
+
+The updater logs every step to `%TEMP%\LevelApp.Updater.log`.
+
+**Critical:** `UpdateDialog.xaml.cs` must strip any trailing backslash from `AppContext.BaseDirectory` before passing it as `installFolder`. Failure to do this causes shell argument mis-parsing on the receiving side.
+
+---
+
+## Known Technical Debt
+
+The items below are acknowledged debt. **Do not extend these patterns.**
+
+### `App.Services` static service locator
+
+`App.Services` is `public static IServiceProvider`. A handful of internal call sites (e.g. `NavigationService` resolving transient page ViewModels) call `App.Services.GetRequiredService<>()` directly. This breaks pure DI testability.
+
+- **Rule:** Never add new direct `App.Services.GetRequiredService<>()` calls outside the DI composition root (`App.xaml.cs`).
+
+### `MainViewModel.XamlRoot` / `Hwnd`
+
+`XamlRoot` and `Hwnd` are `internal` properties set by `MainWindow` after `InitializeComponent()`. They are required by `ContentDialog` and the COM file pickers, and cannot be injected at construction time (the window does not exist yet). This is a WinUI 3 limitation.
+
+- **Rule:** Do not copy this pattern to other ViewModels. `ContentDialog` should only be shown from `MainViewModel` (or by passing `XamlRoot` explicitly as a parameter where strictly necessary).
+
+### `HttpClient` timeout in `UpdateService`
+
+`UpdateService._http` is a static `HttpClient` with no explicit `Timeout`. A hung GitHub API call could block the app startup path indefinitely.
+
+- **Rule:** Do not leave `Timeout` unset on any new `HttpClient` instances. A future patch should add `Timeout = TimeSpan.FromSeconds(15)` to `UpdateService.CreateHttpClient()`.
+
+### No shared rendering contract across display modules
+
+Display modules (`SurfacePlot3DDisplay`, `MeasurementsGridRenderer`, `StrategyPreviewRenderer`, `ParallelWaysDisplay`) are static classes with no common interface. Adding a new renderer requires editing the calling view's code-behind.
+
+- **Rule:** Do not add a fourth static renderer module. When a new one is needed, define an `IDisplayModule` interface first and migrate existing modules to it.
 
 ---
 

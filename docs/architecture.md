@@ -4,7 +4,7 @@
 
 > Living document. Update as the project evolves.
 
-> Last updated: 2026-05-31 *(revised to reflect v0.18.0)*
+> Last updated: 2026-06-02 *(revised to reflect v0.18.0; corrected DeviceRegistry location, test file names, added plugin architecture section, auto-update section, and known technical debt section)*
 
 
 
@@ -73,14 +73,15 @@ LevelApp/
 │   │   ├── IFirmwareUpdater.cs         ← RequiredTransport, IsReady, GetCurrentFirmwareAsync, PerformUpdateAsync
 │   │   ├── ICalibrationWorkflow.cs     ← DisplayName, CreateView() → object
 │   │   └── IInstrumentPlugin.cs        ← root plugin contract; CreateProvider, CreateScanners, optional capabilities
-│   ├── Instruments/                    ← Instrument-related enums and value types (no UI dependencies)
+│   ├── Instruments/                    ← Instrument-related enums, value types, and registry (no UI dependencies)
 │   │   ├── InstrumentConnectionState.cs  ← Disconnected, Connecting, Connected, Degraded, Error
 │   │   ├── InstrumentCapabilities.cs     ← [Flags]: SingleMeasurement, ContinuousStream
 │   │   ├── TransportCapabilities.cs      ← [Flags]: SingleReading, ContinuousStream, Bidirectional
 │   │   ├── TransportRequirement.cs       ← None, Any, BleOnly, UsbOnly, UsbOrBle
 │   │   ├── KnownDevice.cs               ← record(DeviceId, PluginId, TransportId, DisplayName, TransportAddress)
 │   │   ├── FirmwareInfo.cs              ← record(Version, ReleaseNotes?, DownloadUrl?)
-│   │   └── DeviceCandidate.cs           ← record(CandidateId, TransportId, DisplayName, SignalStrength?)
+│   │   ├── DeviceCandidate.cs           ← record(CandidateId, TransportId, DisplayName, SignalStrength?)
+│   │   └── DeviceRegistry.cs            ← IDeviceRegistry impl; persists to %LOCALAPPDATA%\LevelApp\devices.json
 │   ├── Models/
 │   │   ├── InstrumentReading.cs   ← Timestamp, Value; serialised to .instrument log files
 │   │   ├── Project.cs
@@ -167,9 +168,8 @@ LevelApp/
 │   │   ├── ThemeService.cs           ← singleton; applies RequestedTheme to RootFrame
 │   │   ├── ILocalisationService.cs   ← Get(key) → string
 │   │   ├── LocalisationService.cs    ← wraps ResourceLoader; singleton
-│   │   ├── IUpdateService.cs         ← CheckForUpdateAsync(), DownloadUpdateAsync()
-│   │   ├── UpdateService.cs          ← polls GitHub Releases API; downloads zip to %TEMP%
-│   │   └── DeviceRegistry.cs         ← IDeviceRegistry; persists to %LOCALAPPDATA%\LevelApp\devices.json
+│   │   ├── IUpdateService.cs         ← CheckForUpdateAsync(), DownloadUpdateAsync(); UpdateInfo record
+│   │   └── UpdateService.cs          ← polls GitHub Releases API; downloads zip to %TEMP%
 │   ├── Converters/
 │   │   └── BoolToVisibilityConverter.cs
 │   ├── Views/
@@ -210,7 +210,9 @@ LevelApp/
 ├── LevelApp.Tests/
 │   ├── FullGridStrategyTests.cs
 │   ├── UnionJackStrategyTests.cs
-│   ├── LeastSquaresCalculatorTests.cs
+│   ├── SurfacePlateCalculatorTests.cs       ← least-squares solver tests
+│   ├── SequentialIntegrationCalculatorTests.cs
+│   ├── CorrectionRoundTests.cs
 │   ├── ParallelWaysStrategyTests.cs
 │   ├── ParallelWaysCalculatorTests.cs
 │   ├── ProjectReplayTests.cs           ← [Theory] loading docs/sampleProjects/*.levelproj
@@ -344,6 +346,20 @@ public interface IInstrumentPlugin
 
 
 
+### ICalibrationWorkflow
+
+```csharp
+public interface ICalibrationWorkflow
+{
+    string DisplayName { get; }
+    object CreateView();   // returns UIElement; declared object to keep Core UI-free
+}
+```
+
+> **Defined — first concrete implementation planned for the first hardware instrument plugin (WP TBD).** All existing plugins (`ManualEntryPlugin`, both base classes) return `null` from `IInstrumentPlugin.CreateCalibrationWorkflow()`. The UI wires the Calibrate button to this return value and disables it when `null`.
+
+---
+
 ### ITransport / IDeviceScanner / IDeviceRegistry
 
 ```csharp
@@ -388,7 +404,7 @@ public interface IFirmwareUpdater
 }
 ```
 
-
+> **Defined — first concrete implementation planned for the first hardware instrument plugin with DFU support (WP TBD).** `ManualEntryPlugin` returns `null` from `CreateFirmwareUpdater()`; `FirmwareUpdateDialog` handles `null` by showing "Not supported". The DFU subsystem in `LevelApp.Instruments.UsbHid` (`DfuSession`, `DfuConnectionDetector`) is the implementation vehicle; concrete plugins will wrap it.
 
 ---
 
@@ -825,7 +841,147 @@ The vertical exaggeration (`maxZPixels`) is computed per render as `max(10, (col
 
 
 
-## 12. Build Order / Roadmap
+## 12. Instrument Plugin Architecture
+
+
+
+### Overview
+
+The instrument plugin system has a three-tier hierarchy:
+
+```
+IInstrumentPlugin               ← one per instrument type (e.g. "Wyler BT-Level")
+  ├── ITransport[]              ← transport descriptors (BLE, USB HID, manual, …)
+  ├── IDeviceScanner[]          ← one scanner per transport; yields DeviceCandidate
+  └── IInstrumentProvider       ← one per connected device; drives the measurement loop
+        IFirmwareUpdater?       ← optional DFU update workflow
+        ICalibrationWorkflow?   ← optional guided calibration workflow
+```
+
+`IDeviceRegistry` is orthogonal — it persists `KnownDevice` records (one per previously paired device) and is resolved from DI as a singleton in `LevelApp.App`.
+
+
+
+### Plugin / Transport Separation Principle
+
+`LevelApp.Instruments.BLE` and `LevelApp.Instruments.UsbHid` are **pure transport infrastructure**. They provide:
+- A concrete `ITransport` (property bag describing the transport)
+- A concrete `IDeviceScanner` (platform scanning API wrapped in the `IDeviceScanner` contract)
+- An abstract `IInstrumentProvider` base class (connection lifecycle, no instrument-specific protocol)
+- USB HID: the full STM32 DFU subsystem (`DfuSession`, `DfuConnectionDetector`) — testable via `IUsbControlTransport`
+
+They do **not** register an `IInstrumentPlugin` in DI, because there is no concrete instrument-specific code in these projects.
+
+Future concrete instrument plugins (e.g. a Wyler BT-Level plugin) will:
+1. Reference `LevelApp.Instruments.BLE` (or UsbHid)
+2. Subclass `BleInstrumentProviderBase` (or `UsbHidInstrumentProviderBase`) and add protocol logic
+3. Implement `IInstrumentPlugin` and register it in `App.xaml.cs`
+4. Optionally wrap `DfuSession` in a concrete `IFirmwareUpdater`
+5. Optionally provide a concrete `ICalibrationWorkflow`
+
+
+
+### Currently Registered Plugins
+
+| Plugin | PluginId | Transport | IFirmwareUpdater | ICalibrationWorkflow |
+|---|---|---|---|---|
+| `ManualEntryPlugin` | `"manual-entry"` | `"manual"` | `null` | `null` |
+
+`LevelApp.Instruments.BLE` and `LevelApp.Instruments.UsbHid` are compiled and tested but not registered as plugins — they are infrastructure only.
+
+
+
+### Interface Status
+
+| Interface | Status |
+|---|---|
+| `IInstrumentPlugin` | Active — one registered implementation (`ManualEntryPlugin`) |
+| `IInstrumentProvider` | Active — `ManualEntryProvider` + abstract bases in BLE/UsbHid projects |
+| `ITransport` | Active — `ManualTransport`, `BleTransport`, `UsbHidTransport` |
+| `IDeviceScanner` | Active — `ManualEntryScanner`, `BleDeviceScanner`, `UsbHidDeviceScanner` |
+| `IDeviceRegistry` | Active — `DeviceRegistry` (Core/Instruments) registered as singleton in App |
+| `IFirmwareUpdater` | **Defined** — no concrete implementation yet; returns `null` from all current plugins |
+| `ICalibrationWorkflow` | **Defined** — no concrete implementation yet; returns `null` from all current plugins |
+
+
+
+---
+
+
+
+## 13. Auto-Update Mechanism
+
+
+
+The auto-update system has two independent components: the in-app check/download and a separate updater executable.
+
+
+
+### UpdateService (in-app)
+
+`IUpdateService` / `UpdateService` in `LevelApp.App/Services/`:
+
+- **Check**: `CheckForUpdateAsync()` — calls `https://api.github.com/repos/soldernerd/LevelApp/releases/latest`, compares `tag_name` against `AppVersion.Full`. Returns `null` if up to date, network error, or no `.zip` asset found.
+- **Download**: `DownloadUpdateAsync(UpdateInfo, IProgress<double>)` — streams the zip to `%TEMP%\LevelApp-{version}.zip` with chunked progress reporting.
+- `UpdateDialog.xaml` drives both calls, shows a progress bar, and on completion launches `LevelApp.Updater.exe` then calls `Application.Current.Exit()`.
+
+
+
+### LevelApp.Updater (external process)
+
+Standalone self-contained executable in `LevelApp.Updater/`. Uses a **copy-to-temp pattern** so the install folder is fully unlocked when extraction happens:
+
+1. First invocation copies itself to `%TEMP%\LevelApp.Updater.tmp.exe` and relaunches with `--from-temp`.
+2. Temp copy waits up to 10 s for the main app process to exit.
+3. Extracts the zip over the install folder (`overwriteFiles: true`).
+4. Deletes the zip.
+5. Launches the updated `LevelApp.App.exe`.
+
+All steps are logged to `%TEMP%\LevelApp.Updater.log`.
+
+
+
+### Argument Contract
+
+```
+LevelApp.Updater.exe  <zipPath>  <installFolder>  <mainExeName>  [--from-temp]
+```
+
+| Position | Argument | Description |
+|---|---|---|
+| 1 | `zipPath` | Full path to the downloaded `.zip` in `%TEMP%` |
+| 2 | `installFolder` | Directory where the app is installed — **must not end with a backslash** |
+| 3 | `mainExeName` | Filename of the exe to relaunch (e.g. `LevelApp.App.exe`) |
+| — | `--from-temp` | Internal flag; present when running from the `%TEMP%` copy |
+
+`UpdateDialog.xaml.cs` is responsible for stripping the trailing backslash from `AppContext.BaseDirectory` before passing it as `installFolder`. Failure to do this causes shell argument mis-parsing on the receiving side.
+
+
+
+---
+
+
+
+## 14. Known Technical Debt
+
+
+
+The items below are acknowledged debt. Do not extend these patterns.
+
+| Area | Debt | Do Not |
+|---|---|---|
+| `App.Services` static locator | `App.Services` is `public static IServiceProvider`. A handful of call sites (e.g. `NavigationService` resolving page ViewModels) call `App.Services.GetRequiredService<>()` directly, bypassing constructor injection. | Add new direct `App.Services.GetRequiredService<>()` calls outside of the DI composition root. |
+| `MainViewModel` UI handles | `XamlRoot` and `Hwnd` are `internal` properties set by `MainWindow` after `InitializeComponent()`. They are required by `ContentDialog` and COM file pickers and cannot be injected at construction time (the window does not exist yet). | Copy this pattern to other ViewModels. Use `ContentDialog` only from `MainViewModel` or pass `XamlRoot` explicitly where unavoidable. |
+| `HttpClient` timeout in `UpdateService` | `UpdateService._http` is a static `HttpClient` with no explicit `Timeout`. A hung GitHub API call could block the app startup path indefinitely. | Leave the timeout unset. A future patch should add `Timeout = TimeSpan.FromSeconds(15)` to the client construction. |
+| No shared rendering contract | Display modules (`SurfacePlot3DDisplay`, `MeasurementsGridRenderer`, etc.) are static classes with no common interface. Adding a new renderer requires editing the calling view code-behind. | Add a fourth static renderer module. When a new one is needed, define an `IDisplayModule` interface first. |
+
+
+
+---
+
+
+
+## 15. Build Order / Roadmap
 
 
 
@@ -992,7 +1148,7 @@ The vertical exaggeration (`maxZPixels`) is computed per render as `max(10, (col
 
 
 
-## 13. Versioning Convention
+## 16. Versioning Convention
 
 
 
@@ -1042,7 +1198,7 @@ Bump `AppVersion.cs` **before** committing so the delivered commit already carri
 
 
 
-## 14. Open Questions
+## 17. Open Questions
 
 
 
@@ -1059,7 +1215,7 @@ Bump `AppVersion.cs` **before** committing so the delivered commit already carri
 
 
 
-## 15. Model Switching Notes
+## 18. Model Switching Notes
 
 
 
