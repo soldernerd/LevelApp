@@ -9,13 +9,12 @@ public sealed class UpdateService : IUpdateService
     private const string ReleasesApiUrl =
         "https://api.github.com/repos/soldernerd/LevelApp/releases/latest";
 
-    private static readonly HttpClient _http = CreateHttpClient();
+    private readonly HttpClient _http;
 
-    private static HttpClient CreateHttpClient()
+    public UpdateService()
     {
-        var client = new HttpClient();
-        client.DefaultRequestHeaders.UserAgent.ParseAdd($"LevelApp/{AppVersion.Full}");
-        return client;
+        _http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+        _http.DefaultRequestHeaders.UserAgent.ParseAdd($"LevelApp/{AppVersion.Full}");
     }
 
     public async Task<UpdateInfo?> CheckForUpdateAsync()
