@@ -47,6 +47,7 @@ public sealed partial class UpdateDialog : ContentDialog
                                                                      Path.AltDirectorySeparatorChar);
             string updaterPath   = Path.Combine(AppContext.BaseDirectory, "LevelApp.Updater.exe");
 
+            // Argument order defined by UpdaterContract (duplicated in LevelApp.Updater).
             Process.Start(new ProcessStartInfo
             {
                 FileName        = updaterPath,

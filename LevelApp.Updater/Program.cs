@@ -21,21 +21,21 @@ try
     File.WriteAllText(logPath, $"=== LevelApp Updater started {DateTime.Now:yyyy-MM-dd HH:mm:ss} ==={Environment.NewLine}");
     Log($"Args: {string.Join(" | ", Environment.GetCommandLineArgs())}");
 
-    var cmdArgs  = Environment.GetCommandLineArgs();
+    var cmdArgs  = Environment.GetCommandLineArgs(); // [0] = process name
     var argsList = cmdArgs.ToList();
 
-    if (cmdArgs.Length < 4)
+    if (cmdArgs.Length < UpdaterContract.ExpectedArgCount + 1) // +1 for process name
     {
         Log("ERROR: insufficient arguments");
-        Log($"Usage: LevelApp.Updater <zipPath> <installFolder> <mainExeName> [--from-temp]");
+        Log($"Usage: LevelApp.Updater <zipPath> <installFolder> <mainExeName> [{UpdaterContract.FromTempFlag}]");
         Console.ReadKey();
         return 1;
     }
 
-    string zipPath       = cmdArgs[1];
-    string installFolder = cmdArgs[2];
-    string mainExeName   = cmdArgs[3];
-    bool   fromTemp      = argsList.Contains("--from-temp");
+    string zipPath       = cmdArgs[UpdaterContract.ArgZipPath       + 1];
+    string installFolder = cmdArgs[UpdaterContract.ArgInstallFolder + 1];
+    string mainExeName   = cmdArgs[UpdaterContract.ArgMainExeName   + 1];
+    bool   fromTemp      = argsList.Contains(UpdaterContract.FromTempFlag);
 
     Log($"zipPath:       {zipPath}");
     Log($"installFolder: {installFolder}");
@@ -54,7 +54,7 @@ try
         Process.Start(new ProcessStartInfo
         {
             FileName        = tempExe,
-            Arguments       = $"\"{zipPath}\" \"{installFolder}\" \"{mainExeName}\" --from-temp",
+            Arguments       = $"\"{zipPath}\" \"{installFolder}\" \"{mainExeName}\" {UpdaterContract.FromTempFlag}",
             UseShellExecute = true   // visible window so errors are readable
         });
 
