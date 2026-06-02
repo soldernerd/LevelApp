@@ -4,7 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
-    <Grid RowDefinitions="Auto,*">
+    <Grid RowDefinitions="Auto,Auto,*">
 
         <!-- ── Page header ────────────────────────────────────────────────────── -->
         <TextBlock Grid.Row="0"
@@ -12,8 +12,16 @@
                    Style="{StaticResource TitleTextBlockStyle}"
                    Margin="24,16,24,12"/>
 
+        <!-- ── Registry load-error warning ───────────────────────────────────── -->
+        <InfoBar Grid.Row="1"
+                 IsOpen="{x:Bind ViewModel.ShowRegistryWarning}"
+                 Severity="Warning"
+                 Title="{x:Bind ViewModel.RegistryWarning}"
+                 IsClosable="False"
+                 Margin="24,0,24,8"/>
+
         <!-- ── Plugin tabs ────────────────────────────────────────────────────── -->
-        <TabView Grid.Row="1"
+        <TabView Grid.Row="2"
                  x:Name="PluginTabs"
                  IsAddTabButtonVisible="False"
                  TabWidthMode="SizeToContent"

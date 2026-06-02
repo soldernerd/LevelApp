@@ -14,6 +14,8 @@ public sealed class DeviceRegistry : IDeviceRegistry
     private readonly List<KnownDevice> _devices = [];
     private readonly Dictionary<string, string> _preferred = new(); // pluginId → deviceId
 
+    public string? LoadError { get; private set; }
+
     private static readonly JsonSerializerOptions _json = new()
     {
         WriteIndented = true,
@@ -86,7 +88,15 @@ public sealed class DeviceRegistry : IDeviceRegistry
             _devices.AddRange(data.Devices);
             foreach (var kv in data.Preferred) _preferred[kv.Key] = kv.Value;
         }
-        catch (JsonException) { /* corrupt file — start fresh */ }
+        catch (Exception ex) when (ex is JsonException or IOException)
+        {
+            // Back up the corrupt file so it can be inspected, then start fresh.
+            string backupPath = path + ".corrupt";
+            try { File.Copy(path, backupPath, overwrite: true); } catch { /* best-effort */ }
+
+            LoadError = $"Device registry could not be read and has been reset. " +
+                        $"The corrupt file was backed up to {Path.GetFileName(backupPath)}.";
+        }
     }
 
     private void Save()
