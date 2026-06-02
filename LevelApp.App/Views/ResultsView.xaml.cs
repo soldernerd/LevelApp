@@ -18,6 +18,8 @@ public sealed partial class ResultsView : Page
 
     public ResultsView()
     {
+        // Page is created by Frame.Navigate — WinUI 3 instantiates it directly;
+        // constructor injection is not available here.
         ViewModel = App.Services.GetRequiredService<ResultsViewModel>();
         this.InitializeComponent();
     }

@@ -11,6 +11,8 @@ public sealed partial class InstrumentsPage : Page
 
     public InstrumentsPage()
     {
+        // Page is created by Frame.Navigate — WinUI 3 instantiates it directly;
+        // constructor injection is not available here.
         ViewModel = App.Services.GetRequiredService<InstrumentsViewModel>();
         this.InitializeComponent();
     }

@@ -33,6 +33,8 @@ public sealed partial class MeasurementView : Page
 
     public MeasurementView()
     {
+        // Page is created by Frame.Navigate — WinUI 3 instantiates it directly;
+        // constructor injection is not available here.
         ViewModel = App.Services.GetRequiredService<MeasurementViewModel>();
         this.InitializeComponent();
     }

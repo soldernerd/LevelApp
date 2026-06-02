@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using LevelApp.App.Services;
 using LevelApp.Core;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
@@ -13,10 +12,10 @@ public sealed partial class UpdateDialog : ContentDialog
     private readonly IUpdateService _updateService;
     private bool                    _downloading;
 
-    public UpdateDialog(UpdateInfo update)
+    public UpdateDialog(UpdateInfo update, IUpdateService updateService)
     {
         _update        = update;
-        _updateService = App.Services.GetRequiredService<IUpdateService>();
+        _updateService = updateService;
 
         InitializeComponent();
 

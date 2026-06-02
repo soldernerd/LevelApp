@@ -15,19 +15,26 @@ public sealed partial class MainWindow : Window
 {
     public MainViewModel ViewModel { get; }
 
-    private readonly ISettingsService  _settings;
-    private readonly IThemeService     _theme;
-    private readonly IActivityLogger   _activityLogger;
-    private readonly IUpdateService    _updateService;
+    private readonly ISettingsService    _settings;
+    private readonly IThemeService       _theme;
+    private readonly IActivityLogger     _activityLogger;
+    private readonly IUpdateService      _updateService;
+    private readonly IProjectFileService _fileService;
+    private readonly INavigationService  _nav;
     private nint _hwnd;
 
     public MainWindow()
     {
+        // MainWindow is created with `new MainWindow()` in App.OnLaunched — it is not
+        // resolved from the DI container, so constructor injection is not available here.
+        // All App.Services lookups are intentionally concentrated in this constructor block.
         ViewModel       = App.Services.GetRequiredService<MainViewModel>();
         _settings       = App.Services.GetRequiredService<ISettingsService>();
         _theme          = App.Services.GetRequiredService<IThemeService>();
         _activityLogger = App.Services.GetRequiredService<IActivityLogger>();
         _updateService  = App.Services.GetRequiredService<IUpdateService>();
+        _fileService    = App.Services.GetRequiredService<IProjectFileService>();
+        _nav            = App.Services.GetRequiredService<INavigationService>();
 
         this.InitializeComponent(); // x:Bind uses ViewModel
 
@@ -37,12 +44,11 @@ public sealed partial class MainWindow : Window
         AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "levelapp.ico"));
 
         // Initialise services that need the window handle
-        App.Services.GetRequiredService<IProjectFileService>().Initialize(_hwnd);
+        _fileService.Initialize(_hwnd);
         ViewModel.Hwnd = _hwnd;
 
         // Attach navigation frame
-        var nav = (NavigationService)App.Services.GetRequiredService<INavigationService>();
-        nav.Attach(RootFrame);
+        ((NavigationService)_nav).Attach(RootFrame);
 
         // Wire theme service to the root frame and restore persisted theme
         _theme.SetTarget(RootFrame);
@@ -67,7 +73,7 @@ public sealed partial class MainWindow : Window
         // Intercept the window close button for unsaved-changes handling
         AppWindow.Closing += OnAppWindowClosing;
 
-        nav.NavigateTo(PageKey.ProjectSetup);
+        _nav.NavigateTo(PageKey.ProjectSetup);
     }
 
     private async void OnAppWindowClosing(AppWindow sender, AppWindowClosingEventArgs args)
@@ -94,8 +100,7 @@ public sealed partial class MainWindow : Window
 
     private void OnInstrumentsClicked(object sender, RoutedEventArgs e)
     {
-        var nav = App.Services.GetRequiredService<INavigationService>();
-        nav.NavigateTo(PageKey.Instruments);
+        _nav.NavigateTo(PageKey.Instruments);
     }
 
     private async void OnAboutClicked(object sender, RoutedEventArgs e)
@@ -112,7 +117,7 @@ public sealed partial class MainWindow : Window
         var update = await _updateService.CheckForUpdateAsync();
         if (update is null) return;
 
-        var dialog = new UpdateDialog(update)
+        var dialog = new UpdateDialog(update, _updateService)
         {
             XamlRoot = Content.XamlRoot
         };

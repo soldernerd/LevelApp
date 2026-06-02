@@ -24,6 +24,8 @@ public sealed partial class CorrectionView : Page
 
     public CorrectionView()
     {
+        // Page is created by Frame.Navigate — WinUI 3 instantiates it directly;
+        // constructor injection is not available here.
         ViewModel = App.Services.GetRequiredService<CorrectionViewModel>();
         this.InitializeComponent();
     }

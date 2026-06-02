@@ -13,6 +13,8 @@ public sealed partial class ProjectSetupView : Page
 
     public ProjectSetupView()
     {
+        // Page is created by Frame.Navigate — WinUI 3 instantiates it directly;
+        // constructor injection is not available here.
         ViewModel = App.Services.GetRequiredService<ProjectSetupViewModel>();
         this.InitializeComponent();
         this.Loaded += (_, _) => ViewModel.SchedulePreviewUpdate(DispatcherQueue);
