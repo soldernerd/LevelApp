@@ -11,4 +11,10 @@ public interface IWindowContext
 {
     XamlRoot? XamlRoot { get; }
     nint      Hwnd     { get; }
+
+    /// <summary>Called once by MainWindow immediately after the HWND is available.</summary>
+    void SetHwnd(nint hwnd);
+
+    /// <summary>Called once by MainWindow from the Loaded handler when XamlRoot becomes available.</summary>
+    void SetXamlRoot(XamlRoot xamlRoot);
 }

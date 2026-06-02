@@ -15,6 +15,7 @@ public sealed class DeviceRegistry : IDeviceRegistry
     private readonly Dictionary<string, string> _preferred = new(); // pluginId → deviceId
 
     public string? LoadError { get; private set; }
+    public string? SaveError { get; private set; }
 
     private static readonly JsonSerializerOptions _json = new()
     {
@@ -108,6 +109,9 @@ public sealed class DeviceRegistry : IDeviceRegistry
             var data = new RegistryData([.. _devices], new(_preferred));
             File.WriteAllText(_filePath, JsonSerializer.Serialize(data, _json));
         }
-        catch (IOException) { /* best-effort */ }
+        catch (IOException ex)
+        {
+            SaveError = $"Device registry could not be saved: {ex.Message}";
+        }
     }
 }

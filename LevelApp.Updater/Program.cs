@@ -11,14 +11,14 @@ string logPath = Path.Combine(Path.GetTempPath(), "LevelApp.Updater.log");
 
 void Log(string message)
 {
-    string line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} {message}";
+    string line = $"{DateTime.UtcNow:O} {message}";
     Console.WriteLine(line);
     File.AppendAllText(logPath, line + Environment.NewLine);
 }
 
 try
 {
-    File.WriteAllText(logPath, $"=== LevelApp Updater started {DateTime.Now:yyyy-MM-dd HH:mm:ss} ==={Environment.NewLine}");
+    File.WriteAllText(logPath, $"=== LevelApp Updater started {DateTime.UtcNow:O} ==={Environment.NewLine}");
     Log($"Args: {string.Join(" | ", Environment.GetCommandLineArgs())}");
 
     var cmdArgs  = Environment.GetCommandLineArgs(); // [0] = process name

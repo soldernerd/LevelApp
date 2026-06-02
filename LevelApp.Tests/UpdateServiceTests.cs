@@ -32,7 +32,7 @@ public class UpdateServiceTests
     {
         var handler = new FakeHandler(_ =>
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)));
-        var client = new HttpClient(handler);
+        var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(10) };
 
         var result = await FetchOrNullAsync(client);
 

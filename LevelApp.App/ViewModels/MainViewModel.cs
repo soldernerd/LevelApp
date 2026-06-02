@@ -199,6 +199,7 @@ public sealed partial class MainViewModel : ObservableObject
     public async Task<bool> ConfirmDiscardChangesAsync()
     {
         if (!IsDirty || ActiveProject is null) return true;
+        if (_windowContext.XamlRoot is null)   return true; // guard: window not yet loaded — mirrors ShowErrorAsync
 
         var dialog = new ContentDialog
         {
