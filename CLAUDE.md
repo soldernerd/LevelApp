@@ -63,7 +63,7 @@ All version information lives in `LevelApp.Core/AppVersion.cs`:
 public static class AppVersion
 {
     public const int Major = 0;
-    public const int Minor = 18;
+    public const int Minor = 19;
     public const int Patch = 0;
 
     public static string Full    => $"{Major}.{Minor}.{Patch}";

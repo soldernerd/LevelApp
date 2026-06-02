@@ -4,7 +4,7 @@
 
 > Living document. Update as the project evolves.
 
-> Last updated: 2026-06-02 *(revised to reflect v0.18.0; corrected DeviceRegistry location, test file names, added plugin architecture section, auto-update section, and known technical debt section)*
+> Last updated: 2026-06-02 *(revised to reflect v0.19.0; WP0.19 technical debt fixes, updated debt table)*
 
 
 
@@ -968,12 +968,13 @@ LevelApp.Updater.exe  <zipPath>  <installFolder>  <mainExeName>  [--from-temp]
 
 The items below are acknowledged debt. Do not extend these patterns.
 
-| Area | Debt | Do Not |
+| Area | Status | Do Not |
 |---|---|---|
-| `App.Services` static locator | `App.Services` is `public static IServiceProvider`. A handful of call sites (e.g. `NavigationService` resolving page ViewModels) call `App.Services.GetRequiredService<>()` directly, bypassing constructor injection. | Add new direct `App.Services.GetRequiredService<>()` calls outside of the DI composition root. |
-| `MainViewModel` UI handles | `XamlRoot` and `Hwnd` are `internal` properties set by `MainWindow` after `InitializeComponent()`. They are required by `ContentDialog` and COM file pickers and cannot be injected at construction time (the window does not exist yet). | Copy this pattern to other ViewModels. Use `ContentDialog` only from `MainViewModel` or pass `XamlRoot` explicitly where unavoidable. |
-| `HttpClient` timeout in `UpdateService` | `UpdateService._http` is a static `HttpClient` with no explicit `Timeout`. A hung GitHub API call could block the app startup path indefinitely. | Leave the timeout unset. A future patch should add `Timeout = TimeSpan.FromSeconds(15)` to the client construction. |
-| No shared rendering contract | Display modules (`SurfacePlot3DDisplay`, `MeasurementsGridRenderer`, etc.) are static classes with no common interface. Adding a new renderer requires editing the calling view code-behind. | Add a fourth static renderer module. When a new one is needed, define an `IDisplayModule` interface first. |
+| `App.Services` static locator | **Partially addressed (WP0.19).** All `App.Services` calls in XAML view code-behind now carry an explanatory comment; `UpdateDialog` now receives `IUpdateService` via constructor. Remaining calls are in `MainWindow`'s constructor block, which is the genuine composition root — comment documents why. | Add new uncommented `App.Services.GetRequiredService<>()` calls. Any new call site must either use constructor injection or carry the same composition-root comment. |
+| `MainViewModel` UI handles | **Resolved (WP0.19).** `XamlRoot` and `Hwnd` internal setters removed. Replaced by `IWindowContext` singleton (`WindowContext`) injected via DI; `MainWindow` populates it after construction. | Re-introduce post-construction property assignments on ViewModels for WinUI handles. |
+| `HttpClient` timeout in `UpdateService` | **Resolved (WP0.19).** `Timeout = TimeSpan.FromSeconds(10)` set on the `HttpClient` instance. | Leave `Timeout` unset on any new `HttpClient`. |
+| No shared rendering contract | **Active.** Display modules (`SurfacePlot3DDisplay`, `MeasurementsGridRenderer`, etc.) are static classes with no common interface. Adding a new renderer requires editing the calling view code-behind. | Add a fifth static renderer module without first defining an `IDisplayModule` interface. |
+| `DeviceRegistry` silent failure | **Resolved (WP0.19).** Corrupt `devices.json` now backs up to `.corrupt`, sets `LoadError`, and shows a warning `InfoBar` on the Instruments page. | Silently swallow `JsonException`/`IOException` from persistence loads elsewhere. |
 
 
 
@@ -1134,6 +1135,14 @@ The items below are acknowledged debt. Do not extend these patterns.
 - `Dfu/Internal/WinUsbControlTransport` — P/Invoke: `WinUsb_Initialize`, `WinUsb_ControlTransfer`, `WinUsb_Free`
 - 14 unit tests covering transport properties, scanner timeout/cancel, DFU progress, cancellation, disposal
 
+### WP0.19 — Technical Debt & Reliability Fixes ✓ Complete (v0.19.0)
+- Fix 1: `UpdateService` — `HttpClient.Timeout = 10 s`; contract tests added
+- Fix 2: `DeviceRegistry` — corrupt `devices.json` backed up to `.corrupt`, `LoadError` exposed on `IDeviceRegistry`, warning `InfoBar` on `InstrumentsPage`; 3 new unit tests
+- Fix 3: `IGeometryCalculator` / `IGeometryModule` / `IResultDisplay` — confirmed already removed in WP0.06; no action required
+- Fix 4: `App.Services` cleanup — `UpdateDialog` now receives `IUpdateService` via constructor; all XAML code-behind lookups carry explanatory comment; `MainWindow` consolidates all composition-root lookups with a single comment block
+- Fix 5: `IWindowContext` — new `IWindowContext` interface and `WindowContext` singleton (settable from `MainWindow`); `MainViewModel` receives it via DI; internal `XamlRoot`/`Hwnd` setters removed
+- Fix 6: `UpdaterContract` — named constants for cross-process argument contract duplicated in `LevelApp.App/Services/` and `LevelApp.Updater/`; `LevelApp.Updater/Program.cs` updated to use constants
+
 ### Future phases
 - Concrete instrument plugin (e.g. Wyler BT-Level) using `LevelApp.Instruments.BLE`
 - Concrete instrument plugin using `LevelApp.Instruments.UsbHid` + DFU firmware update
@@ -1160,7 +1169,7 @@ The items below are acknowledged debt. Do not extend these patterns.
 public static class AppVersion
 {
     public const int Major = 0;
-    public const int Minor = 18;
+    public const int Minor = 19;
     public const int Patch = 0;
 
     public static string Full    => $"{Major}.{Minor}.{Patch}";
