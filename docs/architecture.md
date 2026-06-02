@@ -180,7 +180,7 @@ LevelApp/
 │   │   ├── MeasurementView.xaml        ← includes ConnectionStatusBar InfoBar (WP0.14)
 │   │   ├── ResultsView.xaml
 │   │   ├── CorrectionView.xaml
-│   │   ├── InstrumentsPage.xaml        ← TabView; one tab per registered IInstrumentPlugin (WP0.16)
+│   │   ├── InstrumentsPage.xaml        ← TabView; one tab per registered IInstrumentPlugin; registry warning InfoBar (WP0.16/WP0.19)
 │   │   ├── InstrumentPluginTabView.xaml ← UserControl; device list, Add/Calibrate/Update buttons (WP0.16)
 │   │   └── Dialogs/
 │   │       ├── PreferencesDialog.xaml      ← default folder, theme selector, activity logging toggle
@@ -198,7 +198,7 @@ LevelApp/
 │   │   ├── ResultsViewModel.cs
 │   │   ├── CorrectionViewModel.cs
 │   │   ├── FlaggedStepItem.cs           ← display DTO for flagged step list
-│   │   ├── InstrumentsViewModel.cs      ← builds InstrumentPluginTabViewModel list from registered plugins (WP0.16)
+│   │   ├── InstrumentsViewModel.cs      ← builds InstrumentPluginTabViewModel list; exposes RegistryWarning from IDeviceRegistry.LoadError (WP0.16/WP0.19)
 │   │   ├── InstrumentPluginTabViewModel.cs ← ObservableCollection<KnownDeviceViewModel>; scan/calibrate/update commands
 │   │   └── KnownDeviceViewModel.cs      ← display wrapper for KnownDevice (WP0.16)
 │   └── DisplayModules/

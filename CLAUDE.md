@@ -234,7 +234,7 @@ The items below are acknowledged debt. **Do not extend these patterns.**
 
 Display modules (`SurfacePlot3DDisplay`, `MeasurementsGridRenderer`, `StrategyPreviewRenderer`, `ParallelWaysDisplay`) are static classes with no common interface. Adding a new renderer requires editing the calling view's code-behind.
 
-- **Rule:** Do not add a fourth static renderer module. When a new one is needed, define an `IDisplayModule` interface first and migrate existing modules to it.
+- **Rule:** Do not add a fifth static renderer module. When a new one is needed, define an `IDisplayModule` interface first and migrate existing modules to it.
 
 ---
 
