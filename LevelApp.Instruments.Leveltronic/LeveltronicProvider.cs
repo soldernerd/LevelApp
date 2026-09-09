@@ -1,10 +1,8 @@
 using LevelApp.Core.Instruments;
 using LevelApp.Core.Interfaces;
 using LevelApp.Core.Models;
-using LevelApp.Instruments.BLE;
 using LevelApp.Instruments.Leveltronic.Protocol;
 using LevelApp.Instruments.Leveltronic.Transport;
-using LevelApp.Instruments.UsbHid;
 
 namespace LevelApp.Instruments.Leveltronic;
 
@@ -29,7 +27,9 @@ public sealed class LeveltronicProvider : IInstrumentProvider
 
     /// <param name="device">The registered device to drive.</param>
     public LeveltronicProvider(KnownDevice device)
-        : this(device, () => CreateLink(device), autoReconnect: device.TransportId == new BleTransport().TransportId)
+        : this(device,
+               () => LeveltronicLinkFactory.Create(device),
+               autoReconnect: device is not null && device.TransportId == LeveltronicLinkFactory.BleTransportId)
     {
     }
 
@@ -178,17 +178,4 @@ public sealed class LeveltronicProvider : IInstrumentProvider
         }
     }
 
-    private static ILeveltronicLink CreateLink(KnownDevice device)
-    {
-        string ble = new BleTransport().TransportId;      // "ble"
-        string usb = new UsbHidTransport().TransportId;   // "usb-hid"
-
-        if (device.TransportId == ble)
-            return new BleLeveltronicLink(device.TransportAddress);
-        if (device.TransportId == usb)
-            return new UsbHidLeveltronicLink(device.TransportAddress);
-
-        throw new NotSupportedException(
-            $"Leveltronic does not support transport '{device.TransportId}'.");
-    }
 }

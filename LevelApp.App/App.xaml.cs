@@ -36,6 +36,7 @@ public partial class App : Application
 
         // Instrument plugins
         services.AddSingleton<IInstrumentPlugin, ManualEntryPlugin>();
+        services.AddSingleton<IInstrumentPlugin, LevelApp.Instruments.Leveltronic.UI.LeveltronicPlugin>();
 
         // Device registry — persists to %LOCALAPPDATA%\LevelApp\devices.json
         services.AddSingleton<IDeviceRegistry>(_ =>
