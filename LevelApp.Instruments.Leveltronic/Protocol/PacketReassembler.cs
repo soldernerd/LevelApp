@@ -44,11 +44,19 @@ public sealed class PacketReassembler
                 break;
 
             var candidate = CollectionsMarshalSpan(0, total).ToArray();
-            _buffer.RemoveRange(0, total);
 
             if (ApiV2Codec.TryParseFrame(candidate, out _, out _, out _))
+            {
                 packets.Add(candidate);
-            // else: framed length was consistent but CRC failed — drop it.
+                _buffer.RemoveRange(0, total);
+            }
+            else
+            {
+                // Plausible header but bad CRC — a false alignment on a garbage
+                // stream. Resync one byte at a time rather than swallowing a
+                // whole speculative frame (which could eat a real packet's start).
+                _buffer.RemoveAt(0);
+            }
         }
 
         return packets;
