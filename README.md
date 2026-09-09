@@ -113,6 +113,10 @@ LevelApp/
 │   │                            # ParallelWays/ (strategy + calculator)
 │   └── Serialization/           # ProjectSerializer, ObjectValueConverter,
 │                                # OrientationConverter
+├── LevelApp.Instruments.*/      # Instrument plugins & transports:
+│                                #   Manual (keyboard entry), BLE + UsbHid (transport
+│                                #   infrastructure + STM32 DFU), Leveltronic (+ .UI):
+│                                #   USB/BLE device over a shared API v2
 ├── LevelApp.App/                # WinUI 3 application
 │   ├── Views/                   # ProjectSetupView, MeasurementView,
 │   │                            # ResultsView, CorrectionView, Dialogs/
@@ -126,7 +130,7 @@ LevelApp/
 │   │                            # HelpButtonStyle.xaml
 │   └── DisplayModules/          # SurfacePlot3DDisplay, MeasurementsGridRenderer,
 │                                # StrategyPreviewRenderer, ParallelWaysDisplay
-├── LevelApp.Tests/              # xUnit unit tests (Core only)
+├── LevelApp.Tests/              # xUnit unit tests (Core + instrument protocol/transport)
 ├── LevelApp.Updater/            # Standalone updater utility (copy-to-temp, extract, relaunch)
 └── docs/
     ├── architecture.md          # Full architecture and design reference
@@ -143,12 +147,12 @@ LevelApp/
 - [x] Contextual help (tooltips + ⓘ flyouts) and en-US / de-DE localisation
 - [x] CI/CD pipeline — automated build, test, package, and GitHub Release on every push
 - [x] Auto-update — in-app check and one-click download/install of new releases
+- [x] Leveltronic instrument plugin — USB (Custom HID) and Bluetooth LE (RN4871 Transparent UART), one shared device API; device-management view for firmware identity, RTC, and every configuration parameter; USB DFU firmware update
+- [ ] Wire the instrument angle read into the guided measurement workflow (pending the firmware inclination resource)
 - [ ] Parallel Ways correction workflow
 - [ ] Heat map display module
 - [ ] Numerical table display module
 - [ ] Residuals chart display module
-- [ ] Bluetooth LE instrument provider
-- [ ] USB HID instrument provider
 - [ ] Additional geometry modules (squareness, lathe bed, …)
 - [ ] PDF report export
 

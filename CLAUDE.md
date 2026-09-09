@@ -170,8 +170,8 @@ It is deliberate project practice to define Core interfaces before concrete impl
 
 | Interface | Current state | First concrete implementation |
 |---|---|---|
-| `ICalibrationWorkflow` | Defined in `LevelApp.Core/Interfaces/`; all plugins return `null` | First hardware instrument plugin (WP TBD) |
-| `IFirmwareUpdater` | Defined in `LevelApp.Core/Interfaces/`; `ManualEntryPlugin` returns `null`; `FirmwareUpdateDialog` handles `null` gracefully | First hardware instrument plugin with DFU (WP TBD) |
+| `ICalibrationWorkflow` | Defined in `LevelApp.Core/Interfaces/`; all plugins return `null` | First hardware instrument plugin with a calibration routine (WP TBD — the Leveltronic firmware has no Calibrations category on its current build) |
+| `IFirmwareUpdater` | **Implemented (WP0.20)** — `LeveltronicFirmwareUpdater` (USB DFU via `DfuSession`). `ManualEntryPlugin` still returns `null`; `FirmwareUpdateDialog` handles `null` gracefully | — |
 
 ---
 
@@ -184,12 +184,15 @@ It is deliberate project practice to define Core interfaces before concrete impl
 
 **Registered `IInstrumentPlugin` implementations:**
 - `ManualEntryPlugin` — always registered; built-in device is seeded into `IDeviceRegistry` on startup.
+- `LeveltronicPlugin` (`LevelApp.Instruments.Leveltronic.UI`) — the "Leveltronic" electronic level over USB Custom HID or BLE (RN4871 Transparent UART), one shared "API v2". WP0.20.
 
 **Infrastructure-only projects (NOT registered as `IInstrumentPlugin`):**
-- `LevelApp.Instruments.BLE` — provides `BleTransport`, `BleDeviceScanner`, and `BleInstrumentProviderBase`. Not registered because there is no concrete instrument-specific code. Future BLE instrument plugins will reference this project and register their own `IInstrumentPlugin`.
-- `LevelApp.Instruments.UsbHid` — same rationale; provides `UsbHidTransport`, `UsbHidDeviceScanner`, `UsbHidInstrumentProviderBase`, and the full STM32 DFU subsystem.
+- `LevelApp.Instruments.BLE` — provides `BleTransport`, `BleDeviceScanner`, `BleInstrumentProviderBase`, and `Internal/BleConnectionManager` (reused by concrete plugins via `InternalsVisibleTo`).
+- `LevelApp.Instruments.UsbHid` — provides `UsbHidTransport`, `UsbHidDeviceScanner`, `UsbHidInstrumentProviderBase`, and the full STM32 DFU subsystem.
 
-When adding a new hardware instrument plugin: reference the appropriate transport project, subclass the provider base class, implement `IInstrumentPlugin`, and register it in `App.xaml.cs`.
+**Concrete device = two projects (WP0.20 pattern):** a headless `LevelApp.Instruments.<Device>` (protocol, transports, `IInstrumentProvider`, `IFirmwareUpdater` — no WinUI, referenced by `LevelApp.Tests`) plus a WinUI `LevelApp.Instruments.<Device>.UI` (the `IInstrumentPlugin` and its `CreateDeviceManagementView` control). `LevelApp.App` references the `.UI` project and registers the plugin. `InstrumentPluginTabView` consumes the optional-capability factories generically — no per-device code in `LevelApp.App` beyond the DI line.
+
+When adding a new hardware instrument plugin: follow that split, reference the appropriate transport project, implement `IInstrumentPlugin` in the `.UI` project, and register it in `App.xaml.cs`.
 
 ---
 

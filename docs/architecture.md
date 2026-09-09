@@ -4,7 +4,7 @@
 
 > Living document. Update as the project evolves.
 
-> Last updated: 2026-06-02 *(revised to reflect v0.19.1; code review remediation for WP0.19)*
+> Last updated: 2026-09-09 *(revised to reflect v0.20.0; WP0.20 — Leveltronic instrument plugin)*
 
 
 
@@ -138,6 +138,29 @@ LevelApp/
 │       └── Internal/
 │           ├── IUsbControlTransport.cs   ← testable abstraction over USB control transfers
 │           └── WinUsbControlTransport.cs ← P/Invoke: WinUsb_Initialize, WinUsb_ControlTransfer, WinUsb_Free
+├── LevelApp.Instruments.Leveltronic/     ← "Leveltronic" device — headless protocol/transport/provider (no WinUI)
+│   ├── Protocol/
+│   │   ├── ApiV2.cs                ← Api2Verb / Api2Category / Api2Status enums
+│   │   ├── ApiV2Codec.cs          ← opcode compose/split, CRC-16/CCITT-FALSE, frame build/parse
+│   │   ├── PacketReassembler.cs   ← byte-stream → packets (BLE); 1-byte resync on CRC failure
+│   │   ├── LeveltronicApi.cs      ← opcodes, USB VID/PID, RN4871 UUIDs, Settings 0x00–0x1C table,
+│   │   │                             provisional inclination Measurements resource 0x10
+│   │   ├── ILeveltronicLink.cs    ← transport-agnostic framed-packet pipe
+│   │   └── LeveltronicModels.cs   ← DeviceIdentity / DeviceState / RtcDateTime records
+│   ├── Transport/
+│   │   ├── UsbHidLeveltronicLink.cs  ← ILeveltronicLink over Custom HID (VID 04D8 / PID F08F)
+│   │   ├── BleLeveltronicLink.cs     ← ILeveltronicLink over RN4871 Transparent UART (reuses BleConnectionManager)
+│   │   └── LeveltronicLinkFactory.cs ← Create(KnownDevice) → the right link
+│   ├── LeveltronicDeviceClient.cs    ← request/response correlation; typed Identity/State/RTC/Settings/Commands
+│   ├── LeveltronicProvider.cs        ← IInstrumentProvider; transport from KnownDevice; BLE backoff reconnect
+│   ├── LeveltronicFirmwareUpdater.cs ← IFirmwareUpdater over USB DFU (reboot-to-DFU → DfuSession)
+│   └── LeveltronicProtocolException.cs ← + InstrumentResourceNotSupportedException (UNKNOWN_RESOURCE)
+├── LevelApp.Instruments.Leveltronic.UI/  ← "Leveltronic" device — WinUI class library (plugin + management view)
+│   ├── LeveltronicPlugin.cs        ← IInstrumentPlugin "leveltronic"; USB + BLE; firmware updater; no calibration
+│   ├── Views/LeveltronicManagementView.xaml(.cs)  ← connect, identity/state, RTC, every Settings field, commands
+│   └── ViewModels/
+│       ├── LeveltronicManagementViewModel.cs
+│       └── LeveltronicSettingRow.cs
 ├── LevelApp.App/                  ← WinUI 3 application
 │   ├── App.xaml / App.xaml.cs     ← DI container setup; registers IInstrumentPlugin(s), IDeviceRegistry
 │   ├── MainWindow.xaml / .cs      ← Menu bar (File, Edit, Instruments, Help); wires IThemeService to RootFrame
@@ -230,6 +253,12 @@ LevelApp/
 │   │   ├── UsbHidTransportTests.cs     ← property + capability checks
 │   │   ├── UsbHidDeviceScannerTests.cs ← timeout + cancellation behaviour (WP0.18)
 │   │   └── DfuSessionTests.cs          ← progress reporting + cancellation via mock transport (WP0.18)
+│   ├── Leveltronic/                    ← WP0.20; references the headless project only (no WinUI in dotnet test)
+│   │   ├── ApiV2CodecTests.cs          ← CRC / framing vectors cross-checked against apiv2.py
+│   │   ├── PacketReassemblerTests.cs   ← split / coalesced / garbage-resync / bad-CRC drop
+│   │   ├── FakeLeveltronicLink.cs      ← in-memory ILeveltronicLink test double
+│   │   ├── LeveltronicDeviceClientTests.cs ← decode/encode, UNKNOWN_RESOURCE, timeout
+│   │   └── LeveltronicProviderTests.cs ← transport selection, state mapping, reading path
 │   ├── Replay/
 │   │   ├── IReplayTarget.cs               ← minimal ViewModel abstraction for replay runner
 │   │   ├── EndOfRecordingException.cs
@@ -883,36 +912,35 @@ IInstrumentPlugin               ← one per instrument type (e.g. "Wyler BT-Leve
 
 They do **not** register an `IInstrumentPlugin` in DI, because there is no concrete instrument-specific code in these projects.
 
-Future concrete instrument plugins (e.g. a Wyler BT-Level plugin) will:
-1. Reference `LevelApp.Instruments.BLE` (or UsbHid)
-2. Subclass `BleInstrumentProviderBase` (or `UsbHidInstrumentProviderBase`) and add protocol logic
-3. Implement `IInstrumentPlugin` and register it in `App.xaml.cs`
-4. Optionally wrap `DfuSession` in a concrete `IFirmwareUpdater`
-5. Optionally provide a concrete `ICalibrationWorkflow`
+### Concrete device pattern — headless + `.UI` split (WP0.20)
 
+A concrete instrument is **two projects**, so `LevelApp.Tests` can reference the protocol/transport code without pulling the Windows App SDK runtime into `dotnet test`, and so the generic Instruments page needs no per-device special-casing:
 
+- **Headless** (`LevelApp.Instruments.Leveltronic`, `net8.0-windows`, no WinUI) — API codec, `ILeveltronicLink` + USB/BLE links, `LeveltronicDeviceClient`, `LeveltronicProvider : IInstrumentProvider`, `LeveltronicFirmwareUpdater : IFirmwareUpdater`. References the BLE/UsbHid infrastructure projects (reuses `BleConnectionManager`, `DfuSession`, `DfuConnectionDetector`, the two scanners).
+- **UI** (`LevelApp.Instruments.Leveltronic.UI`, WinUI class library) — `LeveltronicPlugin : IInstrumentPlugin` and the `LeveltronicManagementView` it returns from `CreateDeviceManagementView`. `LevelApp.App` references this project and registers the plugin.
+
+`InstrumentPluginTabView` consumes `CreateDeviceManagementView` / `CreateFirmwareUpdater` / `CreateCalibrationWorkflow` generically — the 3–4 further planned devices follow the same split with no `LevelApp.App` change beyond the DI line.
 
 ### Currently Registered Plugins
 
-| Plugin | PluginId | Transport | IFirmwareUpdater | ICalibrationWorkflow |
-|---|---|---|---|---|
-| `ManualEntryPlugin` | `"manual-entry"` | `"manual"` | `null` | `null` |
+| Plugin | PluginId | Transport | IFirmwareUpdater | ICalibrationWorkflow | DeviceManagementView |
+|---|---|---|---|---|---|
+| `ManualEntryPlugin` | `"manual-entry"` | `"manual"` | `null` | `null` | `null` |
+| `LeveltronicPlugin` | `"leveltronic"` | `"usb-hid"`, `"ble"` | `LeveltronicFirmwareUpdater` (USB only) | `null` | `LeveltronicManagementView` |
 
-`LevelApp.Instruments.BLE` and `LevelApp.Instruments.UsbHid` are compiled and tested but not registered as plugins — they are infrastructure only.
-
-
+`LevelApp.Instruments.BLE` and `LevelApp.Instruments.UsbHid` are still infrastructure only — not registered as plugins. The Leveltronic plugin references them.
 
 ### Interface Status
 
 | Interface | Status |
 |---|---|
-| `IInstrumentPlugin` | Active — one registered implementation (`ManualEntryPlugin`) |
-| `IInstrumentProvider` | Active — `ManualEntryProvider` + abstract bases in BLE/UsbHid projects |
+| `IInstrumentPlugin` | Active — `ManualEntryPlugin`, `LeveltronicPlugin` |
+| `IInstrumentProvider` | Active — `ManualEntryProvider`, `LeveltronicProvider` + abstract bases in BLE/UsbHid projects |
 | `ITransport` | Active — `ManualTransport`, `BleTransport`, `UsbHidTransport` |
 | `IDeviceScanner` | Active — `ManualEntryScanner`, `BleDeviceScanner`, `UsbHidDeviceScanner` |
 | `IDeviceRegistry` | Active — `DeviceRegistry` (Core/Instruments) registered as singleton in App |
-| `IFirmwareUpdater` | **Defined** — no concrete implementation yet; returns `null` from all current plugins |
-| `ICalibrationWorkflow` | **Defined** — no concrete implementation yet; returns `null` from all current plugins |
+| `IFirmwareUpdater` | Active — `LeveltronicFirmwareUpdater` (USB DFU via `DfuSession`); `ManualEntryPlugin` returns `null` |
+| `ICalibrationWorkflow` | **Defined** — no concrete implementation yet (Leveltronic firmware has no Calibrations category on this build) |
 
 
 
@@ -1167,9 +1195,18 @@ Code review remediation (v0.19.1 — 9 findings):
 - IN-02: `LevelApp.Updater/Program.cs` timestamps standardised to `DateTime.UtcNow` with ISO 8601 `"O"` format
 - IN-03: `UpdateServiceTests` HTTP-error test now constructs `HttpClient` with `Timeout = 10 s` to match production code
 
+### WP0.20 — Leveltronic instrument plugin ✓ Complete (v0.20.0)
+- First concrete hardware plugin: the **"Leveltronic"** precision electronic level (STM32G0B1, `InclinationMeterFirmware`). USB Custom HID (VID `0x04D8` / PID `0xF08F`) and BLE (RN4871 Transparent UART) — both speak the same "Device API v2".
+- New headless project `LevelApp.Instruments.Leveltronic` (`net8.0-windows`, no WinUI): `ApiV2Codec` (opcode structure, CRC-16/CCITT-FALSE, frame build/parse, `PacketReassembler`), `LeveltronicApi` constants + Settings `0x00`–`0x1C` table, `ILeveltronicLink` + `UsbHidLeveltronicLink` / `BleLeveltronicLink` (reuses `BleConnectionManager`), `LeveltronicDeviceClient`, `LeveltronicProvider`, `LeveltronicFirmwareUpdater`.
+- New WinUI class library `LevelApp.Instruments.Leveltronic.UI`: `LeveltronicPlugin` (registered in `App.xaml.cs`) and `LeveltronicManagementView` (connect; identity/state; RTC set-to-PC-clock; read/write every Settings resource with per-field range validation; test beep / force charge / confirmed reboot-to-DFU).
+- `IFirmwareUpdater` gets its first concrete implementation — USB DFU via reboot-to-DFU (`EXECUTE Commands 0x05`) → `DfuConnectionDetector` → `DfuSession`. **Caveat documented in code:** the firmware's reboot-to-DFU sets the `nBOOT0` option byte, so the device stays in the bootloader until reflashed with `nBOOT0 = 1` restored; `DfuSession` does not touch option bytes.
+- **Inclination read is provisional** — this firmware build exposes no angle Measurements resource (temperature / battery / BME280 / external-temp only). `GetReadingAsync` targets a provisional resource (`0x10`, `int32` µm/m, one constant + one parser) and throws `InstrumentResourceNotSupportedException` on `UNKNOWN_RESOURCE` until the firmware resource lands.
+- `LevelApp.Tests` references the headless project only (no WinUI in `dotnet test`): `Leveltronic/` — codec/CRC vectors cross-checked against `PythonTestCode/apiv2.py`, reassembler, device-client decode/encode, provider transport selection.
+
 ### Future phases
-- Concrete instrument plugin (e.g. Wyler BT-Level) using `LevelApp.Instruments.BLE`
-- Concrete instrument plugin using `LevelApp.Instruments.UsbHid` + DFU firmware update
+- Wire the inclination Measurements resource into `GetReadingAsync` once the firmware angle read is specced (one constant + `ParseInclinationMicronsPerMetre`)
+- A "Read from instrument" action in the Measurement view that calls `IInstrumentProvider.GetReadingAsync`
+- Further hardware device plugins (same headless + `.UI` split)
 - Additional display modules (heat map, numerical table, residuals chart)
 - Parallel Ways: correction workflow (currently Surface Plate only)
 - Additional geometry modules (straightness, squareness, etc.)
@@ -1193,8 +1230,8 @@ Code review remediation (v0.19.1 — 9 findings):
 public static class AppVersion
 {
     public const int Major = 0;
-    public const int Minor = 19;
-    public const int Patch = 1;
+    public const int Minor = 20;
+    public const int Patch = 0;
 
     public static string Full    => $"{Major}.{Minor}.{Patch}";
     public static string Display => $"v{Full}";
