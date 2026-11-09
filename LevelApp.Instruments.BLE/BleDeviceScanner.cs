@@ -17,14 +17,21 @@ namespace LevelApp.Instruments.BLE;
 public sealed class BleDeviceScanner : IDeviceScanner
 {
     private readonly Guid[] _serviceUuids;
+    private readonly string[] _namePrefixes;
 
     /// <param name="serviceUuids">
     /// The service UUIDs to filter on. Pass an empty array to receive all BLE
     /// advertisements (useful during development / testing).
     /// </param>
-    public BleDeviceScanner(Guid[] serviceUuids)
+    /// <param name="namePrefixes">
+    /// Optional advertised-local-name prefixes (case-insensitive). When given, only
+    /// advertisements whose name starts with one of them are reported — for
+    /// peripherals (e.g. an RN4871 module) that do not advertise their service UUID.
+    /// </param>
+    public BleDeviceScanner(Guid[] serviceUuids, string[]? namePrefixes = null)
     {
         _serviceUuids = serviceUuids ?? throw new ArgumentNullException(nameof(serviceUuids));
+        _namePrefixes = namePrefixes ?? [];
     }
 
     /// <inheritdoc/>
@@ -55,11 +62,18 @@ public sealed class BleDeviceScanner : IDeviceScanner
         {
             if (cts.IsCancellationRequested) return;
 
+            var localName = args.Advertisement.LocalName;
+
+            // The name may only arrive in the scan response, so an advertisement
+            // without a matching name is skipped without marking the address seen.
+            if (_namePrefixes.Length > 0 &&
+                !_namePrefixes.Any(p => localName.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
+                return;
+
             bool isNew;
             lock (seen) isNew = seen.Add(args.BluetoothAddress);
             if (!isNew) return;
 
-            var localName = args.Advertisement.LocalName;
             var candidate = new DeviceCandidate(
                 CandidateId:    args.BluetoothAddress.ToString("X12"),
                 TransportId:    "ble",

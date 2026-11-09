@@ -8,15 +8,18 @@ namespace LevelApp.Instruments.Leveltronic.Transport;
 /// <summary>
 /// <see cref="ILeveltronicLink"/> over USB Custom HID.
 /// <para>
-/// One HID OUT report carries one request packet; one HID IN report carries one
-/// response packet (zero-padded to the report length — <see cref="ApiV2Codec"/>
-/// reads <c>LEN</c> and ignores the pad). The device uses report id 0, sent as
-/// the leading byte of every report per the Windows HID convention.
+/// The HID report is a fixed 64 bytes. An API packet always starts at the
+/// beginning of a report and occupies <c>ceil((6 + LEN) / 64)</c> consecutive
+/// reports, the last zero-padded (API v3 spec §2.2); both directions use this.
+/// The device uses report id 0, sent as the leading byte of every report per
+/// the Windows HID convention.
 /// </para>
 /// </summary>
 public sealed class UsbHidLeveltronicLink : ILeveltronicLink
 {
     private readonly string _deviceId;
+    private readonly HidReportReassembler _reassembler = new();
+    private readonly SemaphoreSlim _sendGate = new(1, 1);
     private HidDevice? _device;
 
     public UsbHidLeveltronicLink(string deviceInterfaceId)
@@ -43,6 +46,7 @@ public sealed class UsbHidLeveltronicLink : ILeveltronicLink
             ?? throw new InvalidOperationException(
                 $"USB HID device '{_deviceId}' not found or in use by another process.");
 
+        _reassembler.Reset();
         device.InputReportReceived += OnInputReportReceived;
         _device = device;
         ConnectionChanged?.Invoke(this, true);
@@ -65,19 +69,30 @@ public sealed class UsbHidLeveltronicLink : ILeveltronicLink
         var device = _device
             ?? throw new InvalidOperationException("USB HID link is not connected.");
 
-        HidOutputReport report = device.CreateOutputReport();
+        // Reports of one packet must go out back to back.
+        await _sendGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            foreach (var chunk in HidReportReassembler.Split(frame.Span))
+            {
+                HidOutputReport report = device.CreateOutputReport();
 
-        // report.Data length == MaxOutputReportLength and includes the leading
-        // report-id byte (index 0). Leave it 0; copy the packet after it.
-        byte[] buffer = new byte[report.Data.Length];
-        if (frame.Length + 1 > buffer.Length)
-            throw new ArgumentException(
-                $"Frame ({frame.Length} B) does not fit one HID report ({buffer.Length - 1} B).",
-                nameof(frame));
-        frame.Span.CopyTo(buffer.AsSpan(1));
-        report.Data = buffer.AsBuffer();
+                // report.Data length == MaxOutputReportLength and includes the
+                // leading report-id byte (index 0, left 0).
+                byte[] buffer = new byte[report.Data.Length];
+                if (chunk.Length + 1 > buffer.Length)
+                    throw new InvalidOperationException(
+                        $"HID output report is {buffer.Length - 1} B, API v3 needs {chunk.Length} B.");
+                chunk.CopyTo(buffer, 1);
+                report.Data = buffer.AsBuffer();
 
-        await device.SendOutputReportAsync(report).AsTask(ct).ConfigureAwait(false);
+                await device.SendOutputReportAsync(report).AsTask(ct).ConfigureAwait(false);
+            }
+        }
+        finally
+        {
+            _sendGate.Release();
+        }
     }
 
     private void OnInputReportReceived(HidDevice sender, HidInputReportReceivedEventArgs args)
@@ -85,16 +100,15 @@ public sealed class UsbHidLeveltronicLink : ILeveltronicLink
         byte[] raw = args.Report.Data.ToArray();
         if (raw.Length <= 1) return;
 
-        // Strip the leading report-id byte, then parse the fixed-size report.
-        var packet = raw.AsSpan(1);
-        if (ApiV2Codec.TryParseFrame(packet, out _, out _, out _))
-        {
-            // Hand up the exact framed length so the client parses cleanly.
-            int payLen = packet[2] | (packet[3] << 8);
-            int total = ApiV2Codec.HeaderBytes + payLen + ApiV2Codec.CrcBytes;
-            PacketReceived?.Invoke(this, packet[..total].ToArray());
-        }
+        // Strip the leading report-id byte, then reassemble across reports.
+        var packet = _reassembler.Feed(raw.AsSpan(1));
+        if (packet is not null)
+            PacketReceived?.Invoke(this, packet);
     }
 
-    public async ValueTask DisposeAsync() => await DisconnectAsync().ConfigureAwait(false);
+    public async ValueTask DisposeAsync()
+    {
+        await DisconnectAsync().ConfigureAwait(false);
+        _sendGate.Dispose();
+    }
 }

@@ -1,7 +1,6 @@
 using LevelApp.Core.Instruments;
 using LevelApp.Core.Interfaces;
 using LevelApp.Instruments.Leveltronic.Protocol;
-using LevelApp.Instruments.Leveltronic.Transport;
 using LevelApp.Instruments.UsbHid.Dfu;
 
 namespace LevelApp.Instruments.Leveltronic;
@@ -9,30 +8,24 @@ namespace LevelApp.Instruments.Leveltronic;
 /// <summary>
 /// <see cref="IFirmwareUpdater"/> for the Leveltronic, over USB DFU.
 /// <para>
-/// <b>Recovery caveat.</b> The firmware's "reboot to DFU" (<c>EXECUTE Commands
-/// 0x05</c>) works by programming the <c>nBOOT0</c> option byte to 0 and reloading
-/// the option bytes, so the STM32 ROM bootloader is entered <i>and stays entered
-/// on every subsequent boot</i>. A plain DFU download does not restore
-/// <c>nBOOT0</c>, and <see cref="DfuSession"/> does not touch option bytes — so
-/// after <see cref="PerformUpdateAsync"/> the device remains in the bootloader
-/// until it is reflashed with <c>nBOOT0 = 1</c> restored (e.g.
+/// REBOOT_DFU needs service mode (switched on at the instrument). <b>Recovery
+/// caveat.</b> It works by programming the <c>nBOOT0</c> option byte to 0 and
+/// reloading the option bytes, so the STM32 ROM bootloader is entered <i>and
+/// stays entered on every subsequent boot</i>. A plain DFU download does not
+/// restore <c>nBOOT0</c>, and <see cref="DfuSession"/> does not touch option
+/// bytes — so after <see cref="PerformUpdateAsync"/> the device remains in the
+/// bootloader until it is reflashed with <c>nBOOT0 = 1</c> restored (e.g.
 /// <c>InclinationMeterFirmware/dfu_flash.ps1</c> or
 /// <c>STM32_Programmer_CLI ... -ob nBOOT_SEL=1 nBOOT0=1</c>). A power cycle does
 /// not recover it. See <c>InclinationMeterFirmware/docs/wp4_reboot_to_dfu.md</c>.
 /// </para>
 /// </summary>
-public sealed class LeveltronicFirmwareUpdater : IFirmwareUpdater
+public sealed class LeveltronicFirmwareUpdater(KnownDevice device, LeveltronicSessionManager sessions) : IFirmwareUpdater
 {
     /// <summary>STM32G0 main-flash page size (bytes) for DFU_DNLOAD blocks.</summary>
     private const int Stm32G0PageSize = 2048;
 
-    private readonly KnownDevice _device;
     private bool _isReady;
-
-    public LeveltronicFirmwareUpdater(KnownDevice device)
-    {
-        _device = device ?? throw new ArgumentNullException(nameof(device));
-    }
 
     /// <summary>
     /// Supplies the firmware image to flash. Set by the caller (the UI wires a
@@ -49,15 +42,12 @@ public sealed class LeveltronicFirmwareUpdater : IFirmwareUpdater
 
     public async Task<FirmwareInfo> GetCurrentFirmwareAsync(CancellationToken ct = default)
     {
-        await using var link = new UsbHidLeveltronicLink(_device.TransportAddress);
-        await link.ConnectAsync(ct).ConfigureAwait(false);
-        await using var client = new LeveltronicDeviceClient(link);
-
         try
         {
-            var id = await client.GetIdentityAsync(ct).ConfigureAwait(false);
+            await using var lease = await sessions.AcquireAsync(device, ct).ConfigureAwait(false);
+            var id = lease.Session.Identity;
             SetReady(true);
-            return new FirmwareInfo(id.FirmwareVersion, ReleaseNotes: null, DownloadUrl: null);
+            return new FirmwareInfo(id.Firmware, ReleaseNotes: null, DownloadUrl: null);
         }
         catch
         {
@@ -84,12 +74,17 @@ public sealed class LeveltronicFirmwareUpdater : IFirmwareUpdater
         if (image is null || image.Length == 0)
             throw new OperationCanceledException("Firmware image selection was cancelled.");
 
-        // 1. Command the device into the ROM bootloader.
-        await using (var link = new UsbHidLeveltronicLink(_device.TransportAddress))
+        // 1. Command the device into the ROM bootloader (service mode required).
+        await using (var lease = await sessions.AcquireAsync(device, ct).ConfigureAwait(false))
         {
-            await link.ConnectAsync(ct).ConfigureAwait(false);
-            await using var client = new LeveltronicDeviceClient(link);
-            await client.RebootToDfuAsync(ct).ConfigureAwait(false);
+            try
+            {
+                await lease.Session.Api.RebootToDfuAsync(ct).ConfigureAwait(false);
+            }
+            catch (ApiException ex)
+            {
+                throw new InvalidOperationException(ex.UserMessage, ex);
+            }
         }
         SetReady(false);
 
