@@ -4,7 +4,7 @@
 
 > Living document. Update as the project evolves.
 
-> Last updated: 2026-09-09 *(revised to reflect v0.20.0; WP0.20 — Leveltronic instrument plugin)*
+> Last updated: 2026-11-09 *(revised to reflect v0.20.4; WP0.20 — Leveltronic instrument plugin on firmware API v3)*
 
 
 
@@ -72,7 +72,8 @@ LevelApp/
 │   │   ├── IDeviceRegistry.cs          ← GetKnownDevices, RegisterDevice, ForgetDevice, GetPreferredDevice
 │   │   ├── IFirmwareUpdater.cs         ← RequiredTransport, IsReady, GetCurrentFirmwareAsync, PerformUpdateAsync
 │   │   ├── ICalibrationWorkflow.cs     ← DisplayName, CreateView() → object
-│   │   └── IInstrumentPlugin.cs        ← root plugin contract; CreateProvider, CreateScanners, optional capabilities
+│   │   ├── IInstrumentPlugin.cs        ← root plugin contract; CreateProvider, CreateScanners, optional capabilities
+│   │   └── ILiveReadingSource.cs       ← optional provider capability: live value, channels, settled measurement, zero (WP0.20)
 │   ├── Instruments/                    ← Instrument-related enums, value types, and registry (no UI dependencies)
 │   │   ├── InstrumentConnectionState.cs  ← Disconnected, Connecting, Connected, Degraded, Error
 │   │   ├── InstrumentCapabilities.cs     ← [Flags]: SingleMeasurement, ContinuousStream
@@ -81,6 +82,7 @@ LevelApp/
 │   │   ├── KnownDevice.cs               ← record(DeviceId, PluginId, TransportId, DisplayName, TransportAddress)
 │   │   ├── FirmwareInfo.cs              ← record(Version, ReleaseNotes?, DownloadUrl?)
 │   │   ├── DeviceCandidate.cs           ← record(CandidateId, TransportId, DisplayName, SignalStrength?)
+│   │   ├── LiveReading.cs               ← ReadingChannel(Id, DisplayName), LiveReading(µm/m, IsValid, IsDoubtful)
 │   │   └── DeviceRegistry.cs            ← IDeviceRegistry impl; persists to %LOCALAPPDATA%\LevelApp\devices.json
 │   ├── Models/
 │   │   ├── InstrumentReading.cs   ← Timestamp, Value; serialised to .instrument log files
@@ -138,29 +140,44 @@ LevelApp/
 │       └── Internal/
 │           ├── IUsbControlTransport.cs   ← testable abstraction over USB control transfers
 │           └── WinUsbControlTransport.cs ← P/Invoke: WinUsb_Initialize, WinUsb_ControlTransfer, WinUsb_Free
-├── LevelApp.Instruments.Leveltronic/     ← "Leveltronic" device — headless protocol/transport/provider (no WinUI)
+├── LevelApp.Instruments.Leveltronic/     ← "Leveltronic" device, API v3 — headless protocol/session/provider/wizards (no WinUI)
 │   ├── Protocol/
-│   │   ├── ApiV2.cs                ← Api2Verb / Api2Category / Api2Status enums
-│   │   ├── ApiV2Codec.cs          ← opcode compose/split, CRC-16/CCITT-FALSE, frame build/parse
-│   │   ├── PacketReassembler.cs   ← byte-stream → packets (BLE); 1-byte resync on CRC failure
-│   │   ├── LeveltronicApi.cs      ← opcodes, USB VID/PID, RN4871 UUIDs, Settings 0x00–0x1C table,
-│   │   │                             provisional inclination Measurements resource 0x10
-│   │   ├── ILeveltronicLink.cs    ← transport-agnostic framed-packet pipe
-│   │   └── LeveltronicModels.cs   ← DeviceIdentity / DeviceState / RtcDateTime records
+│   │   ├── ApiV3.cs                ← ApiVerb / ApiCategory / ApiStatus enums, ApiFrame record
+│   │   ├── ApiV3Codec.cs          ← opcode compose/split, CRC-16/CCITT-FALSE, BuildFrame / Parse (max payload 122)
+│   │   ├── PacketReassembler.cs   ← BLE byte-stream reassembly (1-byte resync, CRC/desync counters) + HidReportReassembler (64-byte reports)
+│   │   ├── LeveltronicApi.cs      ← transport identity (VID/PID, RN4871 UUIDs, name prefix) and the v3 resource ids
+│   │   ├── LeveltronicModels.cs   ← payload decoders: DeviceIdentity, SystemState, HealthInfo, RtcInfo, Environmental,
+│   │   │                             LiveTilt, SignalDiag, PhasorEntry, ZeroCalStatus, PrecisionStatus, InstrumentSnapshot
+│   │   ├── ValueCatalog.cs        ← data-driven Settings + Calibrations rows (id, type, range, unit, service flag)
+│   │   ├── LeveltronicErrors.cs   ← ApiReply, ApiException (UserMessage), LinkException, IncompatibleFirmware/UnsupportedDevice
+│   │   └── ILeveltronicLink.cs    ← transport-agnostic framed-packet pipe
 │   ├── Transport/
-│   │   ├── UsbHidLeveltronicLink.cs  ← ILeveltronicLink over Custom HID (VID 04D8 / PID F08F)
+│   │   ├── UsbHidLeveltronicLink.cs  ← ILeveltronicLink over Custom HID, packets fragmented over 64-byte reports
 │   │   ├── BleLeveltronicLink.cs     ← ILeveltronicLink over RN4871 Transparent UART (reuses BleConnectionManager)
 │   │   └── LeveltronicLinkFactory.cs ← Create(KnownDevice) → the right link
-│   ├── LeveltronicDeviceClient.cs    ← request/response correlation; typed Identity/State/RTC/Settings/Commands
-│   ├── LeveltronicProvider.cs        ← IInstrumentProvider; transport from KnownDevice; BLE backoff reconnect
-│   ├── LeveltronicFirmwareUpdater.cs ← IFirmwareUpdater over USB DFU (reboot-to-DFU → DfuSession)
-│   └── LeveltronicProtocolException.cs ← + InstrumentResourceNotSupportedException (UNKNOWN_RESOURCE)
-├── LevelApp.Instruments.Leveltronic.UI/  ← "Leveltronic" device — WinUI class library (plugin + management view)
-│   ├── LeveltronicPlugin.cs        ← IInstrumentPlugin "leveltronic"; USB + BLE; firmware updater; no calibration
-│   ├── Views/LeveltronicManagementView.xaml(.cs)  ← connect, identity/state, RTC, every Settings field, commands
-│   └── ViewModels/
-│       ├── LeveltronicManagementViewModel.cs
-│       └── LeveltronicSettingRow.cs
+│   ├── LeveltronicDeviceClient.cs    ← opcode-correlated requests (supersede, timeout) + shared ref-counted subscriptions
+│   ├── InstrumentApi.cs              ← typed operations: System, Topics, Settings/Calibrations, Commands, Procedures, streams
+│   ├── LiveFeed.cs                   ← LIVE + STATUS + ENV merged into an InstrumentSnapshot
+│   ├── PrecisionRun.cs               ← one triggered precision measurement (Procedures PRECISION)
+│   ├── LeveltronicSession.cs         ← link + client + API + feed; LeveltronicSessionManager (one session per instrument, leases)
+│   ├── LeveltronicProvider.cs        ← IInstrumentProvider + ILiveReadingSource (S1/S2/Diff, measure, Zero Diff), BLE auto-reconnect
+│   ├── LeveltronicFirmwareUpdater.cs ← IFirmwareUpdater over USB DFU (REBOOT_DFU is service-gated → DfuSession)
+│   ├── Preferences/LeveltronicPreferences.cs ← ILeveltronicPreferences; JSON store %LOCALAPPDATA%\LevelApp\leveltronic.json
+│   └── Calibration/
+│       ├── CalibrationMath.cs     ← ComplexStats, EstimatePhase, EstimateGain, ShimTilt
+│       ├── FlipCalWizard.cs       ← zero (flip) wizard state machine (+ WizardBase<TState>, SensorMask)
+│       ├── PhaseCalWizard.cs      ← phase wizard (phasor-stream captures)
+│       └── GainCalWizard.cs       ← gain / sensitivity wizard (precision runs, shim setup per serial)
+├── LevelApp.Instruments.Leveltronic.UI/  ← "Leveltronic" device — WinUI class library (plugin + views)
+│   ├── LeveltronicPlugin.cs        ← IInstrumentPlugin "leveltronic"; owns the session manager and preferences
+│   ├── LeveltronicCalibrationWorkflow.cs ← ICalibrationWorkflow → CalibrationHubView
+│   ├── Views/
+│   │   ├── LeveltronicManagementView.xaml(.cs) ← tabs: Info, Settings, Actions, Calibration values, Diagnostics
+│   │   ├── CalibrationHubView.xaml(.cs)        ← phase → gain → zero entry, service-mode card, hosts the wizard page
+│   │   └── WizardPageView.xaml(.cs)            ← renders any WizardPage (generic wizard screen)
+│   ├── ViewModels/                 ← LeveltronicManagementViewModel, ValueRowViewModel + info/diagnostic rows
+│   ├── Calibration/                ← WizardPage records, WizardViewModelBase, Flip/Phase/GainCalViewModel, CalibrationHubViewModel
+│   └── Converters/                 ← BoolToVisibility, PresenceToVisibility, SeverityBrush, ActionTemplateSelector
 ├── LevelApp.App/                  ← WinUI 3 application
 │   ├── App.xaml / App.xaml.cs     ← DI container setup; registers IInstrumentPlugin(s), IDeviceRegistry
 │   ├── MainWindow.xaml / .cs      ← Menu bar (File, Edit, Instruments, Help); wires IThemeService to RootFrame
@@ -196,6 +213,8 @@ LevelApp/
 │   │   ├── UpdaterContract.cs        ← argument-position constants for cross-process update contract
 │   │   ├── IWindowContext.cs         ← XamlRoot?, Hwnd, SetHwnd(), SetXamlRoot() — injected into MainViewModel
 │   │   └── WindowContext.cs          ← internal singleton impl; MainWindow calls SetHwnd/SetXamlRoot after construction
+│   ├── Controls/
+│   │   └── InstrumentReadingPanel.xaml(.cs) ← live value, channel, Take reading, Zero Diff; hidden for manual entry (WP0.20)
 │   ├── Converters/
 │   │   └── BoolToVisibilityConverter.cs
 │   ├── Views/
@@ -217,7 +236,8 @@ LevelApp/
 │   │   ├── ViewModelBase.cs             ← inherits ObservableObject
 │   │   ├── MainViewModel.cs             ← shell state: window title, dirty flag, unsaved-changes dialog
 │   │   ├── ProjectSetupViewModel.cs
-│   │   ├── MeasurementViewModel.cs      ← injects IInstrumentPlugin list + IDeviceRegistry; connection status
+│   │   ├── MeasurementViewModel.cs      ← injects IInstrumentPlugin list + IDeviceRegistry; owns an InstrumentReadingViewModel
+│   │   ├── InstrumentReadingViewModel.cs ← connects the step's provider; ILiveReadingSource state, commands (WP0.20)
 │   │   ├── ResultsViewModel.cs
 │   │   ├── CorrectionViewModel.cs
 │   │   ├── FlaggedStepItem.cs           ← display DTO for flagged step list
@@ -254,11 +274,16 @@ LevelApp/
 │   │   ├── UsbHidDeviceScannerTests.cs ← timeout + cancellation behaviour (WP0.18)
 │   │   └── DfuSessionTests.cs          ← progress reporting + cancellation via mock transport (WP0.18)
 │   ├── Leveltronic/                    ← WP0.20; references the headless project only (no WinUI in dotnet test)
-│   │   ├── ApiV2CodecTests.cs          ← CRC / framing vectors cross-checked against apiv2.py
-│   │   ├── PacketReassemblerTests.cs   ← split / coalesced / garbage-resync / bad-CRC drop
-│   │   ├── FakeLeveltronicLink.cs      ← in-memory ILeveltronicLink test double
-│   │   ├── LeveltronicDeviceClientTests.cs ← decode/encode, UNKNOWN_RESOURCE, timeout
-│   │   └── LeveltronicProviderTests.cs ← transport selection, state mapping, reading path
+│   │   ├── SimulatedLeveltronicLink.cs ← C# port of the phone app's simulated instrument (API v3, sensor physics, service mode)
+│   │   ├── TestKit.cs                  ← FakeTimeProvider helpers, SimRig (simulator + session + manager)
+│   │   ├── ApiV3CodecTests.cs          ← CRC / framing vectors cross-checked against PythonTestCode/apiv3.py
+│   │   ├── PacketReassemblerTests.cs   ← byte-stream resync + HID report reassembly
+│   │   ├── ModelsTests.cs              ← payload decoders, value catalog
+│   │   ├── ClientTests.cs              ← request correlation, timeout, supersede, shared subscriptions
+│   │   ├── ApiAndFeedTests.cs          ← typed ops, service-mode gating, live feed, version gate
+│   │   ├── PrecisionAndProviderTests.cs ← PrecisionRun, session manager, preferences, provider / ILiveReadingSource
+│   │   ├── CalibrationMathTests.cs     ← port of the phone app's calibration_math_test
+│   │   └── WizardTests.cs              ← port of the phone app's wizards_test (flip, phase, gain)
 │   ├── Replay/
 │   │   ├── IReplayTarget.cs               ← minimal ViewModel abstraction for replay runner
 │   │   ├── EndOfRecordingException.cs
@@ -391,7 +416,28 @@ public interface ICalibrationWorkflow
 }
 ```
 
-> **Defined — first concrete implementation planned for the first hardware instrument plugin (WP TBD).** All existing plugins (`ManualEntryPlugin`, both base classes) return `null` from `IInstrumentPlugin.CreateCalibrationWorkflow()`. The UI wires the Calibrate button to this return value and disables it when `null`.
+> **Implemented by `LeveltronicCalibrationWorkflow` (WP0.20)** — it returns the calibration hub (phase → gain → zero wizards). `ManualEntryPlugin` returns `null` from `IInstrumentPlugin.CreateCalibrationWorkflow()`; the Instruments page shows the Calibrate button only when a known device's plugin returns a workflow, and embeds `CreateView()` in the plugin-specific area.
+
+### ILiveReadingSource
+
+Optional capability of an `IInstrumentProvider` (tested with `provider as ILiveReadingSource`; manual entry does not implement it). It lets the guided measurement show what the instrument reads and take a value from it, without any device knowledge in `LevelApp.App`.
+
+```csharp
+public interface ILiveReadingSource
+{
+    IReadOnlyList<ReadingChannel> Channels { get; }     // e.g. S1, S2, Diff
+    string SelectedChannelId { get; set; }
+    LiveReading? Latest { get; }                        // µm/m, IsValid, IsDoubtful; null when not connected
+    event EventHandler? LiveReadingChanged;             // may fire on a background thread
+    Task<double> MeasureAsync(IProgress<double>? progress, CancellationToken ct);   // settled value, µm/m
+
+    bool SupportsZero { get; }  bool IsZeroed { get; }  double? ZeroOffsetMicronsPerMetre { get; }
+    Task ZeroAsync(IProgress<double>? progress, CancellationToken ct);
+    void ClearZero();
+}
+```
+
+Values are **µm/m** — the unit the guided measurement's reading box takes (`MeasurementViewModel` divides by 1000 before storing mm/m on the step). A failed measurement throws `InstrumentMeasurementException` with an operator-ready message. `InstrumentReadingViewModel` (App) wraps this contract for the Measurement and Correction pages.
 
 ---
 
@@ -678,7 +724,10 @@ Navigation is managed by `INavigationService` / `NavigationService`, which maps 
       │  • Instrument orientation arrow (↑↓→←)             │
       │  • Instruction text                                 │
       │  • Progress (N of M, progress bar)                  │
-      │  • Reading entry field (NumberBox, mm/m)            │
+      │  • Instrument panel (live value, channel, Take      │
+      │    reading, Zero Diff) — only for an instrument     │
+      │    that is an ILiveReadingSource                    │
+      │  • Reading entry field (NumberBox, µm/m)            │
       │  • "Calculating…" overlay when solver is running    │
       ↓                                                     │
 [Reading accepted] ──────────────────────────────────────→─┘
@@ -694,6 +743,8 @@ Navigation is managed by `INavigationService` / `NavigationService`, which maps 
       ↓ (all flagged steps re-measured — recalculates, stores CorrectionRound)
 [Results] ← ResultsArgs(project, session)  [loop possible]
 ```
+
+**Instrument-fed readings (WP0.20).** `MeasurementViewModel` and `CorrectionViewModel` each own an `InstrumentReadingViewModel`. On entry it connects the provider resolved from the session's `InstrumentId` (preferred / first known device; `ManualEntryProvider.BuiltInDevice` otherwise), follows its connection state on the page's `InfoBar` (with the failure reason and a Retry button) and releases it in `OnNavigatedFrom` (`Shutdown()`). For an `ILiveReadingSource` the shared `InstrumentReadingPanel` shows the live value (µm/m, "unsteady" when doubtful), a channel selector, **Take reading** (the settled 2 s measurement, with progress and cancel, fills the reading box — the operator still presses Accept) and **Zero Diff** / **Clear zero**. Manual entry stays available and unchanged. The Correction page's reading box is in mm/m, so the instrument value is converted (÷1000) there.
 
 
 
@@ -914,19 +965,25 @@ They do **not** register an `IInstrumentPlugin` in DI, because there is no concr
 
 ### Concrete device pattern — headless + `.UI` split (WP0.20)
 
-A concrete instrument is **two projects**, so `LevelApp.Tests` can reference the protocol/transport code without pulling the Windows App SDK runtime into `dotnet test`, and so the generic Instruments page needs no per-device special-casing:
+A concrete instrument is **two projects**, so `LevelApp.Tests` can reference the protocol/transport/wizard code without pulling the Windows App SDK runtime into `dotnet test`, and so the generic Instruments page needs no per-device special-casing:
 
-- **Headless** (`LevelApp.Instruments.Leveltronic`, `net8.0-windows`, no WinUI) — API codec, `ILeveltronicLink` + USB/BLE links, `LeveltronicDeviceClient`, `LeveltronicProvider : IInstrumentProvider`, `LeveltronicFirmwareUpdater : IFirmwareUpdater`. References the BLE/UsbHid infrastructure projects (reuses `BleConnectionManager`, `DfuSession`, `DfuConnectionDetector`, the two scanners).
-- **UI** (`LevelApp.Instruments.Leveltronic.UI`, WinUI class library) — `LeveltronicPlugin : IInstrumentPlugin` and the `LeveltronicManagementView` it returns from `CreateDeviceManagementView`. `LevelApp.App` references this project and registers the plugin.
+- **Headless** (`LevelApp.Instruments.Leveltronic`, `net8.0-windows`, no WinUI) — the protocol codec and typed API, the transports, the shared session, `LeveltronicProvider`, `LeveltronicFirmwareUpdater`, and the UI-free calibration wizard state machines. References the BLE/UsbHid infrastructure projects (reuses `BleConnectionManager`, `DfuSession`, `DfuConnectionDetector`, `BleDeviceScanner`, `UsbHidDeviceScanner`).
+- **UI** (`LevelApp.Instruments.Leveltronic.UI`, WinUI class library) — `LeveltronicPlugin : IInstrumentPlugin`, the management view it returns from `CreateDeviceManagementView`, and the calibration hub it returns through `LeveltronicCalibrationWorkflow`. `LevelApp.App` references this project and registers the plugin.
 
-`InstrumentPluginTabView` consumes `CreateDeviceManagementView` / `CreateFirmwareUpdater` / `CreateCalibrationWorkflow` generically — the 3–4 further planned devices follow the same split with no `LevelApp.App` change beyond the DI line.
+`InstrumentPluginTabView` consumes `CreateDeviceManagementView` / `CreateFirmwareUpdater` / `CreateCalibrationWorkflow` generically — the further planned devices follow the same split with no `LevelApp.App` change beyond the DI line.
+
+### Shared session (WP0.20)
+
+USB HID and a GATT link cannot be opened twice, and the guided measurement, the management view and the wizards all need the same live data. `LeveltronicSessionManager` (owned by `LeveltronicPlugin`) hands out reference-counted `SessionLease`s over one `LeveltronicSession` per physical instrument (link + `LeveltronicDeviceClient` + `InstrumentApi` + `LiveFeed` + verified identity). The session is opened by the first lease and closed by the last, or when the link drops (`Closed` event; the next acquire opens a fresh one). A session that is still closing is awaited before a new one opens. `LeveltronicProvider` holds a lease while connected and reconnects with backoff on BLE.
+
+The Leveltronic protocol, wizards, preferences file and test approach are described in [`docs/leveltronic.md`](leveltronic.md).
 
 ### Currently Registered Plugins
 
 | Plugin | PluginId | Transport | IFirmwareUpdater | ICalibrationWorkflow | DeviceManagementView |
 |---|---|---|---|---|---|
 | `ManualEntryPlugin` | `"manual-entry"` | `"manual"` | `null` | `null` | `null` |
-| `LeveltronicPlugin` | `"leveltronic"` | `"usb-hid"`, `"ble"` | `LeveltronicFirmwareUpdater` (USB only) | `null` | `LeveltronicManagementView` |
+| `LeveltronicPlugin` | `"leveltronic"` | `"usb-hid"`, `"ble"` | `LeveltronicFirmwareUpdater` (USB only) | `LeveltronicCalibrationWorkflow` | `LeveltronicManagementView` |
 
 `LevelApp.Instruments.BLE` and `LevelApp.Instruments.UsbHid` are still infrastructure only — not registered as plugins. The Leveltronic plugin references them.
 
@@ -940,7 +997,8 @@ A concrete instrument is **two projects**, so `LevelApp.Tests` can reference the
 | `IDeviceScanner` | Active — `ManualEntryScanner`, `BleDeviceScanner`, `UsbHidDeviceScanner` |
 | `IDeviceRegistry` | Active — `DeviceRegistry` (Core/Instruments) registered as singleton in App |
 | `IFirmwareUpdater` | Active — `LeveltronicFirmwareUpdater` (USB DFU via `DfuSession`); `ManualEntryPlugin` returns `null` |
-| `ICalibrationWorkflow` | **Defined** — no concrete implementation yet (Leveltronic firmware has no Calibrations category on this build) |
+| `ICalibrationWorkflow` | Active — `LeveltronicCalibrationWorkflow` (phase, gain, zero wizards); `ManualEntryPlugin` returns `null` |
+| `ILiveReadingSource` | Active — implemented by `LeveltronicProvider`; consumed by `InstrumentReadingViewModel` (WP0.20) |
 
 
 
@@ -1195,24 +1253,27 @@ Code review remediation (v0.19.1 — 9 findings):
 - IN-02: `LevelApp.Updater/Program.cs` timestamps standardised to `DateTime.UtcNow` with ISO 8601 `"O"` format
 - IN-03: `UpdateServiceTests` HTTP-error test now constructs `HttpClient` with `Timeout = 10 s` to match production code
 
-### WP0.20 — Leveltronic instrument plugin ✓ Complete (v0.20.0)
-- First concrete hardware plugin: the **"Leveltronic"** precision electronic level (STM32G0B1, `InclinationMeterFirmware`). USB Custom HID (VID `0x04D8` / PID `0xF08F`) and BLE (RN4871 Transparent UART) — both speak the same "Device API v2".
-- New headless project `LevelApp.Instruments.Leveltronic` (`net8.0-windows`, no WinUI): `ApiV2Codec` (opcode structure, CRC-16/CCITT-FALSE, frame build/parse, `PacketReassembler`), `LeveltronicApi` constants + Settings `0x00`–`0x1C` table, `ILeveltronicLink` + `UsbHidLeveltronicLink` / `BleLeveltronicLink` (reuses `BleConnectionManager`), `LeveltronicDeviceClient`, `LeveltronicProvider`, `LeveltronicFirmwareUpdater`.
-- New WinUI class library `LevelApp.Instruments.Leveltronic.UI`: `LeveltronicPlugin` (registered in `App.xaml.cs`) and `LeveltronicManagementView` (connect; identity/state; RTC set-to-PC-clock; read/write every Settings resource with per-field range validation; test beep / force charge / confirmed reboot-to-DFU).
-- `IFirmwareUpdater` gets its first concrete implementation — USB DFU via reboot-to-DFU (`EXECUTE Commands 0x05`) → `DfuConnectionDetector` → `DfuSession`. **Caveat documented in code:** the firmware's reboot-to-DFU sets the `nBOOT0` option byte, so the device stays in the bootloader until reflashed with `nBOOT0 = 1` restored; `DfuSession` does not touch option bytes.
-- **Inclination read is provisional** — this firmware build exposes no angle Measurements resource (temperature / battery / BME280 / external-temp only). `GetReadingAsync` targets a provisional resource (`0x10`, `int32` µm/m, one constant + one parser) and throws `InstrumentResourceNotSupportedException` on `UNKNOWN_RESOURCE` until the firmware resource lands.
-- `LevelApp.Tests` references the headless project only (no WinUI in `dotnet test`): `Leveltronic/` — codec/CRC vectors cross-checked against `PythonTestCode/apiv2.py`, reassembler, device-client decode/encode, provider transport selection.
+### WP0.20 — Leveltronic instrument plugin ✓ Implemented (v0.20.0 – v0.20.4; awaiting hardware test)
+First concrete hardware plugin: the **"Leveltronic"** precision electronic level (STM32G0B1, firmware repo `InclinationMeterFirmware`), over USB Custom HID (VID `0x04D8` / PID `0xF08F`) and BLE (RN4871 Transparent UART, advertised as `Leveltronic-…`), both speaking one packet protocol. Delivered in two rounds:
+
+**v0.20.0** — plugin built against firmware **API v2** (the docs available at the time): headless protocol/transport/provider project, `.UI` plugin project with a management view, `IFirmwareUpdater` over USB DFU.
+
+**v0.20.1 – v0.20.4** — reworked on **API v3** (firmware 0.11+, a deliberate one-time break from v2 — see the firmware's `docs/api-v3-spec.md`; the phone app `LevelAppMobile` is the reference client):
+- **v0.20.1 — protocol port.** `ApiV3Codec`, `PacketReassembler` + `HidReportReassembler` (packets over 64 B span several HID reports), v3 decoders and `ValueCatalog`, `LeveltronicDeviceClient` with shared ref-counted subscriptions, `InstrumentApi`, `LiveFeed`, `PrecisionRun`, `LeveltronicSession` / `LeveltronicSessionManager` (version + product gate; one session per instrument), `LeveltronicProvider : ILiveReadingSource`, preferences store, BLE scan by name prefix (`BleDeviceScanner` gains `namePrefixes`). New Core contract `ILiveReadingSource`. v2 is dropped: a v2 firmware is refused with "needs API v3".
+- **v0.20.2 — guided measurement.** `InstrumentReadingViewModel` + `InstrumentReadingPanel` on the Measurement and Correction pages (live value, S1 / S2 / Diff selector, Take reading, Zero Diff, connection bar with Retry). The stale "Reading (mm/m)" label of the guided measurement was corrected to µm/m (the box has taken µm/m since v0.5.9).
+- **v0.20.3 — management view.** Tabs Info / Settings / Actions / Calibration values / Diagnostics and a service-mode card, catalog-driven, as on the phone.
+- **v0.20.4 — calibration wizards.** `ICalibrationWorkflow` gets its first implementation: phase → gain → zero (flip), ported from the phone app (same stages, math, texts, service-mode handling). Phase range follows the firmware's ±180° (the phone's math still gates at ±45°). Wizards are UI-free state machines in the headless project; `WizardPageView` renders any wizard page.
+- **Tests:** `LevelApp.Tests` references the headless project only. A C# port of the phone app's simulated instrument (`SimulatedLeveltronicLink`, on `FakeTimeProvider`) drives codec, client, feed, precision, provider and wizard tests — 295 tests in the suite.
+- **Known caveats:** (1) `IFirmwareUpdater` is implemented, but no update feed exists (`CheckForUpdateAsync` → `null`) and nothing sets `FirmwareImageProvider`; REBOOT_DFU is service-gated and leaves the device in the bootloader until reflashed with `nBOOT0 = 1` (`dfu_flash.ps1`). (2) The live panel, the wizard screens and the transports have not run against real hardware — the Instruments page, management tabs and calibration hub were verified loading in the running app against a fake registered device. (3) Diagnostics channel labels follow the firmware reference (S2, B, A, S1); the phone labels them A, B, S1, S2 — verify on the instrument. (4) The Correction page's reading box is still mm/m while the guided measurement is µm/m.
 
 ### Future phases
-- Wire the inclination Measurements resource into `GetReadingAsync` once the firmware angle read is specced (one constant + `ParseInclinationMicronsPerMetre`)
-- A "Read from instrument" action in the Measurement view that calls `IInstrumentProvider.GetReadingAsync`
-- Further hardware device plugins (same headless + `.UI` split)
+- Hardware sign-off of WP0.20 (BLE + USB, live panel, wizards) → minor bump to v0.21.0
+- Second hardware device plugin (NeigMess2 is already supported by the phone app) — same headless + `.UI` split; consider unifying the Correction page's reading unit with the guided measurement
+- A firmware update feed / file picker for `LeveltronicFirmwareUpdater`, and option-byte (`nBOOT0`) restore after a DFU flash
 - Additional display modules (heat map, numerical table, residuals chart)
 - Parallel Ways: correction workflow (currently Surface Plate only)
 - Additional geometry modules (straightness, squareness, etc.)
 - Reporting / PDF export
-
-
 
 ---
 
@@ -1231,7 +1292,7 @@ public static class AppVersion
 {
     public const int Major = 0;
     public const int Minor = 20;
-    public const int Patch = 0;
+    public const int Patch = 4;
 
     public static string Full    => $"{Major}.{Minor}.{Patch}";
     public static string Display => $"v{Full}";

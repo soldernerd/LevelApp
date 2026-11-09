@@ -33,12 +33,15 @@ LevelApp/
 ├── LevelApp.Instruments.Manual/    ← Manual-entry plugin (IInstrumentPlugin registered in DI)
 ├── LevelApp.Instruments.BLE/       ← BLE transport infrastructure only — no IInstrumentPlugin
 ├── LevelApp.Instruments.UsbHid/    ← USB HID transport + DFU — no IInstrumentPlugin
+├── LevelApp.Instruments.Leveltronic/    ← Leveltronic device, API v3: protocol, session, provider, calibration wizards (headless, no WinUI)
+├── LevelApp.Instruments.Leveltronic.UI/ ← Leveltronic WinUI: LeveltronicPlugin (registered in DI), management view, calibration hub
 ├── LevelApp.App/                   ← WinUI 3 application (Views, ViewModels, Services)
 ├── LevelApp.Tests/                 ← xUnit test project
 ├── LevelApp.Updater/               ← Standalone update-and-relaunch executable
 └── docs/
     ├── architecture.md             ← Full design reference (read before implementing)
     ├── levelproj.md                ← .levelproj JSON format reference
+    ├── leveltronic.md              ← Leveltronic instrument integration reference (protocol, wizards, tests, hardware checklist)
     ├── workpackages/               ← One markdown file per work package
     └── sampleProjects/             ← .levelproj files for ProjectReplayTests
 ```
@@ -63,8 +66,8 @@ All version information lives in `LevelApp.Core/AppVersion.cs`:
 public static class AppVersion
 {
     public const int Major = 0;
-    public const int Minor = 19;
-    public const int Patch = 1;
+    public const int Minor = 20;
+    public const int Patch = 4;
 
     public static string Full    => $"{Major}.{Minor}.{Patch}";
     public static string Display => $"v{Full}";
@@ -170,7 +173,7 @@ It is deliberate project practice to define Core interfaces before concrete impl
 
 | Interface | Current state | First concrete implementation |
 |---|---|---|
-| `ICalibrationWorkflow` | Defined in `LevelApp.Core/Interfaces/`; all plugins return `null` | First hardware instrument plugin with a calibration routine (WP TBD — the Leveltronic firmware has no Calibrations category on its current build) |
+| `ICalibrationWorkflow` | **Implemented (WP0.20)** — `LeveltronicCalibrationWorkflow` (phase, gain, zero wizards). `ManualEntryPlugin` still returns `null` | — |
 | `IFirmwareUpdater` | **Implemented (WP0.20)** — `LeveltronicFirmwareUpdater` (USB DFU via `DfuSession`). `ManualEntryPlugin` still returns `null`; `FirmwareUpdateDialog` handles `null` gracefully | — |
 
 ---
@@ -184,13 +187,17 @@ It is deliberate project practice to define Core interfaces before concrete impl
 
 **Registered `IInstrumentPlugin` implementations:**
 - `ManualEntryPlugin` — always registered; built-in device is seeded into `IDeviceRegistry` on startup.
-- `LeveltronicPlugin` (`LevelApp.Instruments.Leveltronic.UI`) — the "Leveltronic" electronic level over USB Custom HID or BLE (RN4871 Transparent UART), one shared "API v2". WP0.20.
+- `LeveltronicPlugin` (`LevelApp.Instruments.Leveltronic.UI`) — the "Leveltronic" electronic level over USB Custom HID or BLE (RN4871 Transparent UART), firmware **API v3** only (0.11+). WP0.20; details in `docs/leveltronic.md`.
 
 **Infrastructure-only projects (NOT registered as `IInstrumentPlugin`):**
 - `LevelApp.Instruments.BLE` — provides `BleTransport`, `BleDeviceScanner`, `BleInstrumentProviderBase`, and `Internal/BleConnectionManager` (reused by concrete plugins via `InternalsVisibleTo`).
 - `LevelApp.Instruments.UsbHid` — provides `UsbHidTransport`, `UsbHidDeviceScanner`, `UsbHidInstrumentProviderBase`, and the full STM32 DFU subsystem.
 
-**Concrete device = two projects (WP0.20 pattern):** a headless `LevelApp.Instruments.<Device>` (protocol, transports, `IInstrumentProvider`, `IFirmwareUpdater` — no WinUI, referenced by `LevelApp.Tests`) plus a WinUI `LevelApp.Instruments.<Device>.UI` (the `IInstrumentPlugin` and its `CreateDeviceManagementView` control). `LevelApp.App` references the `.UI` project and registers the plugin. `InstrumentPluginTabView` consumes the optional-capability factories generically — no per-device code in `LevelApp.App` beyond the DI line.
+**Concrete device = two projects (WP0.20 pattern):** a headless `LevelApp.Instruments.<Device>` (protocol, transports, shared session, `IInstrumentProvider`, `IFirmwareUpdater`, UI-free wizard state machines — no WinUI, referenced by `LevelApp.Tests`) plus a WinUI `LevelApp.Instruments.<Device>.UI` (the `IInstrumentPlugin`, its `CreateDeviceManagementView` control and `ICalibrationWorkflow` view). `LevelApp.App` references the `.UI` project and registers the plugin. `InstrumentPluginTabView` consumes the optional-capability factories generically — no per-device code in `LevelApp.App` beyond the DI line.
+
+**Live readings:** a provider that reports readings also implements the Core contract `ILiveReadingSource` (live value, channels, settled `MeasureAsync`, optional zero offset, all in **µm/m**). `MeasurementViewModel` / `CorrectionViewModel` own an `InstrumentReadingViewModel` that connects the provider and drives the shared `InstrumentReadingPanel`; neither the App nor Core knows any device. **One shared `LeveltronicSession` per instrument** (`LeveltronicSessionManager` leases) — never open a second link to the same device; acquire a lease instead.
+
+**Not yet hardware-tested (as of v0.20.4):** the Leveltronic over real USB/BLE, the live panel and the wizards. The simulator-based tests (`SimulatedLeveltronicLink`, a port of the phone app's simulated instrument) are the safety net; keep the simulator in step with the firmware API (`tools/api_spec.py`).
 
 When adding a new hardware instrument plugin: follow that split, reference the appropriate transport project, implement `IInstrumentPlugin` in the `.UI` project, and register it in `App.xaml.cs`.
 

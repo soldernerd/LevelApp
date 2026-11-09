@@ -29,6 +29,7 @@ The software guides the operator through a defined measurement procedure, acquir
 - **Auto-update** — checks for new releases on GitHub at startup; if a newer version is available the app offers to download and install it automatically
 - **Contextual help** — ⓘ flyout buttons on all section headers and algorithmic concepts (least-squares, flagged steps, sigma threshold, correction rounds, etc.); tooltips on all metric labels and input fields
 - **Localised UI** — full English (en-US) and German (de-DE) localisation; the OS language setting selects the active locale automatically
+- **Instrument integration** — the **Leveltronic** precision electronic level over USB or Bluetooth LE (firmware 0.11+, API v3): live S1 / S2 / Diff reading and a settled "Take reading" right in the guided measurement, Zero Diff, a management view (info and health, settings, actions, calibration values, signal diagnostics) and the phase / gain / zero calibration wizards. Manual keyboard entry always remains available. See [`docs/leveltronic.md`](docs/leveltronic.md)
 - **Extensible architecture** — geometry modules, measurement strategies, instrument providers and display modules are all plugin-style interfaces; new object types and instruments can be added without touching existing code
 
 ---
@@ -116,7 +117,7 @@ LevelApp/
 ├── LevelApp.Instruments.*/      # Instrument plugins & transports:
 │                                #   Manual (keyboard entry), BLE + UsbHid (transport
 │                                #   infrastructure + STM32 DFU), Leveltronic (+ .UI):
-│                                #   USB/BLE device over a shared API v2
+│                                #   USB/BLE device over firmware API v3
 ├── LevelApp.App/                # WinUI 3 application
 │   ├── Views/                   # ProjectSetupView, MeasurementView,
 │   │                            # ResultsView, CorrectionView, Dialogs/
@@ -134,6 +135,7 @@ LevelApp/
 ├── LevelApp.Updater/            # Standalone updater utility (copy-to-temp, extract, relaunch)
 └── docs/
     ├── architecture.md          # Full architecture and design reference
+    ├── leveltronic.md           # Leveltronic instrument: protocol, session, wizards, tests, hardware checklist
     └── levelproj.md             # .levelproj JSON format reference
 ```
 
@@ -147,8 +149,10 @@ LevelApp/
 - [x] Contextual help (tooltips + ⓘ flyouts) and en-US / de-DE localisation
 - [x] CI/CD pipeline — automated build, test, package, and GitHub Release on every push
 - [x] Auto-update — in-app check and one-click download/install of new releases
-- [x] Leveltronic instrument plugin — USB (Custom HID) and Bluetooth LE (RN4871 Transparent UART), one shared device API; device-management view for firmware identity, RTC, and every configuration parameter; USB DFU firmware update
-- [ ] Wire the instrument angle read into the guided measurement workflow (pending the firmware inclination resource)
+- [x] Leveltronic instrument plugin on firmware API v3 — USB (Custom HID) and Bluetooth LE; live reading and settled measurement in the guided measurement (S1 / S2 / Diff, Zero Diff); management view; phase / gain / zero calibration wizards *(implemented; hardware test pending)*
+- [ ] Hardware sign-off of the Leveltronic integration (BLE + USB, live panel, wizards)
+- [ ] Firmware update feed for the Leveltronic (USB DFU is implemented, no image source yet)
+- [ ] Further instrument plugins (the phone app also supports the NeigMess2)
 - [ ] Parallel Ways correction workflow
 - [ ] Heat map display module
 - [ ] Numerical table display module
