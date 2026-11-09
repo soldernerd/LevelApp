@@ -68,7 +68,7 @@
   <!-- MeasurementView -->
   <data name="Measurement_ProgressTitle.Text" xml:space="preserve"><value>Step {0} of {1}</value></data>
   <data name="Measurement_OrientationLabel.Text" xml:space="preserve"><value>Instrument orientation</value></data>
-  <data name="Measurement_ReadingLabel.Text" xml:space="preserve"><value>Reading (mm/m)</value></data>
+  <data name="Measurement_ReadingLabel.Text" xml:space="preserve"><value>Reading (µm/m)</value></data>
   <data name="Measurement_AcceptButton.Content" xml:space="preserve"><value>Accept Reading</value></data>
   <data name="Measurement_SkipButton.Content" xml:space="preserve"><value>Skip</value></data>
   <data name="Measurement_CancelButton.Content" xml:space="preserve"><value>Cancel</value></data>
@@ -215,4 +215,16 @@
   <data name="Results_Recalculate.Content" xml:space="preserve"><value>Recalculate</value></data>
   <data name="PW_BestStraightness_Label.Text" xml:space="preserve"><value>Best Rail Straightness</value></data>
 
+  <data name="ReadingMicro_Help_Body.Text" xml:space="preserve"><value>Enter the value shown on the electronic level, or take it from the instrument. The unit is micrometres per metre (µm/m), i.e. 0.001 mm/m. A positive value means the instrument is tilted so the high end points in the direction of travel. A zero reading means the instrument is perfectly level on that span.</value></data>
+  <data name="Instrument_Header.Text" xml:space="preserve"><value>Instrument</value></data>
+  <data name="Instrument_Channel.Header" xml:space="preserve"><value>Channel</value></data>
+  <data name="Instrument_TakeReading.Content" xml:space="preserve"><value>Take reading</value></data>
+  <data name="Instrument_Cancel.Content" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Instrument_ZeroDiff.Content" xml:space="preserve"><value>Zero Diff</value></data>
+  <data name="Instrument_ClearZero.Content" xml:space="preserve"><value>Clear zero</value></data>
+  <data name="Instrument_Retry.Content" xml:space="preserve"><value>Retry</value></data>
+  <data name="Instrument_Measuring.Text" xml:space="preserve"><value>Measuring – keep the table still…</value></data>
+  <data name="Instrument_NoReading.Text" xml:space="preserve"><value>No reading yet</value></data>
+  <data name="Instrument_Unsteady.Text" xml:space="preserve"><value>Unsteady – wait for the reading to settle</value></data>
+  <data name="Instrument_ZeroedAt.Text" xml:space="preserve"><value>Zeroed at {0} µm/m</value></data>
 </root>

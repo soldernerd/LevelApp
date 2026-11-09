@@ -50,6 +50,7 @@ public sealed partial class CorrectionView : Page
         base.OnNavigatedFrom(e);
         ViewModel.PropertyChanged -= OnViewModelPropertyChanged;
         this.ActualThemeChanged   -= OnActualThemeChanged;
+        ViewModel.Shutdown(); // release the instrument
     }
 
     // ── Canvas refresh ────────────────────────────────────────────────────────

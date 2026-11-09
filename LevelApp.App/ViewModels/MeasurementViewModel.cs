@@ -32,8 +32,12 @@ public sealed partial class MeasurementViewModel : ViewModelBase
 
     public MeasurementViewModel(INavigationService navigation, MainViewModel mainViewModel,
                                 ParallelWaysCalculator pwCalculator, ILocalisationService loc,
-                                IEnumerable<IInstrumentPlugin> plugins, IDeviceRegistry registry)
+                                IEnumerable<IInstrumentPlugin> plugins, IDeviceRegistry registry,
+                                InstrumentReadingViewModel instrumentReading)
     {
+        InstrumentReading = instrumentReading;
+        InstrumentReading.ReadingTaken      += OnInstrumentReadingTaken;
+        InstrumentReading.ConnectionChanged += OnConnectionStateChanged;
         _navigation    = navigation;
         _mainViewModel = mainViewModel;
         _pwCalculator  = pwCalculator;
@@ -42,8 +46,19 @@ public sealed partial class MeasurementViewModel : ViewModelBase
         _registry      = registry;
     }
 
-    private void OnConnectionStateChanged(object? sender, InstrumentConnectionState state)
+    /// <summary>The instrument half of the reading entry (live value, channel, take reading, zero).</summary>
+    public InstrumentReadingViewModel InstrumentReading { get; }
+
+    // A settled measurement from the instrument lands in the reading box (µm/m).
+    private void OnInstrumentReadingTaken(object? sender, double microns) =>
+        Reading = Math.Round(microns, 1);
+
+    /// <summary>Releases the instrument when the page is left.</summary>
+    public void Shutdown() => _ = InstrumentReading.DetachAsync();
+
+    private void OnConnectionStateChanged(object? sender, EventArgs e)
     {
+        OnPropertyChanged(nameof(ShowRetry));
         OnPropertyChanged(nameof(ShowConnectionWarning));
         OnPropertyChanged(nameof(ConnectionSeverity));
         OnPropertyChanged(nameof(ConnectionStatusMessage));
@@ -70,12 +85,10 @@ public sealed partial class MeasurementViewModel : ViewModelBase
                   ?? _registry.GetKnownDevices(plugin.PluginId).FirstOrDefault()
                   ?? ManualEntryProvider.BuiltInDevice;
 
-        // Detach from previous provider (if this VM is re-used).
-        if (_provider is not null)
-            _provider.ConnectionStateChanged -= OnConnectionStateChanged;
-
+        // The reading panel owns the provider's connection from here on (connects
+        // it, follows its state, releases it in Shutdown).
         _provider = plugin.CreateProvider(device);
-        _provider.ConnectionStateChanged += OnConnectionStateChanged;
+        _ = InstrumentReading.AttachAsync(_provider);
 
         IsParallelWays = _definition.GeometryModuleId == "ParallelWays";
 
@@ -167,6 +180,11 @@ public sealed partial class MeasurementViewModel : ViewModelBase
     private InstrumentConnectionState ProviderState =>
         _provider?.ConnectionState ?? InstrumentConnectionState.Disconnected;
 
+    /// <summary>A failed or lost connection to an instrument that reports readings can be retried.</summary>
+    public bool ShowRetry =>
+        InstrumentReading.IsAvailable && ProviderState != InstrumentConnectionState.Connected
+                                      && ProviderState != InstrumentConnectionState.Connecting;
+
     public bool ShowConnectionWarning =>
         ProviderState != InstrumentConnectionState.Connected;
 
@@ -181,7 +199,7 @@ public sealed partial class MeasurementViewModel : ViewModelBase
             InstrumentConnectionState.Disconnected => "Instrument disconnected",
             InstrumentConnectionState.Connecting   => "Connecting to instrument…",
             InstrumentConnectionState.Degraded     => "Instrument signal degraded",
-            InstrumentConnectionState.Error        => "Instrument connection error",
+            InstrumentConnectionState.Error        => InstrumentReading.ConnectionError ?? "Instrument connection error",
             _                                      => string.Empty
         };
 

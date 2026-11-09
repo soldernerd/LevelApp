@@ -2,6 +2,7 @@
     x:Class="LevelApp.App.Views.MeasurementView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:LevelApp.App.Controls"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
     <Grid RowDefinitions="Auto,Auto,*,Auto">
@@ -29,7 +30,13 @@
                  Severity="{x:Bind ViewModel.ConnectionSeverity, Mode=OneWay}"
                  Title="{x:Bind ViewModel.ConnectionStatusMessage, Mode=OneWay}"
                  IsClosable="False"
-                 Margin="24,0,24,0"/>
+                 Margin="24,0,24,0">
+            <InfoBar.ActionButton>
+                <Button x:Uid="Instrument_Retry"
+                        Command="{x:Bind ViewModel.InstrumentReading.RetryCommand}"
+                        Visibility="{x:Bind ViewModel.ShowRetry, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
+            </InfoBar.ActionButton>
+        </InfoBar>
 
         <!-- ── Main content ───────────────────────────────────────────────── -->
         <Grid Grid.Row="2"
@@ -103,6 +110,9 @@
                                Style="{StaticResource BodyTextBlockStyle}"/>
                 </Border>
 
+                <!-- Instrument: live value, channel, take reading, zero (hidden for manual entry) -->
+                <controls:InstrumentReadingPanel ViewModel="{x:Bind ViewModel.InstrumentReading}"/>
+
                 <!-- Reading entry (label replaced from Header attribute) -->
                 <StackPanel Spacing="4">
                     <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
@@ -115,7 +125,7 @@
                                 <Flyout Placement="Bottom">
                                     <StackPanel MaxWidth="340" Spacing="8">
                                         <TextBlock x:Uid="Reading_Help_Title" Style="{StaticResource SubtitleTextBlockStyle}"/>
-                                        <TextBlock x:Uid="Reading_Help_Body" TextWrapping="Wrap" Style="{StaticResource BodyTextBlockStyle}"/>
+                                        <TextBlock x:Uid="ReadingMicro_Help_Body" TextWrapping="Wrap" Style="{StaticResource BodyTextBlockStyle}"/>
                                     </StackPanel>
                                 </Flyout>
                             </Button.Flyout>

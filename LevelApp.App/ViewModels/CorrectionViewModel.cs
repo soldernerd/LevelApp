@@ -3,7 +3,9 @@ using CommunityToolkit.Mvvm.Input;
 using LevelApp.App.Navigation;
 using LevelApp.App.Services;
 using LevelApp.Core.Geometry;
+using LevelApp.Core.Interfaces;
 using LevelApp.Core.Models;
+using LevelApp.Instruments.Manual;
 using Microsoft.UI.Xaml;
 
 namespace LevelApp.App.ViewModels;
@@ -13,6 +15,8 @@ public sealed partial class CorrectionViewModel : ViewModelBase
     private readonly INavigationService  _navigation;
     private readonly MainViewModel       _mainViewModel;
     private readonly ILocalisationService _loc;
+    private readonly IEnumerable<IInstrumentPlugin> _plugins;
+    private readonly IDeviceRegistry     _registry;
 
     private Project            _project    = null!;
     private MeasurementSession _session    = null!;
@@ -21,12 +25,26 @@ public sealed partial class CorrectionViewModel : ViewModelBase
     /// <summary>Flagged steps paired with the new reading collected during this session.</summary>
     private List<(MeasurementStep Step, double? NewReading)> _flagged = [];
 
-    public CorrectionViewModel(INavigationService navigation, MainViewModel mainViewModel, ILocalisationService loc)
+    public CorrectionViewModel(INavigationService navigation, MainViewModel mainViewModel, ILocalisationService loc,
+                               IEnumerable<IInstrumentPlugin> plugins, IDeviceRegistry registry,
+                               InstrumentReadingViewModel instrumentReading)
     {
         _navigation    = navigation;
         _mainViewModel = mainViewModel;
         _loc           = loc;
+        _plugins       = plugins;
+        _registry      = registry;
+
+        InstrumentReading = instrumentReading;
+        // The correction reading box is in mm/m; the instrument delivers µm/m.
+        InstrumentReading.ReadingTaken += (_, microns) => Reading = Math.Round(microns / 1000.0, 4);
     }
+
+    /// <summary>The instrument half of the reading entry (live value, channel, take reading, zero).</summary>
+    public InstrumentReadingViewModel InstrumentReading { get; }
+
+    /// <summary>Releases the instrument when the page is left.</summary>
+    public void Shutdown() => _ = InstrumentReading.DetachAsync();
 
     // ── Initialisation ────────────────────────────────────────────────────────
 
@@ -35,6 +53,13 @@ public sealed partial class CorrectionViewModel : ViewModelBase
         _project    = args.Project;
         _session    = args.Session;
         _definition = _project.ObjectDefinition;
+
+        // Re-measure with the same instrument as the session (live reading, take reading, zero).
+        var plugin = _plugins.FirstOrDefault(p => p.PluginId == _session.InstrumentId) ?? _plugins.First();
+        var device = _registry.GetPreferredDevice(plugin.PluginId)
+                  ?? _registry.GetKnownDevices(plugin.PluginId).FirstOrDefault()
+                  ?? ManualEntryProvider.BuiltInDevice;
+        _ = InstrumentReading.AttachAsync(plugin.CreateProvider(device));
 
         // Determine the effective (latest) result
         SurfaceResult effectiveResult = _session.Corrections.Count > 0 &&

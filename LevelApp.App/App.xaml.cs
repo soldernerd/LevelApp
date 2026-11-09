@@ -60,6 +60,7 @@ public partial class App : Application
 
         // ViewModels — Transient so each navigation gets a fresh instance
         services.AddTransient<ProjectSetupViewModel>();
+        services.AddTransient<InstrumentReadingViewModel>();
         services.AddTransient<MeasurementViewModel>();
         services.AddTransient<ResultsViewModel>();
         services.AddTransient<CorrectionViewModel>();

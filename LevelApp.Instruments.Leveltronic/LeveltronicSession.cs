@@ -131,11 +131,18 @@ public sealed class LeveltronicSessionManager(
 
     private readonly object _gate = new();
     private readonly Dictionary<string, Slot> _slots = [];
+    private readonly Dictionary<string, Task> _closing = [];
     private readonly TimeProvider _time = time ?? TimeProvider.System;
 
     /// <summary>Open (or join) the session of <paramref name="device"/>.</summary>
     public async Task<SessionLease> AcquireAsync(KnownDevice device, CancellationToken ct = default)
     {
+        // A session that is still shutting down holds the HID handle / GATT
+        // link; wait for it before opening a new one.
+        Task? closing;
+        lock (_gate) _closing.TryGetValue(device.DeviceId, out closing);
+        if (closing is not null) await closing.WaitAsync(ct).ConfigureAwait(false);
+
         Slot slot;
         lock (_gate)
         {
@@ -186,6 +193,19 @@ public sealed class LeveltronicSessionManager(
         }
         if (!last) return;
 
+        var close = CloseAsync(slot);
+        lock (_gate) _closing[deviceId] = close;
+        try { await close.ConfigureAwait(false); }
+        finally
+        {
+            lock (_gate)
+                if (_closing.TryGetValue(deviceId, out var cur) && ReferenceEquals(cur, close))
+                    _closing.Remove(deviceId);
+        }
+    }
+
+    private static async Task CloseAsync(Slot slot)
+    {
         try
         {
             var session = await slot.Open.ConfigureAwait(false);
