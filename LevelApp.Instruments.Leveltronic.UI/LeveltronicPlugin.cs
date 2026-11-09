@@ -5,6 +5,7 @@ using LevelApp.Instruments.Leveltronic;
 using LevelApp.Instruments.Leveltronic.Preferences;
 using LevelApp.Instruments.Leveltronic.Protocol;
 using LevelApp.Instruments.Leveltronic.Transport;
+using LevelApp.Instruments.Leveltronic.UI.Views;
 using LevelApp.Instruments.UsbHid;
 
 namespace LevelApp.Instruments.Leveltronic.UI;
@@ -62,5 +63,6 @@ public sealed class LeveltronicPlugin : IInstrumentPlugin
             ? new LeveltronicFirmwareUpdater(device, Sessions)
             : null;
 
-    public object? CreateDeviceManagementView(IDeviceRegistry registry) => null;
+    public object? CreateDeviceManagementView(IDeviceRegistry registry) =>
+        new LeveltronicManagementView(Sessions, registry);
 }
