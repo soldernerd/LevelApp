@@ -50,10 +50,12 @@ internal static class TestKit
     /// <summary>Lets queued continuations (thread-pool hops) run.</summary>
     public static async Task SettleAsync()
     {
-        for (int i = 0; i < 3; i++)
+        // Round-trips through the thread pool drain queued continuations without
+        // paying the ~15 ms of a real timer wait.
+        for (int i = 0; i < 6; i++)
         {
+            await Task.Run(static () => { });
             await Task.Yield();
-            await Task.Delay(1);
         }
     }
 

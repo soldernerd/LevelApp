@@ -56,7 +56,8 @@ public sealed class LeveltronicPlugin : IInstrumentPlugin
     public IInstrumentProvider CreateProvider(KnownDevice device) =>
         new LeveltronicProvider(device, Sessions, Preferences);
 
-    public ICalibrationWorkflow? CreateCalibrationWorkflow(KnownDevice device) => null;
+    public ICalibrationWorkflow? CreateCalibrationWorkflow(KnownDevice device) =>
+        new LeveltronicCalibrationWorkflow(device, Sessions, Preferences);
 
     public IFirmwareUpdater? CreateFirmwareUpdater(KnownDevice device) =>
         device.TransportId == LeveltronicLinkFactory.UsbTransportId

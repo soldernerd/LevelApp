@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="LevelApp.Instruments.Leveltronic.UI.Views.CalibrationHubView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:views="using:LevelApp.Instruments.Leveltronic.UI.Views"
+    xmlns:conv="using:LevelApp.Instruments.Leveltronic.UI.Converters">
+
+    <UserControl.Resources>
+        <conv:PresenceToVisibilityConverter x:Key="Present"/>
+    </UserControl.Resources>
+
+    <Grid Padding="4" RowSpacing="10" RowDefinitions="Auto,Auto,*,Auto">
+
+        <!-- Header -->
+        <Grid Grid.Row="0" ColumnSpacing="8" ColumnDefinitions="*,Auto,Auto">
+            <TextBlock Grid.Column="0" Text="Calibration" Style="{StaticResource TitleTextBlockStyle}" VerticalAlignment="Center"/>
+            <Button Grid.Column="1" Content="Back to the steps" Command="{x:Bind ViewModel.CloseWizardCommand}"
+                    Visibility="{x:Bind ViewModel.ShowWizard, Mode=OneWay, Converter={StaticResource Present}}"/>
+            <Button Grid.Column="2" Content="Connect" Command="{x:Bind ViewModel.ConnectCommand}"
+                    Visibility="{x:Bind ViewModel.ShowRetry, Mode=OneWay, Converter={StaticResource Present}}"/>
+        </Grid>
+
+        <!-- Service mode card -->
+        <Border Grid.Row="1" CornerRadius="6" Padding="12"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                Visibility="{x:Bind ViewModel.IsConnected, Mode=OneWay, Converter={StaticResource Present}}">
+            <StackPanel Spacing="2">
+                <TextBlock Text="{x:Bind ViewModel.ServiceTitle, Mode=OneWay}" FontWeight="SemiBold"/>
+                <TextBlock Text="{x:Bind ViewModel.ServiceText, Mode=OneWay}" TextWrapping="Wrap"
+                           Style="{StaticResource CaptionTextBlockStyle}"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <HyperlinkButton Content="Leave service mode" Padding="0"
+                                 Command="{x:Bind ViewModel.LeaveServiceModeCommand}"
+                                 Visibility="{x:Bind ViewModel.ServiceMode, Mode=OneWay, Converter={StaticResource Present}}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Hub: the three wizards in order -->
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                      Visibility="{x:Bind ViewModel.ShowHub, Mode=OneWay, Converter={StaticResource Present}}">
+            <StackPanel Spacing="10">
+                <TextBlock TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                           Text="Run them in this order — each step assumes the one before it. Writing calibration values needs service mode, which can only be switched on at the instrument."/>
+
+                <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="14"
+                        Command="{x:Bind ViewModel.OpenPhaseCommand}">
+                    <StackPanel>
+                        <TextBlock Text="1  Phase" FontWeight="SemiBold"/>
+                        <TextBlock TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}"
+                                   Text="Finds the phase of each sensor's signal from a tilt step. S1, S2 or both."/>
+                    </StackPanel>
+                </Button>
+                <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="14"
+                        Command="{x:Bind ViewModel.OpenGainCommand}">
+                    <StackPanel>
+                        <TextBlock Text="2  Gain (sensitivity)" FontWeight="SemiBold"/>
+                        <TextBlock TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}"
+                                   Text="Sets k from a shim of known height under an edge of known length. S1, S2 or both."/>
+                    </StackPanel>
+                </Button>
+                <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="14"
+                        Command="{x:Bind ViewModel.OpenFlipCommand}">
+                    <StackPanel>
+                        <TextBlock Text="3  Zero (flip)" FontWeight="SemiBold"/>
+                        <TextBlock TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}"
+                                   Text="The 180° reversal test: measure, turn the instrument, measure again. S1, S2 or both."/>
+                    </StackPanel>
+                </Button>
+
+                <TextBlock TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}"
+                           Foreground="{ThemeResource TextFillColorTertiaryBrush}" Margin="0,8,0,0"
+                           Text="All calibration values — read, or edit in service mode — are on the Calibration values tab of the instrument's management view."/>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- The wizard -->
+        <views:WizardPageView Grid.Row="2" ViewModel="{x:Bind ViewModel.ActiveWizard, Mode=OneWay}"
+                              Visibility="{x:Bind ViewModel.ShowWizard, Mode=OneWay, Converter={StaticResource Present}}"/>
+
+        <!-- Status -->
+        <TextBlock Grid.Row="3" TextWrapping="Wrap"
+                   Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
+                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                   Visibility="{x:Bind ViewModel.StatusIsError, Mode=OneWay, Converter={StaticResource Present}, ConverterParameter=invert}"/>
+        <TextBlock Grid.Row="3" TextWrapping="Wrap"
+                   Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
+                   Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                   Visibility="{x:Bind ViewModel.StatusIsError, Mode=OneWay, Converter={StaticResource Present}}"/>
+    </Grid>
+</UserControl>

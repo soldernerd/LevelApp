@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="LevelApp.Instruments.Leveltronic.UI.Views.WizardPageView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:cal="using:LevelApp.Instruments.Leveltronic.UI.Calibration"
+    xmlns:conv="using:LevelApp.Instruments.Leveltronic.UI.Converters">
+
+    <UserControl.Resources>
+        <conv:PresenceToVisibilityConverter x:Key="Present"/>
+        <conv:SeverityBrushConverter x:Key="SeverityBrush"/>
+
+        <DataTemplate x:Key="BulletTemplate" x:DataType="x:String">
+            <TextBlock Text="{x:Bind}" TextWrapping="Wrap" Margin="0,2"/>
+        </DataTemplate>
+
+        <DataTemplate x:Key="SummaryLineTemplate" x:DataType="x:String">
+            <TextBlock Text="{x:Bind}" FontFamily="Consolas" Margin="0,2"/>
+        </DataTemplate>
+
+        <DataTemplate x:Key="ResultRowTemplate" x:DataType="cal:ResultRow">
+            <Grid ColumnDefinitions="80,*,*,*" Padding="0,3">
+                <TextBlock Grid.Column="0" Text="{x:Bind Label}"/>
+                <TextBlock Grid.Column="1" Text="{x:Bind Before}" FontFamily="Consolas"/>
+                <TextBlock Grid.Column="2" Text="{x:Bind After}" FontFamily="Consolas"/>
+                <TextBlock Grid.Column="3" Text="{x:Bind Delta}" FontFamily="Consolas"/>
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="ResultTableTemplate" x:DataType="cal:ResultTable">
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    CornerRadius="6" Padding="12" Margin="0,0,0,8">
+                <StackPanel>
+                    <TextBlock Text="{x:Bind Title}" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                    <Grid ColumnDefinitions="80,*,*,*"
+                          Opacity="0.7">
+                        <TextBlock Grid.Column="0" Text="Sensor"/>
+                        <TextBlock Grid.Column="1" Text="Before"/>
+                        <TextBlock Grid.Column="2" Text="After"/>
+                        <TextBlock Grid.Column="3" Text="Change"/>
+                    </Grid>
+                    <ItemsControl ItemsSource="{x:Bind Rows}" ItemTemplate="{StaticResource ResultRowTemplate}"/>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="VerdictTemplate" x:DataType="cal:VerdictCard">
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{x:Bind Severity, Converter={StaticResource SeverityBrush}}"
+                    BorderThickness="4,0,0,0" CornerRadius="6" Padding="12" Margin="0,0,0,8">
+                <StackPanel Spacing="2">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <TextBlock Text="{x:Bind Sensor}" FontWeight="SemiBold"/>
+                        <TextBlock Text="{x:Bind Headline}" FontFamily="Consolas"/>
+                    </StackPanel>
+                    <TextBlock Text="{x:Bind Detail}" TextWrapping="Wrap"
+                               Style="{StaticResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               Visibility="{x:Bind Detail, Converter={StaticResource Present}}"/>
+                    <TextBlock Text="{x:Bind Verdict}" TextWrapping="Wrap"
+                               Foreground="{x:Bind Severity, Converter={StaticResource SeverityBrush}}"/>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="PrimaryActionTemplate" x:DataType="cal:WizardAction">
+            <Button Content="{x:Bind Label}" Command="{x:Bind Command}" IsEnabled="{x:Bind Enabled}"
+                    Style="{StaticResource AccentButtonStyle}" Margin="0,0,8,0"/>
+        </DataTemplate>
+
+        <DataTemplate x:Key="NormalActionTemplate" x:DataType="cal:WizardAction">
+            <Button Content="{x:Bind Label}" Command="{x:Bind Command}" IsEnabled="{x:Bind Enabled}" Margin="0,0,8,0"/>
+        </DataTemplate>
+
+        <conv:ActionTemplateSelector x:Key="ActionSelector"
+                                     Primary="{StaticResource PrimaryActionTemplate}"
+                                     Normal="{StaticResource NormalActionTemplate}"/>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="12" Padding="2,0,12,12">
+
+            <TextBlock Text="{x:Bind ViewModel.Page.Title, Mode=OneWay}" Style="{StaticResource SubtitleTextBlockStyle}"/>
+
+            <TextBlock Text="{x:Bind ViewModel.Page.StepText, Mode=OneWay}" FontWeight="SemiBold"
+                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                       Visibility="{x:Bind ViewModel.Page.StepText, Mode=OneWay, Converter={StaticResource Present}}"/>
+
+            <TextBlock Text="{x:Bind ViewModel.Page.Intro, Mode=OneWay}" TextWrapping="Wrap"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                       Visibility="{x:Bind ViewModel.Page.Intro, Mode=OneWay, Converter={StaticResource Present}}"/>
+
+            <ItemsControl ItemsSource="{x:Bind ViewModel.Page.Instructions, Mode=OneWay}"
+                          ItemTemplate="{StaticResource BulletTemplate}"/>
+
+            <!-- Sensor selector -->
+            <StackPanel Spacing="4"
+                        Visibility="{x:Bind ViewModel.Page.ShowSensorSelector, Mode=OneWay, Converter={StaticResource Present}}">
+                <TextBlock Text="Calibrate" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <RadioButton GroupName="Sensors" Content="S1" IsChecked="{x:Bind ViewModel.MaskS1, Mode=TwoWay}"/>
+                    <RadioButton GroupName="Sensors" Content="S2" IsChecked="{x:Bind ViewModel.MaskS2, Mode=TwoWay}"/>
+                    <RadioButton GroupName="Sensors" Content="S1 and S2" IsChecked="{x:Bind ViewModel.MaskBoth, Mode=TwoWay}"/>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Gain: shim inputs -->
+            <StackPanel Spacing="6"
+                        Visibility="{x:Bind ViewModel.Page.ShowShimInputs, Mode=OneWay, Converter={StaticResource Present}}">
+                <TextBlock Text="Known tilt step (per sensor)" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <Grid ColumnDefinitions="60,160,160" ColumnSpacing="8" RowSpacing="6" RowDefinitions="Auto,Auto"
+                      DataContext="{x:Bind ViewModel, Mode=OneWay}">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="S1" VerticalAlignment="Center"/>
+                    <NumberBox Grid.Row="0" Grid.Column="1" Header="Shim height (mm)" Minimum="0" SmallChange="0.01"
+                               Value="{Binding Shim1Height, Mode=TwoWay}"/>
+                    <NumberBox Grid.Row="0" Grid.Column="2" Header="Edge length (mm)" Minimum="0" SmallChange="10"
+                               Value="{Binding Shim1Edge, Mode=TwoWay}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="S2" VerticalAlignment="Center"/>
+                    <NumberBox Grid.Row="1" Grid.Column="1" Header="Shim height (mm)" Minimum="0" SmallChange="0.01"
+                               Value="{Binding Shim2Height, Mode=TwoWay}"/>
+                    <NumberBox Grid.Row="1" Grid.Column="2" Header="Edge length (mm)" Minimum="0" SmallChange="10"
+                               Value="{Binding Shim2Edge, Mode=TwoWay}"/>
+                </Grid>
+                <TextBlock Text="{x:Bind ViewModel.Page.ShimHint, Mode=OneWay}" TextWrapping="Wrap"
+                           Style="{StaticResource CaptionTextBlockStyle}"/>
+            </StackPanel>
+
+            <!-- Stored values summary -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="6" Padding="12"
+                    Visibility="{x:Bind ViewModel.Page.SummaryTitle, Mode=OneWay, Converter={StaticResource Present}}">
+                <StackPanel>
+                    <TextBlock Text="{x:Bind ViewModel.Page.SummaryTitle, Mode=OneWay}" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                    <ItemsControl ItemsSource="{x:Bind ViewModel.Page.SummaryLines, Mode=OneWay}"
+                                  ItemTemplate="{StaticResource SummaryLineTemplate}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Progress ("Hold still…") -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="6" Padding="16"
+                    Visibility="{x:Bind ViewModel.Page.Progress, Mode=OneWay, Converter={StaticResource Present}}">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="{x:Bind ViewModel.Page.Progress.Title, Mode=OneWay}" FontWeight="SemiBold"/>
+                    <ProgressBar Minimum="0" Maximum="1"
+                                 Value="{x:Bind ViewModel.ProgressValue, Mode=OneWay}"
+                                 IsIndeterminate="{x:Bind ViewModel.ProgressIndeterminate, Mode=OneWay}"/>
+                    <TextBlock Text="{x:Bind ViewModel.Page.Progress.Subtitle, Mode=OneWay}"
+                               Style="{StaticResource CaptionTextBlockStyle}"/>
+                    <TextBlock Text="{x:Bind ViewModel.Page.Progress.Warning, Mode=OneWay}" TextWrapping="Wrap"
+                               Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                               Visibility="{x:Bind ViewModel.Page.Progress.Warning, Mode=OneWay, Converter={StaticResource Present}}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Busy -->
+            <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center" Margin="0,24"
+                        Visibility="{x:Bind ViewModel.Page.Busy, Mode=OneWay, Converter={StaticResource Present}}">
+                <ProgressRing IsActive="True" Width="24" Height="24"/>
+                <TextBlock Text="{x:Bind ViewModel.Page.BusyText, Mode=OneWay}" VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <!-- Result -->
+            <TextBlock Text="{x:Bind ViewModel.Page.Headline, Mode=OneWay}" FontSize="20" FontWeight="SemiBold"
+                       Foreground="{ThemeResource SystemFillColorSuccessBrush}"
+                       Visibility="{x:Bind ViewModel.Page.Headline, Mode=OneWay, Converter={StaticResource Present}}"/>
+
+            <ItemsControl ItemsSource="{x:Bind ViewModel.Page.Tables, Mode=OneWay}"
+                          ItemTemplate="{StaticResource ResultTableTemplate}"/>
+
+            <ItemsControl ItemsSource="{x:Bind ViewModel.Page.Verdicts, Mode=OneWay}"
+                          ItemTemplate="{StaticResource VerdictTemplate}"/>
+
+            <TextBlock Text="{x:Bind ViewModel.Page.Footer, Mode=OneWay}" TextWrapping="Wrap"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                       Visibility="{x:Bind ViewModel.Page.Footer, Mode=OneWay, Converter={StaticResource Present}}"/>
+
+            <InfoBar Severity="Error" IsClosable="False" IsOpen="True"
+                     Message="{x:Bind ViewModel.Page.Error, Mode=OneWay}"
+                     Visibility="{x:Bind ViewModel.Page.Error, Mode=OneWay, Converter={StaticResource Present}}"/>
+
+            <!-- Actions -->
+            <ItemsControl ItemsSource="{x:Bind ViewModel.Page.Actions, Mode=OneWay}"
+                          ItemTemplateSelector="{StaticResource ActionSelector}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+            </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
