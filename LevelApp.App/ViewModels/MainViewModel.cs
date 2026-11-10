@@ -225,9 +225,18 @@ public sealed partial class MainViewModel : ObservableObject
     // ── Post-load calculation ─────────────────────────────────────────────────
 
     /// <summary>
+    /// True when <paramref name="result"/> has to be (re)calculated: it is missing, or it
+    /// carries no node heights — which is what an older file deserialises to (it stored a
+    /// <c>heightMapMm</c> grid instead of <c>nodeHeights</c>), and that leaves the 3D
+    /// surface plot empty.
+    /// </summary>
+    private static bool NeedsCalculation(SurfaceResult? result) =>
+        result is null || result.NodeHeights.Count == 0;
+
+    /// <summary>
     /// Runs the calculator for any round whose steps are fully populated but
-    /// whose result is missing — supports files saved before result serialisation
-    /// was enforced and externally produced files.
+    /// whose result is missing or unusable — supports files saved before result
+    /// serialisation was enforced, older file layouts and externally produced files.
     /// </summary>
     private static async Task RecalculateMissingResultsAsync(Project project)
     {
@@ -245,7 +254,7 @@ public sealed partial class MainViewModel : ObservableObject
         var parameters   = initialRound.CalculationParameters ?? new CalculationParameters();
         var calculator   = CalculatorFactory.Create(parameters.MethodId, strategy);
 
-        if (initialRound.Result is null &&
+        if (NeedsCalculation(initialRound.Result) &&
             initialRound.Steps.Count > 0 &&
             initialRound.Steps.All(s => s.Reading.HasValue))
         {
@@ -257,7 +266,7 @@ public sealed partial class MainViewModel : ObservableObject
 
         foreach (var correction in session.Corrections)
         {
-            if (correction.Result is not null) continue;
+            if (!NeedsCalculation(correction.Result)) continue;
             if (correction.ReplacedSteps.Count == 0) continue;
 
             var mergedSteps = MeasurementRound.MergeWithReplacements(

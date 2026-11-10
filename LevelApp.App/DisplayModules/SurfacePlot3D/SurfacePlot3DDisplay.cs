@@ -30,7 +30,16 @@ public sealed class SurfacePlot3DDisplay
                          ObjectDefinition definition, IReadOnlyList<MeasurementStep> steps)
     {
         var canvas = new Canvas();
-        if (result.NodeHeights.Count == 0 || steps.Count == 0) return canvas;
+        if (result.NodeHeights.Count == 0 || steps.Count == 0)
+        {
+            // Say so instead of showing an empty pane (e.g. a result without node heights).
+            return new TextBlock
+            {
+                Text = "No surface data to display. Use Recalculate to compute the surface.",
+                TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
+                Margin = new Microsoft.UI.Xaml.Thickness(Margin)
+            };
+        }
 
         double hMin   = result.NodeHeights.Values.Min();
         double hMax   = result.NodeHeights.Values.Max();
