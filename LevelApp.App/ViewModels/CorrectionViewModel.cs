@@ -15,8 +15,7 @@ public sealed partial class CorrectionViewModel : ViewModelBase
     private readonly INavigationService  _navigation;
     private readonly MainViewModel       _mainViewModel;
     private readonly ILocalisationService _loc;
-    private readonly IEnumerable<IInstrumentPlugin> _plugins;
-    private readonly IDeviceRegistry     _registry;
+    private readonly IInstrumentChoiceCatalog _catalog;
 
     private Project            _project    = null!;
     private MeasurementSession _session    = null!;
@@ -26,14 +25,13 @@ public sealed partial class CorrectionViewModel : ViewModelBase
     private List<(MeasurementStep Step, double? NewReading)> _flagged = [];
 
     public CorrectionViewModel(INavigationService navigation, MainViewModel mainViewModel, ILocalisationService loc,
-                               IEnumerable<IInstrumentPlugin> plugins, IDeviceRegistry registry,
+                               IInstrumentChoiceCatalog catalog,
                                InstrumentReadingViewModel instrumentReading)
     {
         _navigation    = navigation;
         _mainViewModel = mainViewModel;
         _loc           = loc;
-        _plugins       = plugins;
-        _registry      = registry;
+        _catalog       = catalog;
 
         InstrumentReading = instrumentReading;
         // The correction reading box is in mm/m; the instrument delivers µm/m.
@@ -55,11 +53,7 @@ public sealed partial class CorrectionViewModel : ViewModelBase
         _definition = _project.ObjectDefinition;
 
         // Re-measure with the same instrument as the session (live reading, take reading, zero).
-        var plugin = _plugins.FirstOrDefault(p => p.PluginId == _session.InstrumentId) ?? _plugins.First();
-        var device = _registry.GetPreferredDevice(plugin.PluginId)
-                  ?? _registry.GetKnownDevices(plugin.PluginId).FirstOrDefault()
-                  ?? ManualEntryProvider.BuiltInDevice;
-        _ = InstrumentReading.AttachAsync(plugin.CreateProvider(device));
+        _ = InstrumentReading.AttachAsync(_catalog.ResolveProvider(_session.InstrumentId, out _));
 
         // Determine the effective (latest) result
         SurfaceResult effectiveResult = _session.Corrections.Count > 0 &&

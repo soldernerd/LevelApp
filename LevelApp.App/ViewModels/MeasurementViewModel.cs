@@ -19,8 +19,7 @@ public sealed partial class MeasurementViewModel : ViewModelBase
     private readonly MainViewModel                   _mainViewModel;
     private readonly ParallelWaysCalculator          _pwCalculator;
     private readonly ILocalisationService            _loc;
-    private readonly IEnumerable<IInstrumentPlugin>  _plugins;
-    private readonly IDeviceRegistry                 _registry;
+    private readonly IInstrumentChoiceCatalog        _catalog;
 
     // Set in Initialize() once the session's instrumentId is known.
     private IInstrumentProvider? _provider;
@@ -32,7 +31,7 @@ public sealed partial class MeasurementViewModel : ViewModelBase
 
     public MeasurementViewModel(INavigationService navigation, MainViewModel mainViewModel,
                                 ParallelWaysCalculator pwCalculator, ILocalisationService loc,
-                                IEnumerable<IInstrumentPlugin> plugins, IDeviceRegistry registry,
+                                IInstrumentChoiceCatalog catalog,
                                 InstrumentReadingViewModel instrumentReading)
     {
         InstrumentReading = instrumentReading;
@@ -42,8 +41,7 @@ public sealed partial class MeasurementViewModel : ViewModelBase
         _mainViewModel = mainViewModel;
         _pwCalculator  = pwCalculator;
         _loc           = loc;
-        _plugins       = plugins;
-        _registry      = registry;
+        _catalog       = catalog;
     }
 
     /// <summary>The instrument half of the reading entry (live value, channel, take reading, zero).</summary>
@@ -78,16 +76,13 @@ public sealed partial class MeasurementViewModel : ViewModelBase
         _steps      = _session.InitialRound.Steps;
         _definition = _project.ObjectDefinition;
 
-        // Resolve the active provider from the plugin matching the session's instrumentId.
-        var plugin = _plugins.FirstOrDefault(p => p.PluginId == _session.InstrumentId)
-                  ?? _plugins.First();
-        var device = _registry.GetPreferredDevice(plugin.PluginId)
-                  ?? _registry.GetKnownDevices(plugin.PluginId).FirstOrDefault()
-                  ?? ManualEntryProvider.BuiltInDevice;
+        // Resolve the provider for the session's instrument. A hardware instrument that is
+        // not registered falls back to manual entry with a visible warning.
+        _provider        = _catalog.ResolveProvider(_session.InstrumentId, out var fallbackWarning);
+        _fallbackWarning = fallbackWarning;
 
         // The reading panel owns the provider's connection from here on (connects
         // it, follows its state, releases it in Shutdown).
-        _provider = plugin.CreateProvider(device);
         _ = InstrumentReading.AttachAsync(_provider);
 
         IsParallelWays = _definition.GeometryModuleId == "ParallelWays";
@@ -185,15 +180,19 @@ public sealed partial class MeasurementViewModel : ViewModelBase
         InstrumentReading.IsAvailable && ProviderState != InstrumentConnectionState.Connected
                                       && ProviderState != InstrumentConnectionState.Connecting;
 
+    /// <summary>Set when the session's instrument could not be used and manual entry took over.</summary>
+    private string? _fallbackWarning;
+
     public bool ShowConnectionWarning =>
-        ProviderState != InstrumentConnectionState.Connected;
+        _fallbackWarning is not null || ProviderState != InstrumentConnectionState.Connected;
 
     public InfoBarSeverity ConnectionSeverity =>
-        ProviderState == InstrumentConnectionState.Error
+        _fallbackWarning is null && ProviderState == InstrumentConnectionState.Error
             ? InfoBarSeverity.Error
             : InfoBarSeverity.Warning;
 
     public string ConnectionStatusMessage =>
+        _fallbackWarning ??
         ProviderState switch
         {
             InstrumentConnectionState.Disconnected => "Instrument disconnected",

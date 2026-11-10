@@ -39,8 +39,24 @@
 
         </MenuBar>
 
-        <!-- ── Navigation host ───────────────────────────────────────────────── -->
-        <Frame x:Name="RootFrame" Grid.Row="1"/>
+        <!-- Shell content: the theme service targets this grid so both tabs follow the theme. -->
+        <Grid x:Name="ShellContent" Grid.Row="1" RowDefinitions="Auto,*">
+
+            <!-- ── Top-level tabs ────────────────────────────────────────────── -->
+            <SelectorBar x:Name="MainTabs"
+                         Grid.Row="0"
+                         Margin="24,8,24,0"
+                         SelectionChanged="OnMainTabChanged">
+                <SelectorBarItem x:Name="ProjectTabItem" Text="Project" IsSelected="True"/>
+                <SelectorBarItem x:Name="InstrumentsTabItem" Text="Instruments"/>
+            </SelectorBar>
+
+            <!-- ── Navigation hosts: one Frame per tab so switching never loses state ── -->
+            <Grid Grid.Row="1">
+                <Frame x:Name="RootFrame"/>
+                <Frame x:Name="InstrumentsFrame" Visibility="Collapsed"/>
+            </Grid>
+        </Grid>
 
     </Grid>
 

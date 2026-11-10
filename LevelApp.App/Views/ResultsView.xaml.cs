@@ -125,15 +125,19 @@ public sealed partial class ResultsView : Page
     {
         if (ViewModel.ActiveObjectDefinition is null) return;
 
+        var choices = ViewModel.InstrumentChoices;
         var dialog = new NewMeasurementDialog(
             ViewModel.ActiveObjectDefinition,
-            ViewModel.ActiveOperator)
+            ViewModel.ActiveOperator,
+            choices,
+            ViewModel.GetDefaultInstrumentIndex(choices))
         {
             XamlRoot = this.XamlRoot
         };
 
         var result = await dialog.ShowAsync();
         if (result == ContentDialogResult.Primary)
-            ViewModel.StartNewMeasurement(dialog.OperatorName, dialog.Notes, dialog.StrategyId);
+            ViewModel.StartNewMeasurement(dialog.OperatorName, dialog.Notes, dialog.StrategyId,
+                                          dialog.SelectedInstrument);
     }
 }

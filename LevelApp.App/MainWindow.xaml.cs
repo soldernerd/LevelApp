@@ -49,10 +49,10 @@ public sealed partial class MainWindow : Window
         _fileService.Initialize(_hwnd);
 
         // Attach navigation frame
-        ((NavigationService)_nav).Attach(RootFrame);
+        ((NavigationService)_nav).Attach(RootFrame, InstrumentsFrame, SelectTab);
 
         // Wire theme service to the root frame and restore persisted theme
-        _theme.SetTarget(RootFrame);
+        _theme.SetTarget(ShellContent);
         _theme.Apply(_settings.AppTheme);
 
         // Update the title bar whenever the project name or dirty flag changes
@@ -75,6 +75,30 @@ public sealed partial class MainWindow : Window
         AppWindow.Closing += OnAppWindowClosing;
 
         _nav.NavigateTo(PageKey.ProjectSetup);
+    }
+
+    // ── Top-level tabs ────────────────────────────────────────────────────────
+
+    /// <summary>Called by <see cref="NavigationService"/> to bring a tab to the front.</summary>
+    private void SelectTab(bool instruments)
+    {
+        MainTabs.SelectedItem = instruments ? InstrumentsTabItem : ProjectTabItem;
+        ShowTab(instruments);
+    }
+
+    private void OnMainTabChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
+        => ShowTab(ReferenceEquals(sender.SelectedItem, InstrumentsTabItem));
+
+    private void ShowTab(bool instruments)
+    {
+        if (instruments)
+            ((NavigationService)_nav).EnsureInstrumentsPage();
+
+        if (!instruments && RootFrame.Content is Views.ProjectSetupView setup)
+            setup.RefreshInstruments();
+
+        RootFrame.Visibility        = instruments ? Visibility.Collapsed : Visibility.Visible;
+        InstrumentsFrame.Visibility = instruments ? Visibility.Visible   : Visibility.Collapsed;
     }
 
     private async void OnAppWindowClosing(AppWindow sender, AppWindowClosingEventArgs args)

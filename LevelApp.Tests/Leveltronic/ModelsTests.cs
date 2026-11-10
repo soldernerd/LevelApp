@@ -35,6 +35,38 @@ public sealed class ModelsTests
     }
 
     [Fact]
+    public void Identity_V3_50Bytes_ReadsAsApi30()
+    {
+        var id = DeviceIdentity.Decode(new byte[50])!;
+
+        Assert.Equal(0, id.ApiMinor);
+        Assert.Equal("0.0", id.ApiVersionText);
+        Assert.True(id.AtLeast(0, 0));
+    }
+
+    [Fact]
+    public void Identity_V3_51Bytes_CarriesApiMinor()
+    {
+        byte[] d = new byte[51];
+        d[0] = 0; d[1] = 15; d[2] = 0; d[3] = 3; d[50] = 1;
+        BinaryPrimitives.WriteUInt16LittleEndian(d.AsSpan(4), 122);
+
+        var id = DeviceIdentity.Decode(d)!;
+
+        Assert.Equal(3, id.ApiVersion);
+        Assert.Equal(1, id.ApiMinor);
+        Assert.Equal("3.1", id.ApiVersionText);
+        Assert.True(id.AtLeast(3, 1));
+        Assert.True(id.AtLeast(3, 0));
+        Assert.False(id.AtLeast(3, 2));
+        Assert.False(id.AtLeast(4, 0));
+    }
+
+    [Fact]
+    public void Identity_LongerThanKnown_IsAccepted() =>
+        Assert.NotNull(DeviceIdentity.Decode(new byte[60]));
+
+    [Fact]
     public void Identity_V2_19Bytes_DecodesAsApiVersion2()
     {
         byte[] d = new byte[19];
@@ -158,6 +190,17 @@ public sealed class ModelsTests
     }
 
     [Fact]
+    public void PhasorEntry_WireOrderIsS2_B_A_S1()
+    {
+        // Firmware 0.13.0: the stream follows the ADC channels (iS2 qS2 iB qB iA qA iS1 qS1 seq).
+        var e = new PhasorEntry(IB: 3, QB: 4, IA: 5, QA: 6, IS1: 7, QS1: 8, IS2: 1, QS2: 2, Seq: 9);
+        var b = e.Encode();
+        for (int i = 0; i < 8; i++)
+            Assert.Equal(i + 1, BinaryPrimitives.ReadSingleLittleEndian(b.AsSpan(4 * i)));
+        Assert.Equal(9, BinaryPrimitives.ReadUInt16LittleEndian(b.AsSpan(32)));
+    }
+
+    [Fact]
     public void SignalDiag_56Bytes()
     {
         byte[] d = new byte[56];
@@ -223,6 +266,10 @@ public sealed class ModelsTests
         Assert.All(ValueCatalog.Calibrations, d => Assert.True(d.Service));
         Assert.DoesNotContain(ValueCatalog.Settings, d => d.Service);
         Assert.Equal(ValueCatalog.Settings.Count, ValueCatalog.Settings.Select(d => d.Id).Distinct().Count());
-        Assert.True(ValueCatalog.Settings.Single(d => d.Id == 0x53).Optional);
+        Assert.False(ValueCatalog.Settings.Single(d => d.Id == 0x53).Optional);
+        Assert.Equal(100, ValueCatalog.Settings.Single(d => d.Id == 0x54).Max);
+        Assert.Equal(["S2", "B", "A", "S1"], SignalDiag.ChannelNames);
+        Assert.Equal(4, ValueCatalog.ChannelPga.Count);
+        Assert.Equal(0x4A, ValueCatalog.ChannelPga[2].Id);
     }
 }

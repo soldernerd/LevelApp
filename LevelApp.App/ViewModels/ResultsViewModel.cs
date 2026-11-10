@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.Input;
 using LevelApp.App.DisplayModules.ParallelWaysDisplay;
 using LevelApp.App.DisplayModules.SurfacePlot3D;
 using LevelApp.App.Navigation;
+using LevelApp.App.Services;
 using LevelApp.Core.Geometry;
 using LevelApp.Core.Geometry.SurfacePlate.Strategies;
 using LevelApp.Core.Models;
@@ -13,16 +14,26 @@ public sealed partial class ResultsViewModel : ViewModelBase
 {
     private readonly INavigationService  _navigation;
     private readonly MainViewModel       _mainViewModel;
+    private readonly IInstrumentChoiceCatalog _catalog;
 
     private Project            _project = null!;
     private MeasurementSession _session = null!;
     private SurfaceResult?     _currentResult;
 
-    public ResultsViewModel(INavigationService navigation, MainViewModel mainViewModel)
+    public ResultsViewModel(INavigationService navigation, MainViewModel mainViewModel,
+                            IInstrumentChoiceCatalog catalog)
     {
         _navigation    = navigation;
         _mainViewModel = mainViewModel;
+        _catalog       = catalog;
     }
+
+    /// <summary>Instruments offered by the New Measurement dialog (manual entry + registered devices).</summary>
+    public IReadOnlyList<InstrumentChoice> InstrumentChoices => _catalog.GetChoices();
+
+    /// <summary>Index of the instrument to pre-select in the New Measurement dialog.</summary>
+    public int GetDefaultInstrumentIndex(IReadOnlyList<InstrumentChoice> choices)
+        => _catalog.GetDefaultIndex(choices);
 
     // ── Initialisation ────────────────────────────────────────────────────────
 
@@ -202,8 +213,12 @@ public sealed partial class ResultsViewModel : ViewModelBase
     private void StartCorrectionSession()
         => _navigation.NavigateTo(PageKey.Correction, new CorrectionArgs(_project, _session));
 
-    public void StartNewMeasurement(string operatorName, string notes, string strategyId)
+    public void StartNewMeasurement(string operatorName, string notes, string strategyId,
+                                    InstrumentChoice? instrument = null)
     {
+        if (instrument is not null)
+            _catalog.Select(instrument);
+
         var strategy   = StrategyFactory.Create(strategyId);
         var definition = _project.ObjectDefinition;
         var steps      = strategy.GenerateSteps(definition).ToList();
@@ -214,7 +229,7 @@ public sealed partial class ResultsViewModel : ViewModelBase
             TakenAt      = DateTime.UtcNow,
             Operator     = operatorName,
             Notes        = notes,
-            InstrumentId = "manual-entry",
+            InstrumentId = instrument?.PluginId ?? "manual-entry",
             StrategyId   = strategyId,
             InitialRound = new MeasurementRound { Steps = steps }
         };

@@ -87,11 +87,13 @@ public sealed class ApiAndFeedTests
     [Fact]
     public async Task OptionalSetting_IsNullWhenTheFirmwareLacksIt()
     {
-        await using var rig = await SimRig.OpenAsync(t => new SimulatedLeveltronicLink(t) { SupportsChargeFullTimeout = false });
-        var maxAt100 = ValueCatalog.Settings.Single(d => d.Id == 0x53);
+        // No catalogue entry is optional any more (0x53 is a regular setting since firmware 0.11.2),
+        // but a firmware that answers UNKNOWN_RESOURCE must still read as "absent", not as an error.
+        var unknown = new ValueDef(ApiCategory.Settings, 0x7F, "Unknown", "", WireType.U16, 0, 1);
+        await using var rig = await SimRig.OpenAsync();
 
-        Assert.Null(await rig.Api.TryReadValueAsync(maxAt100));
-        await Assert.ThrowsAsync<ApiException>(() => rig.Api.ReadValueAsync(maxAt100));
+        Assert.Null(await rig.Api.TryReadValueAsync(unknown));
+        await Assert.ThrowsAsync<ApiException>(() => rig.Api.ReadValueAsync(unknown));
     }
 
     [Fact]

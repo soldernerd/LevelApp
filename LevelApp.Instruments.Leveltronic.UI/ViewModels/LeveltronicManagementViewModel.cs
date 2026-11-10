@@ -264,7 +264,7 @@ public sealed partial class LeveltronicManagementViewModel : ObservableObject, I
         _info["serial"].Value = id.Serial;
         _info["fw"].Value = id.Firmware;
         _info["build"].Value = id.Build;
-        _info["api"].Value = id.ApiVersion.ToString(Inv);
+        _info["api"].Value = id.ApiVersionText;
     }
 
     private void ApplyRtc(RtcInfo rtc)

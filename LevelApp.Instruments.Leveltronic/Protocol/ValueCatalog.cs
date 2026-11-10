@@ -65,9 +65,14 @@ public static class ValueCatalog
         new(S, 0x52, "Charge start voltage",
             "Below this battery voltage, with USB power present, charging starts.",
             WireType.U16, 3000, 4200, "mV", Group: "Power"),
-        new(S, 0x53, "Max time at 100 %",
-            "Charging stops after this many minutes at a full battery (0 = never). Only present in firmware builds that support it.",
-            WireType.U16, 0, 1440, "min", Optional: true, Group: "Power"),
+        new(S, 0x53, "Full-charge timeout",
+            "Stop charging after this long at a state of charge of \"Full-charge threshold\" or more, " +
+            "or as soon as the charger reports standby, whichever comes first (0 = never).",
+            WireType.U16, 0, 1440, "min", Group: "Power"),
+        new(S, 0x54, "Full-charge threshold",
+            "State of charge (voltage based) from which the full-charge timeout runs. The reading often " +
+            "tops out at 97..99 % while the instrument runs from the battery, so 100 would never fire.",
+            WireType.U16, 50, 100, "%", Group: "Power"),
         new(S, 0x51, "Battery low warning",
             "Below this voltage the low-battery warning shows (must stay above \"Battery critical\").",
             WireType.U16, 3000, 4200, "mV", Group: "Power"),
@@ -116,16 +121,36 @@ public static class ValueCatalog
         "Sign of the reported reading (1 = inverted).",
         WireType.U8, 0, 1, Service: true, Group: "Sensor 2");
 
+    private const string PgaText =
+        "ADC programmable gain, a power of two (1, 2, 4 … 128); applied immediately, k stays stated for PGA 1.";
+    private const string ExcitationPgaText =
+        " The input range is ±1.2 V / PGA and the excitation is already about 0.6 V peak at PGA 1: a higher gain clips.";
+
+    public static readonly ValueDef S1Pga = new(C, 0x48, "S1 PGA gain", PgaText,
+        WireType.U8, 1, 128, Service: true, Group: "Sensor 1");
+    public static readonly ValueDef S2Pga = new(C, 0x49, "S2 PGA gain", PgaText,
+        WireType.U8, 1, 128, Service: true, Group: "Sensor 2");
+    public static readonly ValueDef APga = new(C, 0x4A, "A PGA gain",
+        "ADC programmable gain of excitation A (ADC ch2), a power of two; applied immediately." + ExcitationPgaText,
+        WireType.U8, 1, 128, Service: true, Group: "Excitation");
+    public static readonly ValueDef BPga = new(C, 0x4B, "B PGA gain",
+        "ADC programmable gain of excitation B (ADC ch1), a power of two; same remark as A.",
+        WireType.U8, 1, 128, Service: true, Group: "Excitation");
+
     /// <summary>Per-sensor calibration definitions, index 0 = S1, 1 = S2.</summary>
     public static readonly IReadOnlyList<ValueDef> SensorK = [S1K, S2K];
     public static readonly IReadOnlyList<ValueDef> SensorZero = [S1Zero, S2Zero];
     public static readonly IReadOnlyList<ValueDef> SensorPhase = [S1Phase, S2Phase];
     public static readonly IReadOnlyList<ValueDef> SensorInvert = [S1Invert, S2Invert];
+    public static readonly IReadOnlyList<ValueDef> SensorPga = [S1Pga, S2Pga];
+
+    /// <summary>The PGA of each ADC channel ch0..ch3 (S2, B, A, S1).</summary>
+    public static readonly IReadOnlyList<ValueDef> ChannelPga = [S2Pga, BPga, APga, S1Pga];
 
     /// <summary>All calibrations, for the generic editor (service mode to write).</summary>
     public static readonly IReadOnlyList<ValueDef> Calibrations =
     [
-        S1K, S1Zero, S1Phase, S1Invert, S2K, S2Zero, S2Phase, S2Invert,
+        S1K, S1Zero, S1Phase, S1Invert, S1Pga, S2K, S2Zero, S2Phase, S2Invert, S2Pga, APga, BPga,
         new(C, 0x50, "Battery scale numerator", "Vbat = Vadc × num / den + offset.",
             WireType.U16, 1, 10000, Service: true, Group: "Battery voltage"),
         new(C, 0x51, "Battery scale denominator", "Vbat = Vadc × num / den + offset.",

@@ -38,6 +38,9 @@ internal sealed class SimulatedLeveltronicLink : ILeveltronicLink
     }
 
     public int ApiVersion { get; }
+
+    /// <summary>The API minor reported in IDENTITY (3.1 = firmware 0.15.0).</summary>
+    public int ApiMinor { get; set; } = ApiV3Codec.KnownApiMinor;
     public double Noise { get; }
     public string Product { get; }
     public bool SupportsChargeFullTimeout { get; init; } = true;
@@ -200,7 +203,7 @@ internal sealed class SimulatedLeveltronicLink : ILeveltronicLink
         foreach (var d in ValueCatalog.Settings)
             _values[Key(d)] = d.Id switch
             {
-                0x60 => 300, 0x52 => 3700, 0x51 => 3600, 0x50 => 3400, 0x53 => 120, 0x61 => 4,
+                0x60 => 300, 0x52 => 3700, 0x51 => 3600, 0x50 => 3400, 0x53 => 120, 0x54 => 97, 0x61 => 4,
                 0x40 => 10, 0x41 => 20, 0x42 => 20, 0x43 => 1000, 0x44 => 1000,
                 _ => d.Min,
             };
@@ -218,6 +221,7 @@ internal sealed class SimulatedLeveltronicLink : ILeveltronicLink
             _values.TryAdd(Key(d), d.Id switch
             {
                 0x50 or 0x51 => 1000,
+                0x48 or 0x49 or 0x4A or 0x4B => 1,
                 0x61 or 0x62 or 0x65 or 0x66 => 1000,
                 0x68 => 10,
                 0x63 => 1500,
@@ -306,8 +310,9 @@ internal sealed class SimulatedLeveltronicLink : ILeveltronicLink
                     PutStr(v2, 3, 16, Product);
                     return (ApiStatus.Ok, v2);
                 }
-                var b = new byte[50];
+                var b = new byte[51];
                 b[0] = 1; b[1] = 0; b[2] = 0; b[3] = (byte)ApiVersion;
+                b[50] = (byte)ApiMinor;
                 BinaryPrimitives.WriteUInt16LittleEndian(b.AsSpan(4), ApiV3Codec.MaxPayload);
                 PutStr(b, 6, 16, Product);
                 PutStr(b, 22, 8, "6DA08073");

@@ -20,6 +20,16 @@ public sealed partial class ProjectSetupView : Page
         this.Loaded += (_, _) => ViewModel.SchedulePreviewUpdate(DispatcherQueue);
     }
 
+    /// <summary>
+    /// Re-reads the registered instruments; called when the Project tab is brought back to
+    /// the front, because devices may have been added on the Instruments tab meanwhile.
+    /// </summary>
+    public void RefreshInstruments()
+    {
+        ViewModel.RefreshInstrumentChoices();
+        Bindings.Update();
+    }
+
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);

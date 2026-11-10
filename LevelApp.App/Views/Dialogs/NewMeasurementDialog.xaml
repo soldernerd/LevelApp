@@ -50,6 +50,18 @@
                      TextWrapping="Wrap"/>
         </StackPanel>
 
+        <!-- Instrument -->
+        <StackPanel Spacing="4">
+            <ComboBox x:Name="InstrumentCombo"
+                      Header="Instrument"
+                      HorizontalAlignment="Stretch"/>
+            <TextBlock x:Name="NoInstrumentHint"
+                       Text="No instrument registered yet. Add one on the Instruments tab to measure with hardware."
+                       TextWrapping="Wrap"
+                       Style="{StaticResource CaptionTextBlockStyle}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        </StackPanel>
+
         <!-- Strategy -->
         <ComboBox x:Name="StrategyCombo"
                   Header="Strategy"

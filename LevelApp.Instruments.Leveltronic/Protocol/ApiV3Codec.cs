@@ -16,6 +16,12 @@ public static class ApiV3Codec
     /// <summary>The protocol version reported by System IDENTITY.</summary>
     public const int ApiVersion = 3;
 
+    /// <summary>
+    /// The newest API minor this app knows (3.1, firmware 0.15.0). Only the major decides
+    /// compatibility; a device with a higher minor still works, it just offers more.
+    /// </summary>
+    public const int KnownApiMinor = 1;
+
     public const int HeaderBytes = 4;
     public const int CrcBytes = 2;
 

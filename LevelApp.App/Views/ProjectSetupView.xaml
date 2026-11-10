@@ -75,6 +75,11 @@
                     <ComboBox ItemsSource="{x:Bind ViewModel.InstrumentItems, Mode=OneWay}"
                               SelectedIndex="{x:Bind ViewModel.SelectedInstrumentIndex, Mode=TwoWay}"
                               HorizontalAlignment="Stretch"/>
+                    <TextBlock Text="No instrument registered yet. Add one on the Instruments tab to measure with hardware."
+                               TextWrapping="Wrap"
+                               Style="{StaticResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               Visibility="{x:Bind ViewModel.NoHardwareInstrumentsVisibility, Mode=OneWay}"/>
                 </StackPanel>
 
                 <!-- ── Object ─────────────────────────────────────────────── -->

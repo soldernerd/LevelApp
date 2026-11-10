@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LevelApp.App.DisplayModules.StrategyPreview;
 using LevelApp.App.Navigation;
+using LevelApp.App.Services;
 using LevelApp.Core.Geometry;
 using LevelApp.Core.Geometry.SurfacePlate.Strategies;
 using LevelApp.Core.Interfaces;
@@ -78,22 +79,21 @@ public sealed partial class ProjectSetupViewModel : ViewModelBase
 {
     private readonly INavigationService            _navigation;
     private readonly MainViewModel                 _mainViewModel;
-    private readonly IReadOnlyList<InstrumentPlugin> _plugins;
+    private readonly IInstrumentChoiceCatalog       _catalog;
+    private IReadOnlyList<InstrumentChoice>         _choices = [];
     private Project? _loadedProject;
 
     // Debounce timer for live preview
     private DispatcherQueueTimer? _previewDebounce;
 
     public ProjectSetupViewModel(INavigationService navigation, MainViewModel mainViewModel,
-                                 IEnumerable<InstrumentPlugin> plugins)
+                                 IInstrumentChoiceCatalog catalog)
     {
         _navigation    = navigation;
         _mainViewModel = mainViewModel;
-        _plugins       = plugins.ToList();
+        _catalog       = catalog;
 
-        // Populate instrument selector from registered plugins
-        foreach (var p in _plugins)
-            InstrumentItems.Add(p.DisplayName);
+        RefreshInstrumentChoices();
 
         // Initialise with two default rails
         _railItems.Add(new RailViewModel { Label = "Front", LengthMm = 1000, IsReference = true });
@@ -111,10 +111,38 @@ public sealed partial class ProjectSetupViewModel : ViewModelBase
     [ObservableProperty]
     private int _selectedInstrumentIndex = 0;
 
-    private string ActiveInstrumentId =>
-        _plugins.Count > 0 && SelectedInstrumentIndex >= 0
-            ? _plugins[SelectedInstrumentIndex].PluginId
-            : "manual-entry";
+    private InstrumentChoice? ActiveChoice =>
+        SelectedInstrumentIndex >= 0 && SelectedInstrumentIndex < _choices.Count
+            ? _choices[SelectedInstrumentIndex]
+            : null;
+
+    private string ActiveInstrumentId => ActiveChoice?.PluginId ?? "manual-entry";
+
+    /// <summary>
+    /// Rebuilds the instrument drop-down (manual entry plus every registered device).
+    /// Called on construction and whenever the page is shown, so a device added on the
+    /// Instruments tab appears without restarting.
+    /// </summary>
+    public void RefreshInstrumentChoices()
+    {
+        string? previous = ActiveChoice?.Label;
+
+        _choices = _catalog.GetChoices();
+        InstrumentItems.Clear();
+        foreach (var c in _choices)
+            InstrumentItems.Add(c.Label);
+
+        // Keep the operator's pick across a refresh; otherwise take the catalog default.
+        int keep = previous is null ? -1 : _choices.ToList().FindIndex(c => c.Label == previous);
+        SelectedInstrumentIndex = keep >= 0 ? keep : _catalog.GetDefaultIndex(_choices);
+        OnPropertyChanged(nameof(NoHardwareInstrumentsVisibility));
+    }
+
+    /// <summary>Shows the "no instrument registered" hint while only manual entry is available.</summary>
+    public Microsoft.UI.Xaml.Visibility NoHardwareInstrumentsVisibility =>
+        _choices.Any(c => c.Device is not null)
+            ? Microsoft.UI.Xaml.Visibility.Collapsed
+            : Microsoft.UI.Xaml.Visibility.Visible;
 
     // ── Project information ───────────────────────────────────────────────────
 
@@ -431,6 +459,9 @@ public sealed partial class ProjectSetupViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanStartMeasurement))]
     private void StartMeasurement()
     {
+        if (ActiveChoice is { } choice)
+            _catalog.Select(choice);
+
         var (strategy, definition) = BuildStrategyAndDefinition();
         var steps = strategy.GenerateSteps(definition).ToList();
 

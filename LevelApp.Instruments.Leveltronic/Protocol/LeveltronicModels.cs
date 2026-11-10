@@ -21,16 +21,25 @@ internal static class Wire
 }
 
 /// <summary>
-/// System IDENTITY. Two layouts share the opcode: the 50-byte v3 one and the
-/// 19-byte v2 one (<c>fw[3] product[16]</c>) of devices still on API v2, which
-/// decode with <see cref="ApiVersion"/> 2 and an empty serial and build.
+/// System IDENTITY. Two layouts share the opcode: the v3 one (50 bytes, 51 since API 3.1
+/// which appends <c>api_minor</c>) and the 19-byte v2 one (<c>fw[3] product[16]</c>) of
+/// devices still on API v2, which decode with <see cref="ApiVersion"/> 2 and an empty
+/// serial and build. A longer payload is accepted (the API only ever appends).
 /// </summary>
 public sealed record DeviceIdentity(
     int FwMajor, int FwMinor, int FwPatch,
     int ApiVersion, int MaxPayload,
-    string Product, string Serial, string Build)
+    string Product, string Serial, string Build,
+    int ApiMinor = 0)
 {
     public string Firmware => $"{FwMajor}.{FwMinor}.{FwPatch}";
+
+    /// <summary>The API version as the firmware reports it, e.g. <c>3.1</c> (3.0 before firmware 0.15.0).</summary>
+    public string ApiVersionText => $"{ApiVersion}.{ApiMinor}";
+
+    /// <summary>Whether the device speaks at least API <paramref name="major"/>.<paramref name="minor"/>.</summary>
+    public bool AtLeast(int major, int minor) =>
+        ApiVersion > major || (ApiVersion == major && ApiMinor >= minor);
 
     public static DeviceIdentity? Decode(ReadOnlySpan<byte> d)
     {
@@ -40,7 +49,8 @@ public sealed record DeviceIdentity(
         if (d.Length < 50) return null;
         return new DeviceIdentity(d[0], d[1], d[2], d[3],
             BinaryPrimitives.ReadUInt16LittleEndian(d[4..]),
-            Wire.CString(d, 6, 16), Wire.CString(d, 22, 8), Wire.CString(d, 30, 20));
+            Wire.CString(d, 6, 16), Wire.CString(d, 22, 8), Wire.CString(d, 30, 20),
+            d.Length > 50 ? d[50] : 0);
     }
 }
 
@@ -165,14 +175,19 @@ public sealed record LiveTilt(int Seq, int Flags, double TiltS1, double TiltS2, 
 }
 
 /// <summary>
-/// Topics SIGNAL_DIAG (56 bytes). Channel order is that of the firmware's
-/// reference: ch0 S2, ch1 B, ch2 A, ch3 S1.
+/// Topics SIGNAL_DIAG (56 bytes). Since firmware 0.13.0 every group of four values follows
+/// the ADC channels: ch0 S2, ch1 B, ch2 A, ch3 S1 (the firmware's docs/channel-map.md).
+/// Phase is referenced so that A − B sits at 90° (A about +90°, B about 270°).
 /// </summary>
 public sealed record SignalDiag(
     IReadOnlyList<double> RmsMv, IReadOnlyList<double> P2pMv, IReadOnlyList<double> PhaseDeg,
     double TheoreticalTiltS1, double TheoreticalTiltS2)
 {
+    /// <summary>Signal name of each ADC channel ch0..ch3.</summary>
     public static readonly string[] ChannelNames = ["S2", "B", "A", "S1"];
+
+    /// <summary>The ADC channels in the order the app shows them: A, B, S1, S2.</summary>
+    public static readonly int[] DisplayOrder = [2, 1, 3, 0];
 
     public static SignalDiag? Decode(ReadOnlySpan<byte> d)
     {
@@ -188,7 +203,10 @@ public sealed record SignalDiag(
     }
 }
 
-/// <summary>One Topics PHASOR_STREAM push: the raw phasors of a 64-cycle batch (34 bytes).</summary>
+/// <summary>
+/// One Topics PHASOR_STREAM push: the raw phasors of a 64-cycle batch (34 bytes). Since firmware
+/// 0.13.0 the wire order follows the ADC channels: S2, B, A, S1 (I then Q of each), then the sequence number.
+/// </summary>
 public sealed record PhasorEntry(
     double IB, double QB, double IA, double QA,
     double IS1, double QS1, double IS2, double QS2, int Seq)
@@ -196,15 +214,16 @@ public sealed record PhasorEntry(
     public static PhasorEntry? Decode(ReadOnlySpan<byte> d)
     {
         if (d.Length < 34) return null;
-        return new PhasorEntry(Wire.F32(d, 0), Wire.F32(d, 4), Wire.F32(d, 8), Wire.F32(d, 12),
-            Wire.F32(d, 16), Wire.F32(d, 20), Wire.F32(d, 24), Wire.F32(d, 28),
-            BinaryPrimitives.ReadUInt16LittleEndian(d[32..]));
+        return new PhasorEntry(
+            IB: Wire.F32(d, 8), QB: Wire.F32(d, 12), IA: Wire.F32(d, 16), QA: Wire.F32(d, 20),
+            IS1: Wire.F32(d, 24), QS1: Wire.F32(d, 28), IS2: Wire.F32(d, 0), QS2: Wire.F32(d, 4),
+            Seq: BinaryPrimitives.ReadUInt16LittleEndian(d[32..]));
     }
 
     public byte[] Encode()
     {
         var b = new byte[34];
-        double[] v = [IB, QB, IA, QA, IS1, QS1, IS2, QS2];
+        double[] v = [IS2, QS2, IB, QB, IA, QA, IS1, QS1];
         for (int i = 0; i < 8; i++)
             BinaryPrimitives.WriteSingleLittleEndian(b.AsSpan(4 * i), (float)v[i]);
         BinaryPrimitives.WriteUInt16LittleEndian(b.AsSpan(32), (ushort)Seq);
