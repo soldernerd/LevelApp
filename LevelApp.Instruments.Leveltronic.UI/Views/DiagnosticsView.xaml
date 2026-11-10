@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="LevelApp.Instruments.Leveltronic.UI.Views.DiagnosticsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:LevelApp.Instruments.Leveltronic.UI.ViewModels"
+    xmlns:conv="using:LevelApp.Instruments.Leveltronic.UI.Converters">
+
+    <UserControl.Resources>
+        <conv:BoolToVisibilityConverter x:Key="Vis"/>
+
+        <!-- One converter channel: name, ADC input, PGA, RMS bar, RMS / peak-peak / phase, calibrated phase -->
+        <DataTemplate x:Key="ChannelCardTemplate" x:DataType="vm:SignalChannelCard">
+            <Border Margin="0,0,0,10" Padding="14" CornerRadius="6"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                <StackPanel Spacing="10">
+                    <Grid ColumnSpacing="8" ColumnDefinitions="Auto,Auto,*,Auto">
+                        <TextBlock Grid.Column="0" Text="{x:Bind Name}" FontSize="18" FontWeight="Bold"/>
+                        <TextBlock Grid.Column="1" Text="{x:Bind AdcText}" VerticalAlignment="Bottom"
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                        <TextBlock Grid.Column="3" Text="{x:Bind PgaText, Mode=OneWay}" FontWeight="SemiBold"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </Grid>
+
+                    <ProgressBar Minimum="0" Maximum="1" Value="{x:Bind RmsFraction, Mode=OneWay}"/>
+
+                    <Grid ColumnSpacing="12" ColumnDefinitions="*,*,*">
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="RMS" Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                            <TextBlock Text="{x:Bind RmsText, Mode=OneWay}" FontSize="18" FontWeight="SemiBold"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="PEAK–PEAK" Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                            <TextBlock Text="{x:Bind P2pText, Mode=OneWay}" FontSize="18" FontWeight="SemiBold"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="PHASE" Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                            <TextBlock Text="{x:Bind PhaseText, Mode=OneWay}" FontSize="18" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <StackPanel Visibility="{x:Bind HasCalibratedPhase, Mode=OneWay, Converter={StaticResource Vis}}">
+                        <TextBlock Text="CALIBRATED PHASE" Style="{StaticResource CaptionTextBlockStyle}"
+                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                        <TextBlock Text="{x:Bind CalibratedPhaseText, Mode=OneWay}" FontSize="18" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Padding="4" Spacing="8">
+            <TextBlock TextWrapping="Wrap" LineHeight="20"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                       Text="Channels A, B, S1, S2, with the ADC input each is wired to (A = ch2, B = ch1, S1 = ch3, S2 = ch0) and its PGA gain. A and B are the excitation references; S1 and S2 are the sensor signals. Phase is referenced so that A sits at about 90° and B at about 270°. The calibrated phase of S1 and S2 is the measured phase less the stored phase: it follows A (90°) for a positive tilt and B (270°) for a negative one. The drive to the sensor is A − B, about 2 × A. For setting up and troubleshooting, not for measuring."/>
+
+            <TextBlock TextWrapping="Wrap" Text="{x:Bind ViewModel.StatusText, Mode=OneWay}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                       Visibility="{x:Bind ViewModel.HasData, Mode=OneWay, Converter={StaticResource Vis}, ConverterParameter=invert}"/>
+
+            <ItemsControl ItemsSource="{x:Bind ViewModel.Channels}"
+                          ItemTemplate="{StaticResource ChannelCardTemplate}"/>
+
+            <Border Padding="14" CornerRadius="6"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Theoretical tilt from the signal amplitude" FontWeight="SemiBold"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0" Text="S1"/>
+                        <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.TheoreticalTiltS1Text, Mode=OneWay}"/>
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0" Text="S2"/>
+                        <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.TheoreticalTiltS2Text, Mode=OneWay}"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

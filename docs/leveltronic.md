@@ -132,8 +132,8 @@ service-mode card that continues by itself once service mode is switched on.
 
 | Wizard | What it does | Math (`CalibrationMath`) |
 |---|---|---|
-| **Phase** | captures the PHASOR_STREAM flat (8 s, ≥ 60 batches) and again with a tilt step; the direction of Δu (u = S/(A−B)) is the sensor's signal phase, folded to (−90°, 90°]; independent of the stored phase and the step size; writes 0.01° | `EstimatePhase` (Welford stats, uncertainty, SNR, confidence) |
-| **Gain** | precision measurement without and with a shim of known height under an edge of known length; `kNew = kOld·|Δreading| / tilt`; writes k, then re-measures to prove it; shim/edge values remembered per serial | `EstimateGain`, `ShimTilt` |
+| **Phase** | needs no neutral measurement: capture the PHASOR_STREAM (wire order S2, B, A, S1; 8 s, >= 60 batches) with a clear **positive** and a clear **negative** tilt, or with just one of them (the operator chooses `PhaseMode`: `+ and -` / `+ only` / `- only`). With u = S/(A-B) a positive tilt points at the sensor's signal phase, a negative one at phase + 180 deg. Both tilts: the direction of u+ - u- (the zero offset cancels, most accurate); one tilt: the direction of u itself (turned 180 deg for the negative one; flagged "one tilt only"). Full +-180 deg; independent of the stored phase and the tilt size. An inverted sensor (INVERT = 1) gets phase + 180 deg so the tilt reads positive. Writes 0.01 deg | `EstimatePhaseFromTilts`, `WrapDegrees`, `PhaseEstimate.Rotated` (Welford stats, uncertainty, SNR, confidence) |
+| **Gain** | precision measurement without and with a shim of known height under an edge of known length; `kNew = kOld·|Δreading| / tilt`; saving **only writes k** (nothing is measured again); shim/edge values remembered per serial | `EstimateGain`, `ShimTilt` |
 | **Zero (flip)** | Commands ZERO_CAL step 1 → operator turns 180° → step 2; the firmware stores the zero; before/after shown, repeat runs compared | — (firmware) |
 
 The wizards are UI-free state machines in the headless project (`FlipCalWizard`, `PhaseCalWizard`,
@@ -142,9 +142,7 @@ late async results of a cancelled or restarted run. The `.UI` view-models turn e
 `WizardPage` (title, step text, instructions, progress, tables, verdicts, actions) that one generic
 `WizardPageView` renders.
 
-**Deliberate deviation from the phone app:** the phase range is the firmware's ±180° (−18000..18000 ×
-0.01°; widened in fw 0.11.5), not the phone's ±45°. The phone's screen text already says ±180°; its math
-still gates at ±45°.
+The phase range is the firmware's +-180 deg (-18000..18000 x 0.01 deg), as on the phone app. Starting the phase or gain wizard needs service mode (the button stays disabled until the service-mode card reports it).
 
 ## 7. Preferences
 

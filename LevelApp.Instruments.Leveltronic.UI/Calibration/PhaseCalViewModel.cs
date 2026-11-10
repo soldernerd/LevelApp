@@ -22,6 +22,21 @@ public sealed class PhaseCalViewModel : WizardViewModelBase
     protected override int CurrentMask => _w.State.Mask;
     protected override void ApplyMask(int mask) => _w.SelectSensors(mask);
 
+    // ── Tilt mode (bound to the radio buttons of the selection page) ─────────
+
+    public bool ModeBoth { get => _w.State.Mode == PhaseMode.Both; set { if (value) _w.SelectMode(PhaseMode.Both); } }
+    public bool ModePositive { get => _w.State.Mode == PhaseMode.PositiveOnly; set { if (value) _w.SelectMode(PhaseMode.PositiveOnly); } }
+    public bool ModeNegative { get => _w.State.Mode == PhaseMode.NegativeOnly; set { if (value) _w.SelectMode(PhaseMode.NegativeOnly); } }
+
+    protected override void OnPageRefreshed()
+    {
+        OnPropertyChanged(nameof(ModeBoth));
+        OnPropertyChanged(nameof(ModePositive));
+        OnPropertyChanged(nameof(ModeNegative));
+    }
+
+    // ── Pages ────────────────────────────────────────────────────────────────
+
     protected override WizardPage BuildPage()
     {
         var s = _w.State;
@@ -32,49 +47,44 @@ public sealed class PhaseCalViewModel : WizardViewModelBase
             case PhaseStage.Select:
                 return new WizardPage(Title,
                     Intro: "Each sensor's signal is rotated by a calibrated phase so that a tilt falls entirely in the " +
-                           "in-phase part. To find it the app records the raw signal level and again with a known tilt " +
-                           "step. The size of the step does not matter for the phase — only that it is clearly larger " +
-                           "than the noise (0.1 mm under a 1 m edge is plenty).",
+                           "in-phase part. To find it the app records the signal with a clear tilt: a positive tilt points " +
+                           "along the phase, a negative one the opposite way. The size of the tilt does not matter — only " +
+                           "that it is clearly larger than the noise (0.1 mm under a 1 m edge is plenty).",
+                    ShowPhaseModeSelector: true,
+                    ModeHint: s.Mode == PhaseMode.Both
+                        ? "Most accurate: the sensor's zero offset cancels out."
+                        : "One tilt is quicker, but the sensor's zero offset then adds a small error unless the tilt is large.",
                     ShowSensorSelector: true,
                     SummaryTitle: "Stored phase",
                     SummaryLines: [.. Enumerable.Range(0, 2).Select(i =>
                         $"S{i + 1}   {(s.Current is { } c ? Fmt.CentiDegrees(c[i]) : "—")}")],
                     ShowServiceCard: true,
-                    Actions: [Act("Start", () => _w.Begin(), primary: true)]);
+                    Actions: [Act("Start", () => _w.BeginAsync(), primary: true, enabled: service)]);
 
-            case PhaseStage.Reference:
-                return new WizardPage(Title, StepText: "Step 1 of 3 — Reference",
+            case PhaseStage.Ready:
+            {
+                bool positive = s.Tilt == PhaseTilt.Positive;
+                return new WizardPage(Title, StepText: StepText(s),
                     Instructions:
                     [
-                        "Put the instrument on the surface without any shim.",
-                        "Keep the table still and do not touch the instrument.",
-                        "Capture takes about 8 seconds.",
+                        positive
+                            ? "Raise the front (the end with the red mark) with a shim — at least 0.1 mm under a 1 m edge. " +
+                              "The instrument should read a positive tilt."
+                            : "Raise the back (the end opposite the red mark) with a shim — at least 0.1 mm under a 1 m edge. " +
+                              "The instrument should read a negative tilt.",
+                        "Let it settle, keep it still, then capture (about 8 seconds).",
                     ],
                     Actions:
                     [
-                        Act("Back", () => _w.BackToStart()),
-                        Act("Capture reference", () => _w.CaptureReferenceAsync(), primary: true),
+                        s.Step == 1 ? Act("Back", () => _w.BackToStart()) : Act("Redo", () => _w.Redo()),
+                        Act(positive ? "Capture positive" : "Capture negative", () => _w.CaptureAsync(), primary: true),
                     ]);
+            }
 
-            case PhaseStage.CapturingReference:
-            case PhaseStage.CapturingTilted:
-                return new WizardPage(Title,
-                    StepText: s.Stage == PhaseStage.CapturingReference ? "Step 1 of 3 — Reference" : "Step 2 of 3 — Tilt step",
+            case PhaseStage.Capturing:
+                return new WizardPage(Title, StepText: StepText(s),
                     Progress: new WizardProgress(s.CaptureProgress, "Capturing… hold still", $"{s.Samples} batches"),
                     Actions: [Act("Cancel", () => _w.BackToStart())]);
-
-            case PhaseStage.Tilted:
-                return new WizardPage(Title, StepText: "Step 2 of 3 — Tilt step",
-                    Instructions:
-                    [
-                        "Raise one end of the surface (or the instrument's base) with a shim — at least 0.1 mm under a 1 m edge.",
-                        "Let it settle, keep it still, then capture.",
-                    ],
-                    Actions:
-                    [
-                        Act("Redo reference", () => _w.RedoReference()),
-                        Act("Capture tilt", () => _w.CaptureTiltedAsync(), primary: true),
-                    ]);
 
             case PhaseStage.Review:
             {
@@ -87,12 +97,12 @@ public sealed class PhaseCalViewModel : WizardViewModelBase
                     canApply |= e is { InRange: true };
                     cards.Add(Card($"S{i + 1}", e, s.Current?[i]));
                 }
-                return new WizardPage(Title, StepText: "Step 3 of 3 — Result",
+                return new WizardPage(Title, StepText: $"Step {s.Steps + 1} of {s.Steps + 1} — Result",
                     Verdicts: cards,
                     ShowServiceCard: !service,
                     Actions:
                     [
-                        Act("Redo tilt", () => _w.RedoTilted()),
+                        Act("Redo", () => _w.Redo()),
                         Act("Apply", () => _w.ApplyAsync(), primary: true, enabled: service && canApply),
                     ]);
             }
@@ -128,11 +138,14 @@ public sealed class PhaseCalViewModel : WizardViewModelBase
         }
     }
 
+    private static string StepText(PhaseCalState s) =>
+        $"Step {s.Step} of {s.Steps} — {(s.Tilt == PhaseTilt.Positive ? "Positive tilt" : "Negative tilt")}";
+
     private static VerdictCard Card(string sensor, PhaseEstimate? e, long? storedCdeg)
     {
         if (e is null)
             return new VerdictCard(sensor, VerdictSeverity.Bad, "—", "",
-                "No usable step was seen. Use a larger shim and redo the tilt.");
+                "No usable signal was seen. Use a larger shim and redo.");
 
         VerdictSeverity sev;
         string verdict;
@@ -144,7 +157,7 @@ public sealed class PhaseCalViewModel : WizardViewModelBase
         else if (!e.Confident)
         {
             sev = VerdictSeverity.Warning;
-            verdict = "Low confidence — a larger step or a quieter table would give a better value. You can still apply it.";
+            verdict = "Low confidence — a larger tilt or a quieter table would give a better value. You can still apply it.";
         }
         else
         {
@@ -155,7 +168,8 @@ public sealed class PhaseCalViewModel : WizardViewModelBase
         string snr = e.Snr >= 1e6 ? "∞" : e.Snr.ToString("0", CultureInfo.InvariantCulture);
         return new VerdictCard(sensor, sev,
             $"{Fmt.Signed(e.AngleDeg, 2)}°  ± {e.UncertaintyDeg.ToString("0.00", CultureInfo.InvariantCulture)}°",
-            $"Signal-to-noise {snr}" + (storedCdeg is null ? "" : $"   ·   stored now {Fmt.CentiDegrees(storedCdeg.Value)}"),
+            $"Signal-to-noise {snr}" + (storedCdeg is null ? "" : $"   ·   stored now {Fmt.CentiDegrees(storedCdeg.Value)}") +
+            (e.SingleSided ? "   ·   one tilt only" : ""),
             verdict);
     }
 

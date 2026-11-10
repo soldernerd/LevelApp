@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="LevelApp.Instruments.Leveltronic.UI.Views.ScopeView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:conv="using:LevelApp.Instruments.Leveltronic.UI.Converters">
+
+    <UserControl.Resources>
+        <conv:BoolToVisibilityConverter x:Key="Vis"/>
+    </UserControl.Resources>
+
+    <Grid Padding="4" RowSpacing="8" RowDefinitions="Auto,*,*">
+
+        <!-- Header: what the screen shows, and the S1/S2 scale -->
+        <Grid Grid.Row="0" ColumnSpacing="8" ColumnDefinitions="*,Auto">
+            <TextBlock Grid.Column="0" VerticalAlignment="Center" TextWrapping="Wrap"
+                       Style="{StaticResource CaptionTextBlockStyle}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                       Text="Oscilloscope view of A, B, S1 and S2 at the ADC. The instrument reports amplitude and phase, so each trace is rebuilt as a sine wave: it shows amplitudes and phase relations, not the true waveform."/>
+            <ComboBox x:Name="ScaleBox" Grid.Column="1" MinWidth="170"
+                      ToolTipService.ToolTip="Scale of S1 and S2"/>
+        </Grid>
+
+        <!-- Excitation panel: A and B -->
+        <Border Grid.Row="1" Padding="10" CornerRadius="10"
+                Background="#FF1A1A1A" BorderBrush="#1FFFFFFF" BorderThickness="1">
+            <Grid RowSpacing="6" RowDefinitions="Auto,*">
+                <StackPanel x:Name="ExcitationLegend" Grid.Row="0" Orientation="Horizontal" Spacing="16"/>
+                <Canvas x:Name="ExcitationCanvas" Grid.Row="1" Background="#FF0B140E"
+                        SizeChanged="OnCanvasSizeChanged"/>
+            </Grid>
+        </Border>
+
+        <!-- Sensor panel: S1 and S2 -->
+        <Border Grid.Row="2" Padding="10" CornerRadius="10"
+                Background="#FF1A1A1A" BorderBrush="#1FFFFFFF" BorderThickness="1">
+            <Grid RowSpacing="6" RowDefinitions="Auto,*">
+                <StackPanel x:Name="SensorLegend" Grid.Row="0" Orientation="Horizontal" Spacing="16"/>
+                <Canvas x:Name="SensorCanvas" Grid.Row="1" Background="#FF0B140E"
+                        SizeChanged="OnCanvasSizeChanged"/>
+            </Grid>
+        </Border>
+
+        <!-- Shown instead of data while nothing is flowing -->
+        <TextBlock Grid.Row="1" Grid.RowSpan="2" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   TextWrapping="Wrap" TextAlignment="Center" Foreground="#B3FFFFFF"
+                   IsHitTestVisible="False"
+                   Text="{x:Bind ViewModel.StatusText, Mode=OneWay}"
+                   Visibility="{x:Bind ViewModel.HasData, Mode=OneWay, Converter={StaticResource Vis}, ConverterParameter=invert}"/>
+    </Grid>
+</UserControl>

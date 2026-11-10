@@ -75,15 +75,6 @@
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             </Grid>
         </DataTemplate>
-
-        <DataTemplate x:Key="DiagRowTemplate" x:DataType="vm:DiagChannelRow">
-            <Grid Padding="0,4" ColumnDefinitions="120,140,140,140">
-                <TextBlock Grid.Column="0" Text="{x:Bind Name}"/>
-                <TextBlock Grid.Column="1" Text="{x:Bind Rms, Mode=OneWay}"/>
-                <TextBlock Grid.Column="2" Text="{x:Bind P2p, Mode=OneWay}"/>
-                <TextBlock Grid.Column="3" Text="{x:Bind Phase, Mode=OneWay}"/>
-            </Grid>
-        </DataTemplate>
     </UserControl.Resources>
 
     <Grid x:Name="Root" Padding="4" RowSpacing="8" RowDefinitions="Auto,Auto,*,Auto">
@@ -114,6 +105,8 @@
         </Border>
 
         <Pivot Grid.Row="2" x:Name="Tabs" SelectionChanged="OnTabChanged">
+            <PivotItem x:Name="LiveTab" Header="Live" Tag="live"/>
+
             <PivotItem Header="Info" Tag="info">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
@@ -146,25 +139,9 @@
                 </ScrollViewer>
             </PivotItem>
 
-            <PivotItem Header="Diagnostics" Tag="diagnostics">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel Spacing="8">
-                        <TextBlock TextWrapping="Wrap"
-                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                   Text="RMS, peak-to-peak and phase of the four converter channels at the ADC pins, for setting up and troubleshooting, not for measuring."/>
-                        <Grid ColumnDefinitions="120,140,140,140">
-                            <TextBlock Grid.Column="0" Text="Channel" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Column="1" Text="RMS" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Column="2" Text="Peak-peak" FontWeight="SemiBold"/>
-                            <TextBlock Grid.Column="3" Text="Phase" FontWeight="SemiBold"/>
-                        </Grid>
-                        <ItemsControl ItemsSource="{x:Bind ViewModel.DiagChannels}"
-                                      ItemTemplate="{StaticResource DiagRowTemplate}"/>
-                        <TextBlock Text="Theoretical tilt from the signal amplitude" FontWeight="SemiBold" Margin="0,8,0,0"/>
-                        <TextBlock Text="{x:Bind ViewModel.TheoreticalTiltText, Mode=OneWay}"/>
-                    </StackPanel>
-                </ScrollViewer>
-            </PivotItem>
+            <PivotItem x:Name="ScopeTab" Header="Oscilloscope" Tag="scope"/>
+
+            <PivotItem x:Name="DiagnosticsTab" Header="Diagnostics" Tag="diagnostics"/>
         </Pivot>
 
         <!-- Status -->

@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="LevelApp.Instruments.Leveltronic.UI.Views.LiveView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:conv="using:LevelApp.Instruments.Leveltronic.UI.Converters"
+    xmlns:w="using:LevelApp.Instruments.Leveltronic.UI.Views.Widgets">
+
+    <UserControl.Resources>
+        <conv:BoolToVisibilityConverter x:Key="Vis"/>
+        <conv:ReadingStateBrushConverter x:Key="StateBrush"/>
+    </UserControl.Resources>
+
+    <!-- Dark instrument-display styling regardless of the app theme. -->
+    <Grid Background="#121212" RequestedTheme="Dark" Padding="12" RowSpacing="8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Top bar: disconnected notice, temperature, battery -->
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+            <TextBlock Grid.Column="0" Text="DISCONNECTED" FontSize="13" CharacterSpacing="150"
+                       Foreground="#D32F2F" VerticalAlignment="Center"
+                       Visibility="{x:Bind ViewModel.IsConnected, Mode=OneWay, Converter={StaticResource Vis}, ConverterParameter=invert}"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                <TextBlock Text="{x:Bind ViewModel.TemperatureText, Mode=OneWay}" FontSize="13"
+                           Foreground="#B3FFFFFF" VerticalAlignment="Center"
+                           ToolTipService.ToolTip="On-board temperature"
+                           Visibility="{x:Bind ViewModel.HasTemperature, Mode=OneWay, Converter={StaticResource Vis}}"/>
+                <w:BatteryIndicator GlyphHeight="18"
+                                    Percent="{x:Bind ViewModel.BatteryPercent, Mode=OneWay}"
+                                    Charging="{x:Bind ViewModel.Charging, Mode=OneWay}"
+                                    ChargeState="{x:Bind ViewModel.BatteryChargeState, Mode=OneWay}"
+                                    Visibility="{x:Bind ViewModel.HasBattery, Mode=OneWay, Converter={StaticResource Vis}}"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- The three reading cards -->
+        <Grid Grid.Row="1" RowSpacing="10" Opacity="{x:Bind ViewModel.DisplayOpacity, Mode=OneWay}">
+            <Grid.OpacityTransition>
+                <ScalarTransition/>
+            </Grid.OpacityTransition>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="2*"/>
+                <RowDefinition Height="2*"/>
+                <RowDefinition Height="3*"/>
+            </Grid.RowDefinitions>
+
+            <!-- S1 -->
+            <Border Grid.Row="0" Background="#1A1A1A" BorderBrush="#1FFFFFFF" BorderThickness="1"
+                    CornerRadius="14" Padding="16,8">
+                <Grid ColumnDefinitions="64,*,Auto" ColumnSpacing="10">
+                    <TextBlock Grid.Column="0" Text="S1" FontSize="22" FontWeight="SemiBold"
+                               Foreground="#8AFFFFFF" VerticalAlignment="Center"/>
+                    <Viewbox Grid.Column="1" Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Right">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="{x:Bind ViewModel.S1Text, Mode=OneWay}" FontSize="62" FontWeight="Bold"
+                                       Typography.NumeralAlignment="Tabular"
+                                       Foreground="{x:Bind ViewModel.S1State, Mode=OneWay, Converter={StaticResource StateBrush}}"/>
+                            <TextBlock Text="mm/m" FontSize="18" Foreground="#8AFFFFFF"
+                                       VerticalAlignment="Bottom" Margin="0,0,0,10"/>
+                        </StackPanel>
+                    </Viewbox>
+                    <w:VibrationIndicator Grid.Column="2" VerticalAlignment="Center"
+                                          State="{x:Bind ViewModel.S1State, Mode=OneWay}"/>
+                </Grid>
+            </Border>
+
+            <!-- S2 -->
+            <Border Grid.Row="1" Background="#1A1A1A" BorderBrush="#1FFFFFFF" BorderThickness="1"
+                    CornerRadius="14" Padding="16,8">
+                <Grid ColumnDefinitions="64,*,Auto" ColumnSpacing="10">
+                    <TextBlock Grid.Column="0" Text="S2" FontSize="22" FontWeight="SemiBold"
+                               Foreground="#8AFFFFFF" VerticalAlignment="Center"/>
+                    <Viewbox Grid.Column="1" Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Right">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="{x:Bind ViewModel.S2Text, Mode=OneWay}" FontSize="62" FontWeight="Bold"
+                                       Typography.NumeralAlignment="Tabular"
+                                       Foreground="{x:Bind ViewModel.S2State, Mode=OneWay, Converter={StaticResource StateBrush}}"/>
+                            <TextBlock Text="mm/m" FontSize="18" Foreground="#8AFFFFFF"
+                                       VerticalAlignment="Bottom" Margin="0,0,0,10"/>
+                        </StackPanel>
+                    </Viewbox>
+                    <w:VibrationIndicator Grid.Column="2" VerticalAlignment="Center"
+                                          State="{x:Bind ViewModel.S2State, Mode=OneWay}"/>
+                </Grid>
+            </Border>
+
+            <!-- DIFF (emphasised) -->
+            <Border Grid.Row="2" Background="#1B2A38" BorderBrush="#3D6A94" BorderThickness="1"
+                    CornerRadius="14" Padding="16,8">
+                <Grid ColumnDefinitions="64,*,Auto" ColumnSpacing="10">
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <TextBlock Text="DIFF" FontSize="24" FontWeight="SemiBold" Foreground="#8AFFFFFF"/>
+                        <TextBlock Text="{x:Bind ViewModel.DiffSubLabel, Mode=OneWay}" FontSize="11"
+                                   Foreground="#62FFFFFF"/>
+                    </StackPanel>
+                    <Viewbox Grid.Column="1" Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Right">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="{x:Bind ViewModel.DiffText, Mode=OneWay}" FontSize="76" FontWeight="Bold"
+                                       Typography.NumeralAlignment="Tabular"
+                                       Foreground="{x:Bind ViewModel.DiffState, Mode=OneWay, Converter={StaticResource StateBrush}}"/>
+                            <TextBlock Text="mm/m" FontSize="22" Foreground="#8AFFFFFF"
+                                       VerticalAlignment="Bottom" Margin="0,0,0,12"/>
+                        </StackPanel>
+                    </Viewbox>
+                    <w:VibrationIndicator Grid.Column="2" VerticalAlignment="Center"
+                                          State="{x:Bind ViewModel.DiffState, Mode=OneWay}"/>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Demodulation stopped -->
+        <TextBlock Grid.Row="2" Text="The tilt measurement is stopped." Foreground="#FFA000"
+                   Visibility="{x:Bind ViewModel.DemodStopped, Mode=OneWay, Converter={StaticResource Vis}}"/>
+
+        <!-- Inline measurement panel (Zero Diff / Precision) -->
+        <Border Grid.Row="3" Background="#1E1E1E" BorderBrush="#1FFFFFFF" BorderThickness="1"
+                CornerRadius="14" Padding="20,16"
+                Visibility="{x:Bind ViewModel.IsPanelOpen, Mode=OneWay, Converter={StaticResource Vis}}">
+            <StackPanel Spacing="10">
+                <TextBlock Text="{x:Bind ViewModel.PanelHeading, Mode=OneWay}" FontSize="14"
+                           Foreground="#8AFFFFFF" CharacterSpacing="50"/>
+
+                <!-- running -->
+                <StackPanel Spacing="8"
+                            Visibility="{x:Bind ViewModel.IsPanelRunning, Mode=OneWay, Converter={StaticResource Vis}}">
+                    <TextBlock Text="Hold still&#x2026;" FontSize="20" FontWeight="SemiBold" Foreground="White"/>
+                    <ProgressBar Minimum="0" Maximum="100"
+                                 Value="{x:Bind ViewModel.Progress, Mode=OneWay}"
+                                 IsIndeterminate="{x:Bind ViewModel.IsProgressIndeterminate, Mode=OneWay}"/>
+                    <TextBlock Text="{x:Bind ViewModel.PanelSubtitle, Mode=OneWay}" FontSize="13"
+                               Foreground="#B3FFFFFF" TextWrapping="Wrap"/>
+                    <TextBlock Text="{x:Bind ViewModel.PanelWarning, Mode=OneWay}" FontSize="13"
+                               Foreground="#FFA000" TextWrapping="Wrap"
+                               Visibility="{x:Bind ViewModel.HasPanelWarning, Mode=OneWay, Converter={StaticResource Vis}}"/>
+                </StackPanel>
+
+                <!-- done: the result -->
+                <StackPanel Spacing="4"
+                            Visibility="{x:Bind ViewModel.IsPanelDone, Mode=OneWay, Converter={StaticResource Vis}}">
+                    <Grid ColumnDefinitions="70,*,Auto" ColumnSpacing="8">
+                        <TextBlock Grid.Column="0" Text="S1" FontSize="17" Foreground="#8AFFFFFF" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.ResultS1, Mode=OneWay}" FontSize="28"
+                                   FontWeight="Bold" Foreground="White" HorizontalAlignment="Right"
+                                   Typography.NumeralAlignment="Tabular"/>
+                        <TextBlock Grid.Column="2" Text="mm/m" FontSize="13" Foreground="#8AFFFFFF" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
+                    </Grid>
+                    <Grid ColumnDefinitions="70,*,Auto" ColumnSpacing="8">
+                        <TextBlock Grid.Column="0" Text="S2" FontSize="17" Foreground="#8AFFFFFF" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.ResultS2, Mode=OneWay}" FontSize="28"
+                                   FontWeight="Bold" Foreground="White" HorizontalAlignment="Right"
+                                   Typography.NumeralAlignment="Tabular"/>
+                        <TextBlock Grid.Column="2" Text="mm/m" FontSize="13" Foreground="#8AFFFFFF" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
+                    </Grid>
+                    <Grid ColumnDefinitions="70,*,Auto" ColumnSpacing="8">
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <TextBlock Text="DIFF" FontSize="20" Foreground="#8AFFFFFF"/>
+                            <TextBlock Text="{x:Bind ViewModel.ResultDiffNote, Mode=OneWay}" FontSize="11" Foreground="#62FFFFFF"/>
+                        </StackPanel>
+                        <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.ResultDiff, Mode=OneWay}" FontSize="36"
+                                   FontWeight="Bold" Foreground="White" HorizontalAlignment="Right"
+                                   Typography.NumeralAlignment="Tabular"/>
+                        <TextBlock Grid.Column="2" Text="mm/m" FontSize="13" Foreground="#8AFFFFFF" VerticalAlignment="Bottom" Margin="0,0,0,8"/>
+                    </Grid>
+                </StackPanel>
+
+                <!-- failed -->
+                <TextBlock Text="{x:Bind ViewModel.PanelMessage, Mode=OneWay}" FontSize="14" Foreground="White"
+                           TextWrapping="Wrap"
+                           Visibility="{x:Bind ViewModel.IsPanelFailed, Mode=OneWay, Converter={StaticResource Vis}}"/>
+
+                <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,6,0,0">
+                    <Button Content="Cancel" Command="{x:Bind ViewModel.CancelPrecisionCommand}"
+                            Visibility="{x:Bind ViewModel.IsPanelRunning, Mode=OneWay, Converter={StaticResource Vis}}"/>
+                    <Button Content="Close" Command="{x:Bind ViewModel.ClosePanelCommand}"
+                            Visibility="{x:Bind ViewModel.IsPanelRunning, Mode=OneWay, Converter={StaticResource Vis}, ConverterParameter=invert}"/>
+                    <Button Content="Measure again" Style="{StaticResource AccentButtonStyle}"
+                            Command="{x:Bind ViewModel.MeasureAgainCommand}"
+                            Visibility="{x:Bind ViewModel.IsPanelRunning, Mode=OneWay, Converter={StaticResource Vis}, ConverterParameter=invert}"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Zero Diff / Precision buttons -->
+        <Grid Grid.Row="4" ColumnDefinitions="*,*" ColumnSpacing="12" Margin="0,4,0,0">
+            <Button Grid.Column="0" HorizontalAlignment="Stretch" Height="52"
+                    Content="{x:Bind ViewModel.ZeroButtonText, Mode=OneWay}"
+                    Command="{x:Bind ViewModel.ZeroDiffCommand}"
+                    IsEnabled="{x:Bind ViewModel.CanStart, Mode=OneWay}"/>
+            <Button Grid.Column="1" HorizontalAlignment="Stretch" Height="52"
+                    Style="{StaticResource AccentButtonStyle}"
+                    Content="Precision"
+                    Command="{x:Bind ViewModel.PrecisionCommand}"
+                    IsEnabled="{x:Bind ViewModel.CanStart, Mode=OneWay}"/>
+        </Grid>
+
+        <!-- Zero note -->
+        <StackPanel Grid.Row="5" Orientation="Horizontal" Spacing="8"
+                    Visibility="{x:Bind ViewModel.IsZeroed, Mode=OneWay, Converter={StaticResource Vis}}">
+            <TextBlock Text="{x:Bind ViewModel.ZeroNote, Mode=OneWay}" FontSize="12"
+                       Foreground="#8AFFFFFF" VerticalAlignment="Center"/>
+            <HyperlinkButton Content="Clear zero" Padding="4,0" FontSize="12"
+                             Command="{x:Bind ViewModel.ClearZeroCommand}"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

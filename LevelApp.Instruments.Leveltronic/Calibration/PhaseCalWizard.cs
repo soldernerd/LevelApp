@@ -2,16 +2,45 @@ using LevelApp.Instruments.Leveltronic.Protocol;
 
 namespace LevelApp.Instruments.Leveltronic.Calibration;
 
+/// <summary>Which tilts the phase calibration measures.</summary>
+public enum PhaseMode
+{
+    /// <summary>A clear positive and a clear negative tilt: the zero offset cancels. The most accurate.</summary>
+    Both,
+    /// <summary>One clear positive tilt only.</summary>
+    PositiveOnly,
+    /// <summary>One clear negative tilt only.</summary>
+    NegativeOnly,
+}
+
+/// <summary>
+/// The direction of a tilt: positive is the one the instrument reads as a positive
+/// tilt (the front, the end with the red mark, up).
+/// </summary>
+public enum PhaseTilt { Positive, Negative }
+
+public static class PhaseModeExtensions
+{
+    private static readonly PhaseTilt[] BothTilts = [PhaseTilt.Positive, PhaseTilt.Negative];
+    private static readonly PhaseTilt[] PositiveTilts = [PhaseTilt.Positive];
+    private static readonly PhaseTilt[] NegativeTilts = [PhaseTilt.Negative];
+
+    /// <summary>The tilts to capture, in order.</summary>
+    public static IReadOnlyList<PhaseTilt> Tilts(this PhaseMode mode) => mode switch
+    {
+        PhaseMode.PositiveOnly => PositiveTilts,
+        PhaseMode.NegativeOnly => NegativeTilts,
+        _ => BothTilts,
+    };
+}
+
 public enum PhaseStage
 {
-    /// <summary>Choose the sensors, read the current phases.</summary>
+    /// <summary>Choose the sensors and the tilts, read the current phases.</summary>
     Select,
-    /// <summary>Instrument flat / unshimmed — ready to capture the reference.</summary>
-    Reference,
-    CapturingReference,
-    /// <summary>Tilt step applied — ready to capture.</summary>
-    Tilted,
-    CapturingTilted,
+    /// <summary>The tilt in <see cref="PhaseCalState.Tilt"/> is to be applied, then captured.</summary>
+    Ready,
+    Capturing,
     /// <summary>Computed; the user reviews and applies.</summary>
     Review,
     Applying,
@@ -22,6 +51,9 @@ public enum PhaseStage
 public sealed record PhaseCalState(
     PhaseStage Stage = PhaseStage.Select,
     int Mask = SensorMask.Both,
+    PhaseMode Mode = PhaseMode.Both,
+    // The tilt being prepared or captured.
+    PhaseTilt Tilt = PhaseTilt.Positive,
     // 0..1 of the capture time.
     double CaptureProgress = 0,
     // Batches received in the running capture.
@@ -36,15 +68,32 @@ public sealed record PhaseCalState(
     bool NeedsService = false)
 {
     public IReadOnlyList<PhaseEstimate?> PhaseEstimates => Estimates ?? [null, null];
+
+    /// <summary>1-based position of <see cref="Tilt"/> among the tilts of the <see cref="Mode"/>.</summary>
+    public int Step
+    {
+        get
+        {
+            var tilts = Mode.Tilts();
+            for (int i = 0; i < tilts.Count; i++)
+                if (tilts[i] == Tilt) return i + 1;
+            return 0;
+        }
+    }
+
+    public int Steps => Mode.Tilts().Count;
 }
 
 /// <summary>
 /// Phase calibration. Each sensor's tilt signal lies along <c>e^{jφ}</c> in the complex
-/// plane of <c>u = S / (A − B)</c>. Capture the phasor stream flat and again with a
-/// known tilt step; the direction of the change in <c>u</c> is φ — independent of the
-/// stored phase and of the size of the step. See
-/// <see cref="CalibrationMath.EstimatePhase"/>. Port of the phone app's
-/// <c>PhaseCalNotifier</c> (phase range ±180° as the firmware now allows).
+/// plane of <c>u = S / (A − B)</c>: a positive tilt points at φ, a negative one at
+/// φ + 180°. Capture the phasor stream with a clear positive and a clear negative tilt
+/// (the direction of their difference is φ, the zero offset cancels), or with one of
+/// them only (the direction of <c>u</c> itself). Neither the size of the tilt nor the
+/// stored phase matters, and no neutral measurement is needed. See
+/// <see cref="CalibrationMath.EstimatePhaseFromTilts"/>. An inverted sensor (INVERT = 1)
+/// gets φ + 180°, as its stored phase must absorb the sign. Port of the phone app's
+/// <c>PhaseCalNotifier</c> (phase range ±180°).
 /// </summary>
 public sealed class PhaseCalWizard(InstrumentApi api, TimeProvider? time = null)
     : WizardBase<PhaseCalState>(new PhaseCalState())
@@ -55,15 +104,22 @@ public sealed class PhaseCalWizard(InstrumentApi api, TimeProvider? time = null)
     public const int MinSamples = 60;
 
     private readonly TimeProvider _time = time ?? TimeProvider.System;
-    private readonly ComplexStats[] _flat = [new(), new()];
-    private readonly ComplexStats[] _tilt = [new(), new()];
+    private readonly ComplexStats[] _pos = [new(), new()];
+    private readonly ComplexStats[] _neg = [new(), new()];
     private readonly object _statsGate = new();
+
+    // The sensors' invert flags: an inverted sensor reads positive for a negative raw
+    // signal, which the stored phase must absorb.
+    private long[] _invert = [0, 0];
 
     private IDisposable? _sub;
     private ITimer? _timer;
 
     private async Task<long[]> ReadPhasesAsync() =>
         await Task.WhenAll(ValueCatalog.SensorPhase.Select(d => api.ReadValueAsync(d)));
+
+    private async Task<long[]> ReadInvertAsync() =>
+        await Task.WhenAll(ValueCatalog.SensorInvert.Select(d => api.ReadValueAsync(d)));
 
     public async Task RefreshValuesAsync()
     {
@@ -81,29 +137,41 @@ public sealed class PhaseCalWizard(InstrumentApi api, TimeProvider? time = null)
         Update(s => s with { Mask = mask });
     }
 
-    /// <summary>Leave the selection and go to "capture the reference".</summary>
-    public void Begin()
+    public void SelectMode(PhaseMode mode)
     {
         if (State.Stage != PhaseStage.Select) return;
-        Update(s => s with { Stage = PhaseStage.Reference });
+        Update(s => s with { Mode = mode });
     }
 
-    public Task CaptureReferenceAsync() =>
-        State.Stage != PhaseStage.Reference
-            ? Task.CompletedTask
-            : CaptureAsync(PhaseStage.CapturingReference, PhaseStage.Tilted, _flat);
-
-    public Task CaptureTiltedAsync() =>
-        State.Stage != PhaseStage.Tilted
-            ? Task.CompletedTask
-            : CaptureAsync(PhaseStage.CapturingTilted, PhaseStage.Review, _tilt);
-
-    private Task CaptureAsync(PhaseStage during, PhaseStage next, ComplexStats[] into)
+    /// <summary>Leave the selection and go to the first tilt.</summary>
+    public async Task BeginAsync()
     {
+        if (State.Stage != PhaseStage.Select) return;
+        int gen = NextGen();
+        long[] invert;
+        try
+        {
+            invert = await ReadInvertAsync();
+        }
+        catch (Exception e)
+        {
+            Fail(gen, e);
+            return;
+        }
+        if (gen != Gen) return;
+        _invert = invert;
+        Update(s => s with { Stage = PhaseStage.Ready, Tilt = s.Mode.Tilts()[0] });
+    }
+
+    /// <summary>Captures the tilt that is ready.</summary>
+    public Task CaptureAsync()
+    {
+        if (State.Stage != PhaseStage.Ready) return Task.CompletedTask;
+        var into = State.Tilt == PhaseTilt.Positive ? _pos : _neg;
         int gen = NextGen();
         lock (_statsGate)
             foreach (var s in into) s.Reset();
-        Update(s => s with { Stage = during, CaptureProgress = 0, Samples = 0 });
+        Update(s => s with { Stage = PhaseStage.Capturing, CaptureProgress = 0, Samples = 0 });
 
         int ticks = 0;
         int total = (int)(CaptureDuration.TotalMilliseconds / 200);
@@ -116,7 +184,7 @@ public sealed class PhaseCalWizard(InstrumentApi api, TimeProvider? time = null)
             if (ticks >= total)
             {
                 _timer?.Dispose();
-                _ = EndCaptureAsync(gen, next, into);
+                _ = EndCaptureAsync(gen, into);
             }
         }, null, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(200));
 
@@ -143,44 +211,51 @@ public sealed class PhaseCalWizard(InstrumentApi api, TimeProvider? time = null)
         return Task.CompletedTask;
     }
 
-    private Task EndCaptureAsync(int gen, PhaseStage next, ComplexStats[] into)
+    private Task EndCaptureAsync(int gen, ComplexStats[] into)
     {
         if (gen != Gen) return Task.CompletedTask;
         _sub?.Dispose();
         _sub = null;
 
         int n;
-        PhaseEstimate?[]? estimates = null;
-        lock (_statsGate)
-        {
-            n = into[0].N;
-            if (n >= MinSamples && next == PhaseStage.Review)
-                estimates = [CalibrationMath.EstimatePhase(_flat[0], _tilt[0]), CalibrationMath.EstimatePhase(_flat[1], _tilt[1])];
-        }
-
+        lock (_statsGate) n = into[0].N;
         if (n < MinSamples)
         {
             Fail(gen, new LinkException("too few phasor batches arrived — is the tilt measurement running?"));
             return Task.CompletedTask;
         }
-        if (estimates is not null)
-            Update(s => s with { Stage = PhaseStage.Review, Samples = n, Estimates = estimates });
-        else
-            Update(s => s with { Stage = next, Samples = n });
+
+        var st = State;
+        var tilts = st.Mode.Tilts();
+        int next = st.Step; // 1-based position of the current tilt = 0-based index of the next one
+        if (next < tilts.Count)
+        {
+            Update(s => s with { Stage = PhaseStage.Ready, Tilt = tilts[next], Samples = n });
+            return Task.CompletedTask;
+        }
+
+        PhaseEstimate?[] estimates;
+        lock (_statsGate)
+            estimates = [Estimate(0, tilts), Estimate(1, tilts)];
+        Update(s => s with { Stage = PhaseStage.Review, Samples = n, Estimates = estimates });
         return Task.CompletedTask;
     }
 
-    /// <summary>Back to "capture the reference" (e.g. the table was bumped).</summary>
-    public void RedoReference()
+    private PhaseEstimate? Estimate(int i, IReadOnlyList<PhaseTilt> tilts)
     {
-        Stop();
-        Update(s => s with { Stage = PhaseStage.Reference });
+        var e = CalibrationMath.EstimatePhaseFromTilts(
+            positive: tilts.Contains(PhaseTilt.Positive) ? _pos[i] : null,
+            negative: tilts.Contains(PhaseTilt.Negative) ? _neg[i] : null);
+        // The estimate is the direction of a tilt that reads positive; with the sign of
+        // the reading inverted that is the raw signal turned by 180°.
+        return e is not null && _invert[i] == 1 ? e.Rotated(180) : e;
     }
 
-    public void RedoTilted()
+    /// <summary>Back to the first tilt (e.g. the table was bumped).</summary>
+    public void Redo()
     {
         Stop();
-        Update(s => s with { Stage = PhaseStage.Tilted });
+        Update(s => s with { Stage = PhaseStage.Ready, Tilt = s.Mode.Tilts()[0] });
     }
 
     /// <summary>Writes the estimated phase of every selected sensor that has a usable one. Needs service mode.</summary>

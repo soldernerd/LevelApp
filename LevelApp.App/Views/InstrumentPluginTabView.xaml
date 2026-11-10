@@ -4,16 +4,26 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="using:LevelApp.App.ViewModels">
 
-    <ScrollViewer Padding="0,16,0,24">
-        <StackPanel Spacing="24" MaxWidth="600" Margin="0,0,0,0">
+    <!-- Devices and actions sit in a collapsible header; the plugin's own view (for the
+         Leveltronic: live screen, scope, diagnostics, settings...) gets the rest of the page. -->
+    <Grid RowDefinitions="Auto,*" RowSpacing="12" Padding="0,12,0,0">
 
-            <!-- ── Section: Known Devices ─────────────────────────────────────── -->
-            <StackPanel Spacing="12">
+        <Expander x:Name="DevicesExpander"
+                  Grid.Row="0"
+                  Header="Devices and actions"
+                  IsExpanded="True"
+                  HorizontalAlignment="Stretch"
+                  HorizontalContentAlignment="Left">
+            <ScrollViewer MaxHeight="320" VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="24" MaxWidth="600" HorizontalAlignment="Left">
+
+                <!-- ── Section: Known Devices ─────────────────────────────────────── -->
+                <StackPanel Spacing="12">
 
                 <TextBlock Text="Known Devices"
                            Style="{StaticResource SubtitleTextBlockStyle}"/>
 
-                <!-- Device list — shown only when there are known devices -->
+                    <!-- Device list — shown only when there are known devices -->
                 <ItemsControl x:Name="DeviceList"
                               ItemsSource="{x:Bind ViewModel.KnownDevices, Mode=OneWay}">
                     <ItemsControl.ItemTemplate>
@@ -22,7 +32,7 @@
                                     CornerRadius="4"
                                     Padding="12,8"
                                     Margin="0,0,0,4">
-                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                                <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
                                     <TextBlock Grid.Column="0"
                                                Text="{x:Bind DisplayName}"
                                                VerticalAlignment="Center"
@@ -38,6 +48,12 @@
                                     </Border>
                                     <Button Grid.Column="2"
                                             VerticalAlignment="Center"
+                                            ToolTipService.ToolTip="Give this device a name"
+                                            Click="OnRenameDeviceClicked">
+                                        <FontIcon Glyph="&#xE70F;" FontSize="12"/>
+                                    </Button>
+                                    <Button Grid.Column="3"
+                                            VerticalAlignment="Center"
                                             ToolTipService.ToolTip="Forget this device"
                                             Click="OnForgetDeviceClicked">
                                         <FontIcon Glyph="&#xE711;" FontSize="12"/>
@@ -48,14 +64,14 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
-                <!-- Empty state -->
+                    <!-- Empty state -->
                 <TextBlock x:Name="NoDevicesText"
                            Text="No devices registered."
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                            Style="{StaticResource BodyTextBlockStyle}"
                            Visibility="Collapsed"/>
 
-                <!-- Add Device button — hidden for always-connected plugins -->
+                    <!-- Add Device button — hidden for always-connected plugins -->
                 <Button x:Name="AddDeviceButton"
                         Content="+ Add Device"
                         Click="OnAddDeviceClicked"
@@ -63,8 +79,8 @@
 
             </StackPanel>
 
-            <!-- ── Section: Actions ───────────────────────────────────────────── -->
-            <StackPanel Spacing="8">
+                <!-- ── Section: Actions ───────────────────────────────────────────── -->
+                <StackPanel Spacing="8">
 
                 <TextBlock Text="Actions"
                            Style="{StaticResource SubtitleTextBlockStyle}"/>
@@ -85,11 +101,18 @@
 
             </StackPanel>
 
-            <!-- ── Section: Plugin-specific view (if any) ────────────────────── -->
-            <ContentPresenter x:Name="PluginSpecificContent"
-                              Visibility="Collapsed"/>
 
-        </StackPanel>
-    </ScrollViewer>
+                </StackPanel>
+            </ScrollViewer>
+        </Expander>
+
+        <!-- ── Plugin-specific view (if any) ─────────────────────────────── -->
+        <ContentPresenter x:Name="PluginSpecificContent"
+                          Grid.Row="1"
+                          HorizontalContentAlignment="Stretch"
+                          VerticalContentAlignment="Stretch"
+                          Visibility="Collapsed"/>
+
+    </Grid>
 
 </UserControl>

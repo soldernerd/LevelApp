@@ -52,88 +52,126 @@ public sealed class CalibrationMathTests
         Assert.Null(CalibrationMath.ComplexDivide(1, 1, 0, 0));
     }
 
+    private static readonly double[] Truths = [-170.0, -90.0, -40.0, -12.5, 0.0, 3.0, 12.0, 44.0, 135.0, 180.0];
+
+    public static IEnumerable<object[]> TruthData() => Truths.Select(t => new object[] { t });
+
+    private static double Off(double a, double truth) => Math.Abs(CalibrationMath.WrapDegrees(a - truth));
+
     [Theory]
-    [InlineData(-40.0)]
-    [InlineData(-12.5)]
-    [InlineData(0.0)]
-    [InlineData(3.0)]
-    [InlineData(12.0)]
-    [InlineData(44.0)]
-    public void EstimatePhase_RecoversTheTruth(double truth)
+    [MemberData(nameof(TruthData))]
+    public void EstimatePhaseFromTilts_RecoversTheTruth_FromAPositiveAndANegativeTilt(double truth)
     {
-        var e = CalibrationMath.EstimatePhase(Capture(0, phaseDeg: truth, seed: 1), Capture(0.1, phaseDeg: truth, seed: 2))!;
-        Assert.Equal(truth, e.AngleDeg, 1);
+        var e = CalibrationMath.EstimatePhaseFromTilts(
+            positive: Capture(0.1, phaseDeg: truth, seed: 1),
+            negative: Capture(-0.1, phaseDeg: truth, seed: 2))!;
+        Assert.True(Off(e.AngleDeg, truth) < 0.1);
         Assert.True(e.InRange);
         Assert.True(e.Confident);
-        Assert.InRange((double)e.CentiDegrees, truth * 100 - 10, truth * 100 + 10);
+        Assert.False(e.SingleSided);
+    }
+
+    [Theory]
+    [MemberData(nameof(TruthData))]
+    public void EstimatePhaseFromTilts_RecoversTheTruth_FromAPositiveTiltAlone(double truth)
+    {
+        var e = CalibrationMath.EstimatePhaseFromTilts(positive: Capture(0.1, phaseDeg: truth, seed: 1))!;
+        Assert.True(Off(e.AngleDeg, truth) < 0.5);
+        Assert.True(e.SingleSided);
+    }
+
+    [Theory]
+    [MemberData(nameof(TruthData))]
+    public void EstimatePhaseFromTilts_RecoversTheTruth_FromANegativeTiltAlone(double truth)
+    {
+        var e = CalibrationMath.EstimatePhaseFromTilts(negative: Capture(-0.1, phaseDeg: truth, seed: 2))!;
+        Assert.True(Off(e.AngleDeg, truth) < 0.5);
+        Assert.True(e.SingleSided);
     }
 
     [Fact]
-    public void EstimatePhase_TheSignOfTheStepDoesNotChangeThePhase()
+    public void EstimatePhaseFromTilts_TwoTiltsCancelTheZeroOffset_OneDoesNot()
     {
-        var up = CalibrationMath.EstimatePhase(Capture(0, seed: 1), Capture(0.1, seed: 2))!;
-        var down = CalibrationMath.EstimatePhase(Capture(0, seed: 1), Capture(-0.1, seed: 2))!;
-        Assert.Equal(up.AngleDeg, down.AngleDeg, 1);
+        var both = CalibrationMath.EstimatePhaseFromTilts(
+            positive: Capture(0.1, zero: 0.001, phaseDeg: 30, seed: 1),
+            negative: Capture(-0.1, zero: 0.001, phaseDeg: 30, seed: 2))!;
+        Assert.Equal(30, both.AngleDeg, 1);
+
+        // An offset that is not along the signal (e.g. a crosstalk term).
+        static ComplexStats Offset(double tilt, int seed)
+        {
+            var s = Capture(tilt, zero: 0, phaseDeg: 30, seed: seed);
+            var r = new ComplexStats();
+            for (int i = 0; i < 300; i++) r.Add(s.MeanRe + 0.002, s.MeanIm - 0.002);
+            return r;
+        }
+
+        var withOffsetBoth = CalibrationMath.EstimatePhaseFromTilts(positive: Offset(0.1, 1), negative: Offset(-0.1, 2))!;
+        var withOffsetOne = CalibrationMath.EstimatePhaseFromTilts(positive: Offset(0.1, 1))!;
+        Assert.True(Math.Abs(withOffsetBoth.AngleDeg - 30) < Math.Abs(withOffsetOne.AngleDeg - 30));
+        Assert.Equal(30, withOffsetBoth.AngleDeg, 1);
     }
 
     [Fact]
-    public void EstimatePhase_DoesNotDependOnTheStepSize()
+    public void EstimatePhaseFromTilts_DoesNotDependOnTheTiltSize()
     {
-        var small = CalibrationMath.EstimatePhase(Capture(0, seed: 1), Capture(0.02, seed: 2))!;
-        var large = CalibrationMath.EstimatePhase(Capture(0, seed: 1), Capture(1.0, seed: 2))!;
-        Assert.Equal(small.AngleDeg, large.AngleDeg, 0);
+        var small = CalibrationMath.EstimatePhaseFromTilts(Capture(0.02, seed: 1), Capture(-0.02, seed: 2))!;
+        var large = CalibrationMath.EstimatePhaseFromTilts(Capture(1.0, seed: 1), Capture(-1.0, seed: 2))!;
         Assert.InRange(Math.Abs(small.AngleDeg - large.AngleDeg), 0, 0.3);
     }
 
     [Fact]
-    public void EstimatePhase_SeventyDegreesIsInRange_ThatTheFirmwareNowAccepts()
+    public void EstimatePhaseFromTilts_ATiltBuriedInNoiseHasLowConfidenceAndAWideError()
     {
-        var e = CalibrationMath.EstimatePhase(Capture(0, phaseDeg: 70, seed: 1), Capture(0.1, phaseDeg: 70, seed: 2))!;
-        Assert.Equal(70, e.AngleDeg, 1);
-        Assert.True(e.InRange);
-        Assert.InRange(e.CentiDegrees, 6990L, 7010L);
-    }
-
-    [Fact]
-    public void EstimatePhase_AStepBuriedInNoiseHasLowConfidenceAndAWideError()
-    {
-        var e = CalibrationMath.EstimatePhase(
-            Capture(0, noise: 5e-3, n: 40, seed: 1), Capture(0.01, noise: 5e-3, n: 40, seed: 2))!;
+        var e = CalibrationMath.EstimatePhaseFromTilts(
+            Capture(0.01, noise: 5e-3, n: 40, seed: 1), Capture(-0.01, noise: 5e-3, n: 40, seed: 2))!;
         Assert.False(e.Confident);
         Assert.True(e.UncertaintyDeg > 1);
     }
 
     [Fact]
-    public void EstimatePhase_UncertaintyShrinksWithABiggerStep()
+    public void EstimatePhaseFromTilts_UncertaintyShrinksWithABiggerTilt()
     {
-        var a = CalibrationMath.EstimatePhase(Capture(0, noise: 1e-4, seed: 1), Capture(0.02, noise: 1e-4, seed: 2))!;
-        var b = CalibrationMath.EstimatePhase(Capture(0, noise: 1e-4, seed: 1), Capture(0.5, noise: 1e-4, seed: 2))!;
+        var a = CalibrationMath.EstimatePhaseFromTilts(
+            Capture(0.02, noise: 1e-4, seed: 1), Capture(-0.02, noise: 1e-4, seed: 2))!;
+        var b = CalibrationMath.EstimatePhaseFromTilts(
+            Capture(0.5, noise: 1e-4, seed: 1), Capture(-0.5, noise: 1e-4, seed: 2))!;
         Assert.True(b.UncertaintyDeg < a.UncertaintyDeg);
         Assert.True(b.Snr > a.Snr);
     }
 
     [Fact]
-    public void EstimatePhase_TooFewSamplesOrNoStepIsNull()
+    public void EstimatePhaseFromTilts_TooFewSamplesNothingOrNoSignalIsNull()
     {
-        Assert.Null(CalibrationMath.EstimatePhase(new ComplexStats(), Capture(0.1)));
-        Assert.Null(CalibrationMath.EstimatePhase(Capture(0.1, n: 3), Capture(0.1, n: 3)));
-        var same = new ComplexStats();
-        for (int i = 0; i < 11; i++) same.Add(1, 1);
-        Assert.Null(CalibrationMath.EstimatePhase(same, same));
+        Assert.Null(CalibrationMath.EstimatePhaseFromTilts());
+        Assert.Null(CalibrationMath.EstimatePhaseFromTilts(positive: Capture(0.1, n: 3)));
+        Assert.Null(CalibrationMath.EstimatePhaseFromTilts(positive: Capture(0.1), negative: Capture(-0.1, n: 3)));
+        var zero = new ComplexStats();
+        for (int i = 0; i < 10; i++) zero.Add(0, 0);
+        Assert.Null(CalibrationMath.EstimatePhaseFromTilts(positive: zero));
+        Assert.Null(CalibrationMath.EstimatePhaseFromTilts(positive: zero, negative: zero));
     }
 
     [Fact]
-    public void EstimatePhase_FoldsIntoMinus90To90()
+    public void PhaseEstimate_StoresTheFullPlusMinus180Degrees()
     {
-        // The step points at 192°: same line as 12°.
-        var flat = new ComplexStats();
-        var tilted = new ComplexStats();
-        for (int i = 0; i < 20; i++)
-        {
-            flat.Add(0, 0);
-            tilted.Add(Math.Cos(192 * Math.PI / 180), Math.Sin(192 * Math.PI / 180));
-        }
-        Assert.Equal(12, CalibrationMath.EstimatePhase(flat, tilted)!.AngleDeg, 6);
+        var e = CalibrationMath.EstimatePhaseFromTilts(positive: Capture(0.1, phaseDeg: 150, seed: 1))!;
+        Assert.True(e.InRange);
+        Assert.InRange(e.CentiDegrees, 14990L, 15010L);
+        Assert.Equal(18000L, new PhaseEstimate(180, 0, 1, 1).CentiDegrees);
+        Assert.Equal(-18000L, new PhaseEstimate(-181, 0, 1, 1).CentiDegrees);
+        Assert.False(new PhaseEstimate(181, 0, 1, 1).InRange);
+    }
+
+    [Fact]
+    public void Rotated_KeepsTheEstimateIn_Minus180To180()
+    {
+        var e = CalibrationMath.EstimatePhaseFromTilts(positive: Capture(0.1, phaseDeg: 100, seed: 1))!;
+        Assert.Equal(-80, e.Rotated(180).AngleDeg, 1);
+        Assert.Equal(-80, e.Rotated(-180).AngleDeg, 1);
+        Assert.Equal(e.Snr, e.Rotated(180).Snr);
+        Assert.Equal(180, CalibrationMath.WrapDegrees(540), 9);
+        Assert.Equal(180, CalibrationMath.WrapDegrees(-180), 9);
     }
 
     [Fact]

@@ -65,5 +65,5 @@ public sealed class LeveltronicPlugin : IInstrumentPlugin
             : null;
 
     public object? CreateDeviceManagementView(IDeviceRegistry registry) =>
-        new LeveltronicManagementView(Sessions, registry);
+        new LeveltronicManagementView(Sessions, registry, Preferences);
 }

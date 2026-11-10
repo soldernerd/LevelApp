@@ -1,4 +1,5 @@
 using LevelApp.Core.Interfaces;
+using LevelApp.Instruments.Leveltronic.Preferences;
 using LevelApp.Instruments.Leveltronic.UI.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -15,13 +16,19 @@ public sealed partial class LeveltronicManagementView : UserControl
 {
     public LeveltronicManagementViewModel ViewModel { get; }
 
-    public LeveltronicManagementView(LeveltronicSessionManager sessions, IDeviceRegistry registry)
+    public LeveltronicManagementView(
+        LeveltronicSessionManager sessions, IDeviceRegistry registry, ILeveltronicPreferences preferences)
     {
-        ViewModel = new LeveltronicManagementViewModel(sessions, registry)
+        ViewModel = new LeveltronicManagementViewModel(sessions, registry, preferences)
         {
             ConfirmAsync = ConfirmAsync,
         };
         InitializeComponent();
+
+        // The tab views take their view model in the constructor, so they are created here.
+        LiveTab.Content        = new LiveView(ViewModel.Live);
+        ScopeTab.Content       = new ScopeView(ViewModel.Scope);
+        DiagnosticsTab.Content = new DiagnosticsView(ViewModel.Diagnostics);
 
         Loaded += (_, _) =>
         {
@@ -33,9 +40,7 @@ public sealed partial class LeveltronicManagementView : UserControl
 
     private void OnTabChanged(object sender, SelectionChangedEventArgs e)
     {
-        string? tag = (Tabs.SelectedItem as PivotItem)?.Tag as string;
-        ViewModel.InfoVisible = tag == "info";
-        ViewModel.DiagnosticsVisible = tag == "diagnostics";
+        ViewModel.ActiveTab = (Tabs.SelectedItem as PivotItem)?.Tag as string ?? "";
     }
 
     private async Task<bool> ConfirmAsync(string title, string message)

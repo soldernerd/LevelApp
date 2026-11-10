@@ -7,7 +7,8 @@ namespace LevelApp.Instruments.Leveltronic.Calibration;
 // Model (firmware Math/math_displacement.c): per batch and sensor u = S / D with
 // D = A - B; a real tilt moves u along e^{j*phi}, phi being the sensor's signal
 // phase. The firmware derotates by the stored phase, x = u * e^{-j*phiCal}, and
-// reports tilt = (Re x - zero) / k.
+// reports tilt = (Re x - zero) / k. A positive tilt points at phi, a negative one
+// at phi + 180 degrees.
 
 /// <summary>Running mean / variance of a complex quantity (Welford).</summary>
 public sealed class ComplexStats
@@ -40,20 +41,33 @@ public sealed class ComplexStats
     public double VarIm => N > 1 ? _m2Im / (N - 1) : 0;
 }
 
-/// <summary>The result of comparing two captures of <c>u</c>: a flat reference and a known tilt step.</summary>
-public sealed record PhaseEstimate(double AngleDeg, double UncertaintyDeg, double Snr, double StepMagnitude)
+/// <summary>
+/// The signal phase of a sensor found from captures of <c>u = S / (A − B)</c> with a
+/// clear tilt applied (see <see cref="CalibrationMath.EstimatePhaseFromTilts"/>).
+/// </summary>
+/// <param name="AngleDeg">The signal phase in (−180°, 180°]: the direction of <c>u</c> for a positive tilt.</param>
+/// <param name="UncertaintyDeg">1σ uncertainty of <paramref name="AngleDeg"/>.</param>
+/// <param name="Snr">|signal| over the standard error perpendicular to it.</param>
+/// <param name="StepMagnitude">|u| (one tilt) or |u₊ − u₋| (both), the signal size in the ratio plane.</param>
+/// <param name="SingleSided">
+/// Found from one tilt direction only, so the sensor's zero offset is not cancelled (it
+/// adds a small error when the tilt is not large against it).
+/// </param>
+public sealed record PhaseEstimate(
+    double AngleDeg, double UncertaintyDeg, double Snr, double StepMagnitude, bool SingleSided = false)
 {
-    /// <summary>
-    /// The instrument stores the phase in ±180° (firmware 0.11.5+; it was ±45°
-    /// before). The estimate is folded to (−90°, 90°], so it always fits.
-    /// </summary>
+    /// <summary>The instrument stores the phase in ±180°.</summary>
     public bool InRange => Math.Abs(AngleDeg) <= 180.0;
 
     /// <summary>Stored unit: 0.01°.</summary>
-    public long CentiDegrees => Math.Clamp((long)Math.Round(AngleDeg * 100), -18000, 18000);
+    public long CentiDegrees =>
+        Math.Clamp((long)Math.Round(AngleDeg * 100, MidpointRounding.AwayFromZero), -18000, 18000);
 
     /// <summary>Good enough to apply without a second thought.</summary>
     public bool Confident => Snr >= 8 && UncertaintyDeg <= 0.5;
+
+    /// <summary>The same estimate rotated by <paramref name="deg"/>, kept in (−180°, 180°].</summary>
+    public PhaseEstimate Rotated(double deg) => this with { AngleDeg = CalibrationMath.WrapDegrees(AngleDeg + deg) };
 }
 
 /// <summary>The result of a gain (sensitivity k) calibration step.</summary>
@@ -84,31 +98,61 @@ public static class CalibrationMath
         return ((sr * dr + si * di) / d, (si * dr - sr * di) / d);
     }
 
-    /// <summary>
-    /// Phase from a tilt step: the direction of <c>Δu = u_tilted − u_flat</c>, folded
-    /// into (−90°, 90°] (the sign of the step is the invert flag's business, not the
-    /// phase's). Null if either capture is too short or there is no step.
-    /// </summary>
-    public static PhaseEstimate? EstimatePhase(ComplexStats flat, ComplexStats tilted)
+    /// <summary><paramref name="deg"/> folded into (−180°, 180°].</summary>
+    public static double WrapDegrees(double deg)
     {
-        if (flat.N < 5 || tilted.N < 5) return null;
-        double dRe = tilted.MeanRe - flat.MeanRe;
-        double dIm = tilted.MeanIm - flat.MeanIm;
+        double a = deg;
+        while (a > 180) a -= 360;
+        while (a <= -180) a += 360;
+        return a;
+    }
+
+    /// <summary>
+    /// Phase from captures of <c>u</c> with a clear tilt of each sign. A tilt moves <c>u</c>
+    /// along <c>e^{jφ}</c>: a positive tilt points at φ, a negative one at φ + 180°.
+    /// <list type="bullet">
+    /// <item>both <paramref name="positive"/> and <paramref name="negative"/>: φ is the direction of
+    /// <c>u₊ − u₋</c>, so the sensor's zero offset cancels and the tilt size does not matter;</item>
+    /// <item>only one: φ is the direction of <c>u</c> itself (turned by 180° for the negative
+    /// tilt), which assumes the zero offset is small against the signal.</item>
+    /// </list>
+    /// Null if a capture is too short or there is no signal.
+    /// </summary>
+    public static PhaseEstimate? EstimatePhaseFromTilts(ComplexStats? positive = null, ComplexStats? negative = null)
+    {
+        if (positive is null && negative is null) return null;
+        if ((positive is not null && positive.N < 5) || (negative is not null && negative.N < 5)) return null;
+
+        double dRe, dIm, seRe, seIm, flip;
+        if (positive is not null && negative is not null)
+        {
+            dRe = positive.MeanRe - negative.MeanRe;
+            dIm = positive.MeanIm - negative.MeanIm;
+            seRe = Math.Sqrt(positive.VarRe / positive.N + negative.VarRe / negative.N);
+            seIm = Math.Sqrt(positive.VarIm / positive.N + negative.VarIm / negative.N);
+            flip = 0;
+        }
+        else
+        {
+            var one = positive ?? negative!;
+            dRe = one.MeanRe;
+            dIm = one.MeanIm;
+            seRe = Math.Sqrt(one.VarRe / one.N);
+            seIm = Math.Sqrt(one.VarIm / one.N);
+            flip = positive is not null ? 0 : 180;
+        }
         double mag = Math.Sqrt(dRe * dRe + dIm * dIm);
         if (mag == 0) return null;
 
-        double a = Math.Atan2(dIm, dRe) * 180 / Math.PI;
-        while (a > 90) a -= 180;
-        while (a <= -90) a += 180;
-
-        double seRe = Math.Sqrt(flat.VarRe / flat.N + tilted.VarRe / tilted.N);
-        double seIm = Math.Sqrt(flat.VarIm / flat.N + tilted.VarIm / tilted.N);
         double ux = dRe / mag, uy = dIm / mag;
-        // Error component perpendicular to the step direction.
+        // Error component perpendicular to the signal direction.
         double sePerp = Math.Sqrt(Math.Pow(seRe * uy, 2) + Math.Pow(seIm * ux, 2));
-        double unc = Math.Atan2(sePerp, mag) * 180 / Math.PI;
-        double snr = sePerp == 0 ? 1e9 : mag / sePerp;
-        return new PhaseEstimate(a, unc, snr, mag);
+        return new PhaseEstimate(
+            AngleDeg: WrapDegrees(Math.Atan2(dIm, dRe) * 180 / Math.PI + flip),
+            UncertaintyDeg: Math.Atan2(sePerp, mag) * 180 / Math.PI,
+            Snr: sePerp == 0 ? 1e9 : mag / sePerp,
+            StepMagnitude: mag,
+            SingleSided: positive is null || negative is null);
     }
 
     /// <summary>

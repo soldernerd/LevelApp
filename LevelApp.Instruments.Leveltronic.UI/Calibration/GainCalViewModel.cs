@@ -68,7 +68,7 @@ public sealed class GainCalViewModel : WizardViewModelBase
                     SummaryLines: [.. Enumerable.Range(0, 2).Select(i =>
                         $"S{i + 1}   {(s.CurrentK is { } k ? k[i].ToString(CultureInfo.InvariantCulture) : "—")}")],
                     ShowServiceCard: true,
-                    Actions: [Act("Start", () => _w.Begin(), primary: true, enabled: ready)]);
+                    Actions: [Act("Start", () => _w.Begin(), primary: true, enabled: ready && service)]);
             }
 
             case GainStage.Baseline:
@@ -87,13 +87,10 @@ public sealed class GainCalViewModel : WizardViewModelBase
 
             case GainStage.MeasuringBaseline:
             case GainStage.MeasuringShim:
-            case GainStage.Verifying:
             {
                 bool baseline = s.Stage == GainStage.MeasuringBaseline;
-                bool verifying = s.Stage == GainStage.Verifying;
                 return new WizardPage(Title,
-                    StepText: $"Step {(baseline ? 1 : verifying ? 3 : 2)} of 3 — " +
-                              (baseline ? "Baseline" : verifying ? "Checking the new k" : "With the shim"),
+                    StepText: $"Step {(baseline ? 1 : 2)} of 3 — " + (baseline ? "Baseline" : "With the shim"),
                     Progress: new WizardProgress(Math.Clamp(s.Progress, 0.0, 1.0), "Measuring… hold still",
                         Warning: s.Disturbed ? "The table is not quiet yet — wait for it to calm down." : null),
                     Actions: [Act("Cancel", () => _w.BackToStart())]);
@@ -147,21 +144,10 @@ public sealed class GainCalViewModel : WizardViewModelBase
                             new ResultRow($"S{i + 1}", s.KBefore[i].ToString(CultureInfo.InvariantCulture),
                                 s.KAfter[i].ToString(CultureInfo.InvariantCulture),
                                 Fmt.Signed(((double)s.KAfter[i] / s.KBefore[i] - 1) * 100, 1, "%")))]));
-                string? footer = null;
-                if (s.VerifyReading is { } verify && s.ShimReading is { } shim && s.BaselineReading is { } baseline)
-                {
-                    var tilts = s.KnownTilts;
-                    tables.Add(new ResultTable("Check: the shim now reads",
-                        [.. Enumerable.Range(0, 2).Where(i => SensorMask.Has(s.Mask, i)).Select(i =>
-                            new ResultRow($"S{i + 1}", Fmt.Signed(shim[i] - baseline[i], 4), Fmt.Signed(verify[i], 4),
-                                Fmt.Signed((Math.Abs(verify[i]) / tilts[i] - 1) * 100, 1, "%")))]));
-                    footer = "\"Before\" is the step as read with the old k, \"After\" with the new k; \"Change\" is the new " +
-                             "reading's deviation from the known tilt.\n\nLast in the usual order: the zero (flip) calibration.";
-                }
                 return new WizardPage(Title,
                     Headline: "Sensitivity stored",
                     Tables: tables,
-                    Footer: footer ?? "Last in the usual order: the zero (flip) calibration.",
+                    Footer: "Last in the usual order: the zero (flip) calibration.",
                     Actions:
                     [
                         Act("Again", () => _w.BackToStart()),

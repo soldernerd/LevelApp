@@ -61,6 +61,9 @@ internal sealed class SimulatedLeveltronicLink : ILeveltronicLink
     /// <summary>Makes a precision measurement never find a clean window.</summary>
     public bool PrecisionNeverClean { get; set; }
 
+    /// <summary>How many precision measurements were started.</summary>
+    public int PrecisionRuns { get; private set; }
+
     /// <summary>Phasor pushes stop (to provoke "too few batches").</summary>
     public bool PhasorSilent { get; set; }
 
@@ -585,6 +588,7 @@ internal sealed class SimulatedLeveltronicLink : ILeveltronicLink
         if (p[0] != 0) return (ApiStatus.InvalidParameter, null);
         if (!_demodRunning || _zPhase != ZeroCalPhase.Idle) return (ApiStatus.BusyResource, null);
 
+        PrecisionRuns++;
         _pPhase = PrecisionPhase.Running;
         _pCount = 0;
         _pElapsed = 0;
@@ -691,10 +695,11 @@ internal sealed class SimulatedLeveltronicLink : ILeveltronicLink
     private byte[] DiagBytes()
     {
         var b = new byte[56];
-        // Channel order S2, B, A, S1.
+        // ADC channel order S2, B, A, S1; A − B at 90°.
         double[] rms = [4.1, 310.0, 309.5, 3.8];
         double[] p2p = [11.6, 877.0, 875.4, 10.8];
-        double[] ph = [TruePhaseDeg[1], 180.0, 0.0, TruePhaseDeg[0]];
+        // A sensor reads its own phase against the drive, which sits at 90°.
+        double[] ph = [TruePhaseDeg[1] + 90, 270.0, 90.0, TruePhaseDeg[0] + 90];
         for (int i = 0; i < 4; i++)
         {
             BinaryPrimitives.WriteSingleLittleEndian(b.AsSpan(4 * i), (float)rms[i]);

@@ -16,8 +16,6 @@ public enum GainStage
     /// <summary>Computed; the user reviews and applies.</summary>
     Review,
     Applying,
-    /// <summary>Re-measuring with the step still applied, to prove the new k.</summary>
-    Verifying,
     Done,
     Error,
 }
@@ -40,8 +38,6 @@ public sealed record GainCalState(
     IReadOnlyList<GainEstimate?>? Estimates = null,
     IReadOnlyList<long>? KBefore = null,
     IReadOnlyList<long>? KAfter = null,
-    // Reading change [S1, S2] re-measured after applying (compare to the known tilt).
-    IReadOnlyList<double>? VerifyReading = null,
     string? Message = null,
     bool NeedsService = false)
 {
@@ -227,7 +223,10 @@ public sealed class GainCalWizard : WizardBase<GainCalState>
         Update(s => s with { Stage = GainStage.Shim });
     }
 
-    /// <summary>Writes the estimated k of every selected sensor that has a usable one, then re-measures with the step still applied to prove it.</summary>
+    /// <summary>
+    /// Writes the estimated k of every selected sensor that has a usable one. Nothing is
+    /// measured again: the new k is only stored.
+    /// </summary>
     public async Task ApplyAsync()
     {
         if (State.Stage != GainStage.Review) return;
@@ -245,28 +244,11 @@ public sealed class GainCalWizard : WizardBase<GainCalState>
             }
             var after = await ReadKAsync();
             if (gen != Gen) return;
-            Update(s => s with { Stage = GainStage.Verifying, KBefore = before, KAfter = after, CurrentK = after, Progress = 0 });
+            Update(s => s with { Stage = GainStage.Done, KBefore = before, KAfter = after, CurrentK = after, Progress = 0 });
         }
         catch (Exception e)
         {
             Fail(gen, e);
-            return;
-        }
-
-        // Verification: the same step must now read as the known tilt.
-        var verify = await MeasureAsync(GainStage.Verifying, GainStage.Done);
-        if (verify is not null)
-        {
-            var baseline = State.BaselineReading!;
-            Update(s => s with
-            {
-                Stage = GainStage.Done,
-                VerifyReading = [verify.TiltS1 - baseline[0], verify.TiltS2 - baseline[1]],
-            });
-        }
-        else if (State.Stage != GainStage.Error)
-        {
-            Update(s => s with { Stage = GainStage.Done });
         }
     }
 

@@ -164,7 +164,7 @@ LevelApp/
 │   ├── LeveltronicFirmwareUpdater.cs ← IFirmwareUpdater over USB DFU (REBOOT_DFU is service-gated → DfuSession)
 │   ├── Preferences/LeveltronicPreferences.cs ← ILeveltronicPreferences; JSON store %LOCALAPPDATA%\LevelApp\leveltronic.json
 │   └── Calibration/
-│       ├── CalibrationMath.cs     ← ComplexStats, EstimatePhase, EstimateGain, ShimTilt
+│       ├── CalibrationMath.cs     ← ComplexStats, phase estimate from a +/- tilt (±180°), EstimateGain, ShimTilt
 │       ├── FlipCalWizard.cs       ← zero (flip) wizard state machine (+ WizardBase<TState>, SensorMask)
 │       ├── PhaseCalWizard.cs      ← phase wizard (phasor-stream captures)
 │       └── GainCalWizard.cs       ← gain / sensitivity wizard (precision runs, shim setup per serial)
@@ -180,7 +180,7 @@ LevelApp/
 │   └── Converters/                 ← BoolToVisibility, PresenceToVisibility, SeverityBrush, ActionTemplateSelector
 ├── LevelApp.App/                  ← WinUI 3 application
 │   ├── App.xaml / App.xaml.cs     ← DI container setup; registers IInstrumentPlugin(s), IDeviceRegistry
-│   ├── MainWindow.xaml / .cs      ← Menu bar (File, Edit, Instruments, Help); wires IThemeService to RootFrame
+│   ├── MainWindow.xaml / .cs      ← Menu bar + top-level Project / Instruments tabs (SelectorBar, one Frame each so tab switches keep state); wires IThemeService to the shell grid
 │   ├── Helpers/
 │   │   └── ThemeHelper.cs         ← GetColor, GetBrush, PlotRamp, InterpolateRamp (shared by all renderers)
 │   ├── Strings/
@@ -1262,7 +1262,7 @@ First concrete hardware plugin: the **"Leveltronic"** precision electronic level
 - **v0.20.1 — protocol port.** `ApiV3Codec`, `PacketReassembler` + `HidReportReassembler` (packets over 64 B span several HID reports), v3 decoders and `ValueCatalog`, `LeveltronicDeviceClient` with shared ref-counted subscriptions, `InstrumentApi`, `LiveFeed`, `PrecisionRun`, `LeveltronicSession` / `LeveltronicSessionManager` (version + product gate; one session per instrument), `LeveltronicProvider : ILiveReadingSource`, preferences store, BLE scan by name prefix (`BleDeviceScanner` gains `namePrefixes`). New Core contract `ILiveReadingSource`. v2 is dropped: a v2 firmware is refused with "needs API v3".
 - **v0.20.2 — guided measurement.** `InstrumentReadingViewModel` + `InstrumentReadingPanel` on the Measurement and Correction pages (live value, S1 / S2 / Diff selector, Take reading, Zero Diff, connection bar with Retry). The stale "Reading (mm/m)" label of the guided measurement was corrected to µm/m (the box has taken µm/m since v0.5.9).
 - **v0.20.3 — management view.** Tabs Info / Settings / Actions / Calibration values / Diagnostics and a service-mode card, catalog-driven, as on the phone.
-- **v0.20.4 — calibration wizards.** `ICalibrationWorkflow` gets its first implementation: phase → gain → zero (flip), ported from the phone app (same stages, math, texts, service-mode handling). Phase range follows the firmware's ±180° (the phone's math still gates at ±45°). Wizards are UI-free state machines in the headless project; `WizardPageView` renders any wizard page.
+- **v0.20.4 — calibration wizards.** `ICalibrationWorkflow` gets its first implementation: phase → gain → zero (flip), ported from the phone app (same stages, math, texts, service-mode handling). Phase range follows the firmware's ±180° (the phone is ±180° too since 2026-11-09). Wizards are UI-free state machines in the headless project; `WizardPageView` renders any wizard page.
 - **Tests:** `LevelApp.Tests` references the headless project only. A C# port of the phone app's simulated instrument (`SimulatedLeveltronicLink`, on `FakeTimeProvider`) drives codec, client, feed, precision, provider and wizard tests — 295 tests in the suite.
 - **Known caveats:** (1) `IFirmwareUpdater` is implemented, but no update feed exists (`CheckForUpdateAsync` → `null`) and nothing sets `FirmwareImageProvider`; REBOOT_DFU is service-gated and leaves the device in the bootloader until reflashed with `nBOOT0 = 1` (`dfu_flash.ps1`). (2) The live panel, the wizard screens and the transports have not run against real hardware — the Instruments page, management tabs and calibration hub were verified loading in the running app against a fake registered device. (3) Diagnostics channel labels follow the firmware reference (S2, B, A, S1); the phone labels them A, B, S1, S2 — verify on the instrument. (4) The Correction page's reading box is still mm/m while the guided measurement is µm/m.
 
@@ -1355,5 +1355,4 @@ When starting a new session with an AI assistant, paste this document as context
 
 
 > 'I'm building LevelApp — a C# WinUI 3 Windows app for precision level measurement evaluation. The architecture document is below. New features are implemented from work package files in docs/workpackages/. Please read both before starting any work.'
-
-
+- **v0.20.6–0.20.8 — shell tabs, instrument choice, API 3.1, mobile parity.** The shell has two tabs, *Project* (setup → measurement → results → correction) and *Instruments*, each with its own Frame (`NavigationService.Attach(projectFrame, instrumentsFrame, selectTab)`). `IInstrumentChoiceCatalog` lists "Manual entry" plus every registered device for the Setup page and the New Measurement dialog and resolves a session's `InstrumentId` to a provider (a hardware plugin without a registered device falls back to manual entry with a visible warning). The Instruments tab keeps one management view per plugin (devices fold away, calibration has a way back, devices can be renamed). Results without `nodeHeights` (older files) are recalculated on load. Leveltronic: IDENTITY `api_minor` (API 3.1, `DeviceIdentity.AtLeast`), phasor/diag channel order S2,B,A,S1, PGA calibrations 0x48-0x4B, settings 0x53/0x54; management view gains Live, Oscilloscope and a richer Diagnostics tab (`LiveViewModel`, `ScopeViewModel`, `DiagnosticsViewModel` on `SessionViewModelBase`); phase calibration takes a positive and/or negative tilt and gain saving no longer re-measures. **Not compiled or hardware-tested when written.**

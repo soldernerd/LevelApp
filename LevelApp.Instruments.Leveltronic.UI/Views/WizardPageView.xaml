@@ -93,6 +93,19 @@
             <ItemsControl ItemsSource="{x:Bind ViewModel.Page.Instructions, Mode=OneWay}"
                           ItemTemplate="{StaticResource BulletTemplate}"/>
 
+            <!-- Phase: which tilts to measure -->
+            <StackPanel Spacing="4"
+                        Visibility="{x:Bind ViewModel.Page.ShowPhaseModeSelector, Mode=OneWay, Converter={StaticResource Present}}">
+                <TextBlock Text="Tilts to measure" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                <StackPanel Orientation="Horizontal" Spacing="8" DataContext="{x:Bind ViewModel, Mode=OneWay}">
+                    <RadioButton GroupName="PhaseTilts" Content="+ and −" IsChecked="{Binding ModeBoth, Mode=TwoWay}"/>
+                    <RadioButton GroupName="PhaseTilts" Content="+ only" IsChecked="{Binding ModePositive, Mode=TwoWay}"/>
+                    <RadioButton GroupName="PhaseTilts" Content="− only" IsChecked="{Binding ModeNegative, Mode=TwoWay}"/>
+                </StackPanel>
+                <TextBlock Text="{x:Bind ViewModel.Page.ModeHint, Mode=OneWay}" TextWrapping="Wrap"
+                           Style="{StaticResource CaptionTextBlockStyle}"/>
+            </StackPanel>
+
             <!-- Sensor selector -->
             <StackPanel Spacing="4"
                         Visibility="{x:Bind ViewModel.Page.ShowSensorSelector, Mode=OneWay, Converter={StaticResource Present}}">

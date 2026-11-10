@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 using LevelApp.Core.Instruments;
 using LevelApp.Core.Interfaces;
 using LevelApp.Instruments.Leveltronic;
+using LevelApp.Instruments.Leveltronic.Preferences;
 using LevelApp.Instruments.Leveltronic.Protocol;
 
 namespace LevelApp.Instruments.Leveltronic.UI.ViewModels;
@@ -25,14 +26,14 @@ public sealed partial class LeveltronicManagementViewModel : ObservableObject, I
 
     private SessionLease? _lease;
     private IDisposable? _keepAlive;
-    private IDisposable? _diagSub;
     private CancellationTokenSource? _pollCts;
     private KnownDevice? _target;
 
     // Info rows (fixed layout, values updated in place)
     private readonly Dictionary<string, InfoRow> _info = [];
 
-    public LeveltronicManagementViewModel(LeveltronicSessionManager sessions, IDeviceRegistry registry)
+    public LeveltronicManagementViewModel(
+        LeveltronicSessionManager sessions, IDeviceRegistry registry, ILeveltronicPreferences preferences)
     {
         _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
         _registry = registry ?? throw new ArgumentNullException(nameof(registry));
@@ -41,7 +42,9 @@ public sealed partial class LeveltronicManagementViewModel : ObservableObject, I
         SettingGroups = BuildGroups(ValueCatalog.Settings);
         CalibrationGroups = BuildGroups(ValueCatalog.Calibrations);
         Actions = BuildActions();
-        foreach (var n in SignalDiag.ChannelNames) DiagChannels.Add(new DiagChannelRow(n));
+        Live = new LiveViewModel(preferences ?? throw new ArgumentNullException(nameof(preferences)));
+        Scope = new ScopeViewModel();
+        Diagnostics = new DiagnosticsViewModel();
 
         UpdateTargetDevice();
     }
@@ -71,7 +74,6 @@ public sealed partial class LeveltronicManagementViewModel : ObservableObject, I
     [NotifyPropertyChangedFor(nameof(ServiceText))]
     private bool _serviceMode;
 
-    [ObservableProperty] private string _theoreticalTiltText = "";
 
     public bool CanConnect => HasDevice && !IsConnected && !IsBusy;
     public bool CanOperate => IsConnected && !IsBusy;
@@ -85,21 +87,34 @@ public sealed partial class LeveltronicManagementViewModel : ObservableObject, I
     public ObservableCollection<ValueGroup> SettingGroups { get; }
     public ObservableCollection<ValueGroup> CalibrationGroups { get; }
     public IReadOnlyList<ActionItem> Actions { get; }
-    public ObservableCollection<DiagChannelRow> DiagChannels { get; } = [];
+
+    /// <summary>The live screen (S1, S2, Diff, battery, Zero Diff, Precision).</summary>
+    public LiveViewModel Live { get; }
+
+    /// <summary>The oscilloscope view of A, B, S1, S2.</summary>
+    public ScopeViewModel Scope { get; }
+
+    /// <summary>The signal diagnostics.</summary>
+    public DiagnosticsViewModel Diagnostics { get; }
 
     /// <summary>The Info tab is showing (RTC and HEALTH are polled only then).</summary>
     public bool InfoVisible { get; set; }
 
-    private bool _diagVisible;
+    private string _activeTab = "";
 
-    /// <summary>The Diagnostics tab is showing (SIGNAL_DIAG is subscribed only then).</summary>
-    public bool DiagnosticsVisible
+    /// <summary>
+    /// Tag of the tab showing. Tells each tab which feeds to run: RTC / HEALTH polling only on
+    /// Info, SIGNAL_DIAG only on Scope and Diagnostics.
+    /// </summary>
+    public string ActiveTab
     {
-        get => _diagVisible;
+        get => _activeTab;
         set
         {
-            _diagVisible = value;
-            SyncDiagSubscription();
+            _activeTab = value;
+            InfoVisible = value == "info";
+            Scope.IsActive = value == "scope";
+            Diagnostics.IsActive = value == "diagnostics";
         }
     }
 
@@ -140,7 +155,9 @@ public sealed partial class LeveltronicManagementViewModel : ObservableObject, I
             FillIdentity(s.Identity);
             _pollCts = new CancellationTokenSource();
             _ = PollAsync(s, _pollCts.Token);
-            SyncDiagSubscription();
+            Live.Attach(s);
+            Scope.Attach(s);
+            Diagnostics.Attach(s);
             Report($"Connected to {_target.DisplayName}.", false);
         }
         catch (Exception ex)
@@ -168,8 +185,9 @@ public sealed partial class LeveltronicManagementViewModel : ObservableObject, I
     {
         _pollCts?.Cancel();
         _pollCts = null;
-        _diagSub?.Dispose();
-        _diagSub = null;
+        Live.Detach();
+        Scope.Detach();
+        Diagnostics.Detach();
         _keepAlive?.Dispose();
         _keepAlive = null;
 
@@ -429,35 +447,6 @@ public sealed partial class LeveltronicManagementViewModel : ObservableObject, I
                     "You will have to recalibrate. Continue?"), Danger: true),
         };
         return list;
-    }
-
-    // ── Diagnostics ──────────────────────────────────────────────────────────
-
-    private void SyncDiagSubscription()
-    {
-        if (_diagVisible && Session is { } s)
-        {
-            if (_diagSub is not null) return;
-            _diagSub = s.Api.SubscribeSignalDiag(d => Post(() => ApplyDiag(d)), ex => Post(() =>
-                Report(ex is ApiException api ? api.UserMessage : "Signal diagnostics are not available.", true)));
-        }
-        else
-        {
-            _diagSub?.Dispose();
-            _diagSub = null;
-        }
-    }
-
-    private void ApplyDiag(SignalDiag d)
-    {
-        for (int i = 0; i < DiagChannels.Count && i < 4; i++)
-        {
-            DiagChannels[i].Rms = $"{d.RmsMv[i]:0.00} mV";
-            DiagChannels[i].P2p = $"{d.P2pMv[i]:0.0} mV";
-            DiagChannels[i].Phase = $"{d.PhaseDeg[i]:0.0}°";
-        }
-        TheoreticalTiltText =
-            $"S1 {d.TheoreticalTiltS1 * 1000:+0.0;-0.0;0.0} µm/m · S2 {d.TheoreticalTiltS2 * 1000:+0.0;-0.0;0.0} µm/m";
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

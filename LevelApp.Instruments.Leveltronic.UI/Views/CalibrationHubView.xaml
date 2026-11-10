@@ -48,7 +48,7 @@
                     <StackPanel>
                         <TextBlock Text="1  Phase" FontWeight="SemiBold"/>
                         <TextBlock TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}"
-                                   Text="Finds the phase of each sensor's signal from a tilt step. S1, S2 or both."/>
+                                   Text="Finds the phase of each sensor's signal from a clear positive and/or negative tilt. S1, S2 or both."/>
                     </StackPanel>
                 </Button>
                 <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="14"

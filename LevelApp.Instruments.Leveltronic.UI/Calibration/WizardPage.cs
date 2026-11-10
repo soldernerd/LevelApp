@@ -34,6 +34,8 @@ public sealed record WizardPage(
     IReadOnlyList<string>? Instructions = null,
     bool ShowSensorSelector = false,
     bool ShowShimInputs = false,
+    bool ShowPhaseModeSelector = false,
+    string? ModeHint = null,
     string? SummaryTitle = null,
     IReadOnlyList<string>? SummaryLines = null,
     string? ShimHint = null,
