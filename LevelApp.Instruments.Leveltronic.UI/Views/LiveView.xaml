@@ -62,7 +62,7 @@
                             <TextBlock Text="{x:Bind ViewModel.S1Text, Mode=OneWay}" FontSize="62" FontWeight="Bold"
                                        Typography.NumeralAlignment="Tabular"
                                        Foreground="{x:Bind ViewModel.S1State, Mode=OneWay, Converter={StaticResource StateBrush}}"/>
-                            <TextBlock Text="mm/m" FontSize="18" Foreground="#8AFFFFFF"
+                            <TextBlock Text="µm/m" FontSize="18" Foreground="#8AFFFFFF"
                                        VerticalAlignment="Bottom" Margin="0,0,0,10"/>
                         </StackPanel>
                     </Viewbox>
@@ -82,7 +82,7 @@
                             <TextBlock Text="{x:Bind ViewModel.S2Text, Mode=OneWay}" FontSize="62" FontWeight="Bold"
                                        Typography.NumeralAlignment="Tabular"
                                        Foreground="{x:Bind ViewModel.S2State, Mode=OneWay, Converter={StaticResource StateBrush}}"/>
-                            <TextBlock Text="mm/m" FontSize="18" Foreground="#8AFFFFFF"
+                            <TextBlock Text="µm/m" FontSize="18" Foreground="#8AFFFFFF"
                                        VerticalAlignment="Bottom" Margin="0,0,0,10"/>
                         </StackPanel>
                     </Viewbox>
@@ -105,7 +105,7 @@
                             <TextBlock Text="{x:Bind ViewModel.DiffText, Mode=OneWay}" FontSize="76" FontWeight="Bold"
                                        Typography.NumeralAlignment="Tabular"
                                        Foreground="{x:Bind ViewModel.DiffState, Mode=OneWay, Converter={StaticResource StateBrush}}"/>
-                            <TextBlock Text="mm/m" FontSize="22" Foreground="#8AFFFFFF"
+                            <TextBlock Text="µm/m" FontSize="22" Foreground="#8AFFFFFF"
                                        VerticalAlignment="Bottom" Margin="0,0,0,12"/>
                         </StackPanel>
                     </Viewbox>
@@ -149,14 +149,14 @@
                         <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.ResultS1, Mode=OneWay}" FontSize="28"
                                    FontWeight="Bold" Foreground="White" HorizontalAlignment="Right"
                                    Typography.NumeralAlignment="Tabular"/>
-                        <TextBlock Grid.Column="2" Text="mm/m" FontSize="13" Foreground="#8AFFFFFF" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
+                        <TextBlock Grid.Column="2" Text="µm/m" FontSize="13" Foreground="#8AFFFFFF" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
                     </Grid>
                     <Grid ColumnDefinitions="70,*,Auto" ColumnSpacing="8">
                         <TextBlock Grid.Column="0" Text="S2" FontSize="17" Foreground="#8AFFFFFF" VerticalAlignment="Center"/>
                         <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.ResultS2, Mode=OneWay}" FontSize="28"
                                    FontWeight="Bold" Foreground="White" HorizontalAlignment="Right"
                                    Typography.NumeralAlignment="Tabular"/>
-                        <TextBlock Grid.Column="2" Text="mm/m" FontSize="13" Foreground="#8AFFFFFF" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
+                        <TextBlock Grid.Column="2" Text="µm/m" FontSize="13" Foreground="#8AFFFFFF" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
                     </Grid>
                     <Grid ColumnDefinitions="70,*,Auto" ColumnSpacing="8">
                         <StackPanel Grid.Column="0" VerticalAlignment="Center">
@@ -166,7 +166,7 @@
                         <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.ResultDiff, Mode=OneWay}" FontSize="36"
                                    FontWeight="Bold" Foreground="White" HorizontalAlignment="Right"
                                    Typography.NumeralAlignment="Tabular"/>
-                        <TextBlock Grid.Column="2" Text="mm/m" FontSize="13" Foreground="#8AFFFFFF" VerticalAlignment="Bottom" Margin="0,0,0,8"/>
+                        <TextBlock Grid.Column="2" Text="µm/m" FontSize="13" Foreground="#8AFFFFFF" VerticalAlignment="Bottom" Margin="0,0,0,8"/>
                     </Grid>
                 </StackPanel>
 

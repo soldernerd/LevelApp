@@ -109,9 +109,9 @@
         <TabView Grid.Row="2" x:Name="Tabs" SelectionChanged="OnTabChanged"
                  IsAddTabButtonVisible="False" TabWidthMode="SizeToContent"
                  CanReorderTabs="False">
-            <TabViewItem IsClosable="False" x:Name="LiveTab" Header="Live" Tag="live"/>
+            <TabViewItem IsClosable="False" VerticalContentAlignment="Stretch" HorizontalContentAlignment="Stretch" x:Name="LiveTab" Header="Live" Tag="live"/>
 
-            <TabViewItem IsClosable="False" Header="Info" Tag="info">
+            <TabViewItem IsClosable="False" VerticalContentAlignment="Stretch" HorizontalContentAlignment="Stretch" Header="Info" Tag="info">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
                         <ItemsControl ItemsSource="{x:Bind ViewModel.InfoGroups}"
@@ -122,30 +122,30 @@
                 </ScrollViewer>
             </TabViewItem>
 
-            <TabViewItem IsClosable="False" Header="Settings" Tag="settings">
+            <TabViewItem IsClosable="False" VerticalContentAlignment="Stretch" HorizontalContentAlignment="Stretch" Header="Settings" Tag="settings">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <ItemsControl ItemsSource="{x:Bind ViewModel.SettingGroups}"
                                   ItemTemplate="{StaticResource ValueGroupTemplate}"/>
                 </ScrollViewer>
             </TabViewItem>
 
-            <TabViewItem IsClosable="False" Header="Actions" Tag="actions">
+            <TabViewItem IsClosable="False" VerticalContentAlignment="Stretch" HorizontalContentAlignment="Stretch" Header="Actions" Tag="actions">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <ItemsControl ItemsSource="{x:Bind ViewModel.Actions}"
                                   ItemTemplate="{StaticResource ActionTemplate}"/>
                 </ScrollViewer>
             </TabViewItem>
 
-            <TabViewItem IsClosable="False" Header="Calibration values" Tag="calibration">
+            <TabViewItem IsClosable="False" VerticalContentAlignment="Stretch" HorizontalContentAlignment="Stretch" Header="Calibration values" Tag="calibration">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <ItemsControl ItemsSource="{x:Bind ViewModel.CalibrationGroups}"
                                   ItemTemplate="{StaticResource ValueGroupTemplate}"/>
                 </ScrollViewer>
             </TabViewItem>
 
-            <TabViewItem IsClosable="False" x:Name="ScopeTab" Header="Oscilloscope" Tag="scope"/>
+            <TabViewItem IsClosable="False" VerticalContentAlignment="Stretch" HorizontalContentAlignment="Stretch" x:Name="ScopeTab" Header="Oscilloscope" Tag="scope"/>
 
-            <TabViewItem IsClosable="False" x:Name="DiagnosticsTab" Header="Diagnostics" Tag="diagnostics"/>
+            <TabViewItem IsClosable="False" VerticalContentAlignment="Stretch" HorizontalContentAlignment="Stretch" x:Name="DiagnosticsTab" Header="Diagnostics" Tag="diagnostics"/>
         </TabView>
 
         <!-- Status -->

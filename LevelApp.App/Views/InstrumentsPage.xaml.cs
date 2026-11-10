@@ -1,5 +1,6 @@
 using LevelApp.App.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 
@@ -31,7 +32,10 @@ public sealed partial class InstrumentsPage : Page
             {
                 Header     = pluginVm.DisplayName,
                 Content    = tabContent,
-                IsClosable = false
+                IsClosable = false,
+                // The plugin's view (live screen, scope...) must fill the tab, not size to its content.
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                VerticalContentAlignment   = VerticalAlignment.Stretch
             };
 
             PluginTabs.TabItems.Add(tab);

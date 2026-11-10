@@ -33,9 +33,9 @@ public sealed partial class LiveViewModel : SessionViewModelBase
 
     // ---- readings ----
 
-    [ObservableProperty] private string _s1Text = LiveFormat.Placeholder();
-    [ObservableProperty] private string _s2Text = LiveFormat.Placeholder();
-    [ObservableProperty] private string _diffText = LiveFormat.Placeholder();
+    [ObservableProperty] private string _s1Text = LiveFormat.Placeholder(2);
+    [ObservableProperty] private string _s2Text = LiveFormat.Placeholder(2);
+    [ObservableProperty] private string _diffText = LiveFormat.Placeholder(2);
     [ObservableProperty] private ReadingState _s1State = ReadingState.None;
     [ObservableProperty] private ReadingState _s2State = ReadingState.None;
     [ObservableProperty] private ReadingState _diffState = ReadingState.None;
@@ -144,10 +144,10 @@ public sealed partial class LiveViewModel : SessionViewModelBase
         bool has = s.HasReading;
 
         bool show1 = has && live is not null;
-        S1Text = show1 ? LiveFormat.Tilt(live!.TiltS1, 5) : LiveFormat.Placeholder();
-        S2Text = show1 ? LiveFormat.Tilt(live!.TiltS2, 5) : LiveFormat.Placeholder();
+        S1Text = show1 ? LiveFormat.Micro(live!.TiltS1) : LiveFormat.Placeholder(2);
+        S2Text = show1 ? LiveFormat.Micro(live!.TiltS2) : LiveFormat.Placeholder(2);
         double? shownDiff = LiveFormat.ApplyTare(live?.TiltDiff, _tare);
-        DiffText = has && shownDiff is not null ? LiveFormat.Tilt(shownDiff, 5) : LiveFormat.Placeholder();
+        DiffText = has && shownDiff is not null ? LiveFormat.Micro(shownDiff) : LiveFormat.Placeholder(2);
 
         bool s1Doubtful = live?.S1Doubtful ?? false;
         bool s2Doubtful = live?.S2Doubtful ?? false;
@@ -176,7 +176,7 @@ public sealed partial class LiveViewModel : SessionViewModelBase
         IsZeroed = _tare is not null;
         ZeroButtonText = _tare is null ? "Zero Diff" : "Re-zero Diff";
         DiffSubLabel = _tare is null ? "S1 − S2" : "zeroed";
-        ZeroNote = _tare is null ? "" : $"Diff is zeroed at {LiveFormat.Tilt(_tare)} mm/m";
+        ZeroNote = _tare is null ? "" : $"Diff is zeroed at {LiveFormat.Micro(_tare)} µm/m";
     }
 
     private void SetTare(double? value)
@@ -271,9 +271,9 @@ public sealed partial class LiveViewModel : SessionViewModelBase
             else
             {
                 _resultDiffRaw = result.TiltDiff;
-                ResultS1 = LiveFormat.Tilt(result.TiltS1, 5);
-                ResultS2 = LiveFormat.Tilt(result.TiltS2, 5);
-                ResultDiff = LiveFormat.Tilt(LiveFormat.ApplyTare(_resultDiffRaw, _tare), 5);
+                ResultS1 = LiveFormat.Micro(result.TiltS1);
+                ResultS2 = LiveFormat.Micro(result.TiltS2);
+                ResultDiff = LiveFormat.Micro(LiveFormat.ApplyTare(_resultDiffRaw, _tare));
                 ResultDiffNote = _tare is not null ? "zeroed" : "";
                 SetPanel(running: false, done: true, failed: false);
             }

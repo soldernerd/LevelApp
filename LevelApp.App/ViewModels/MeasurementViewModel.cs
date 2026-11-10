@@ -51,12 +51,12 @@ public sealed partial class MeasurementViewModel : ViewModelBase
 
     // A settled measurement from the instrument lands in the reading box (µm/m).
     private void OnInstrumentReadingTaken(object? sender, double microns) =>
-        Reading = Math.Round(microns, 1);
+        Reading = Math.Round(microns, 2);
 
     // "Take reading and accept": the settled value is entered and accepted in one go.
     private void OnInstrumentReadingAccepted(object? sender, double microns)
     {
-        Reading = Math.Round(microns, 1);
+        Reading = Math.Round(microns, 2);
         if (AcceptReadingCommand.CanExecute(null))
             _ = AcceptReadingCommand.ExecuteAsync(null);
     }
@@ -291,7 +291,7 @@ public sealed partial class MeasurementViewModel : ViewModelBase
     {
         CurrentStepIndex--;
         var previous = _steps[CurrentStepIndex].Reading;
-        Reading = previous.HasValue ? Math.Round(previous.Value * 1000.0, 1) : double.NaN;
+        Reading = previous.HasValue ? Math.Round(previous.Value * 1000.0, 2) : double.NaN;
     }
 
     private bool CanGoBack() => CurrentStepIndex > 0 && !IsCalculating;

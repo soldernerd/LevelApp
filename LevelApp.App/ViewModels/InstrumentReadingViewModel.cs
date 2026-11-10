@@ -279,7 +279,7 @@ public sealed partial class InstrumentReadingViewModel : ObservableObject
         StatusText = live.IsDoubtful ? _loc.Get("Instrument_Unsteady.Text") : string.Empty;
     }
 
-    private static string Format(double microns) => microns.ToString("+0.0;-0.0;0.0", Inv);
+    private static string Format(double microns) => microns.ToString("+0.00;-0.00;0.00", Inv);
 
     private void Post(Action a)
     {

@@ -26,7 +26,7 @@
                 Background="#FF1A1A1A" BorderBrush="#1FFFFFFF" BorderThickness="1">
             <Grid RowSpacing="6" RowDefinitions="Auto,*">
                 <StackPanel x:Name="ExcitationLegend" Grid.Row="0" Orientation="Horizontal" Spacing="16"/>
-                <Canvas x:Name="ExcitationCanvas" Grid.Row="1" Background="#FF0B140E"
+                <Canvas x:Name="ExcitationCanvas" Grid.Row="1" MinHeight="200" Background="#FF0B140E"
                         SizeChanged="OnCanvasSizeChanged"/>
             </Grid>
         </Border>
@@ -36,7 +36,7 @@
                 Background="#FF1A1A1A" BorderBrush="#1FFFFFFF" BorderThickness="1">
             <Grid RowSpacing="6" RowDefinitions="Auto,*">
                 <StackPanel x:Name="SensorLegend" Grid.Row="0" Orientation="Horizontal" Spacing="16"/>
-                <Canvas x:Name="SensorCanvas" Grid.Row="1" Background="#FF0B140E"
+                <Canvas x:Name="SensorCanvas" Grid.Row="1" MinHeight="200" Background="#FF0B140E"
                         SizeChanged="OnCanvasSizeChanged"/>
             </Grid>
         </Border>

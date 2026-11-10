@@ -29,6 +29,15 @@ public static class LiveFormat
             ? Placeholder(decimals)
             : Sign(v.Value) + Math.Abs(v.Value).ToString("F" + decimals, CultureInfo.InvariantCulture);
 
+    /// <summary>
+    /// A tilt given in mm/m shown in µm/m with an explicit sign and two decimals: <c>+123.45</c>
+    /// (the instrument resolves 0.01 µm/m); a placeholder for null / non-finite.
+    /// </summary>
+    public static string Micro(double? mmPerM, int decimals = 2) =>
+        mmPerM is null || !double.IsFinite(mmPerM.Value)
+            ? Placeholder(decimals)
+            : Sign(mmPerM.Value) + Math.Abs(mmPerM.Value * 1000.0).ToString("F" + decimals, CultureInfo.InvariantCulture);
+
     /// <summary>A signed number with <paramref name="decimals"/> decimals and an optional unit; "—" for null / non-finite.</summary>
     public static string Signed(double? v, int decimals = 2, string unit = "")
     {

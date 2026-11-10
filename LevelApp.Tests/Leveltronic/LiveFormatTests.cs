@@ -80,4 +80,15 @@ public sealed class LiveFormatTests
         Assert.Equal("Looking for a quiet 2 s window  ·  3/10  ·  1.2 s",
             LiveFormat.PrecisionSubtitle(3, 10, 1234));
     }
+
+    [Theory]
+    [InlineData(0.12345, "+123.45")]
+    [InlineData(-0.00123, "−1.23")]
+    [InlineData(0.0, "+0.00")]
+    public void Micro_ShowsMicrometresPerMetreWithTwoDecimals(double mmPerM, string expected) =>
+        Assert.Equal(expected, LiveFormat.Micro(mmPerM));
+
+    [Fact]
+    public void Micro_MissingIsPlaceholder() =>
+        Assert.Equal("––.––", LiveFormat.Micro(null));
 }
