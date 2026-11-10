@@ -50,15 +50,7 @@ public sealed class BleLeveltronicLink : ILeveltronicLink
         var device = _connection.Device
             ?? throw new InvalidOperationException($"BLE device 0x{_address:X12} could not be opened.");
 
-        var svcResult = await device
-            .GetGattServicesForUuidAsync(LeveltronicApi.BleServiceUuid, BluetoothCacheMode.Uncached)
-            .AsTask(ct).ConfigureAwait(false);
-        var service = svcResult.Status == GattCommunicationStatus.Success
-            ? svcResult.Services.FirstOrDefault()
-            : null;
-        if (service is null)
-            throw new InvalidOperationException(
-                "Transparent-UART service not found on the device (is it a Leveltronic?).");
+        var service = await FindServiceAsync(device, ct).ConfigureAwait(false);
 
         _rx = await GetCharacteristicAsync(service, LeveltronicApi.BleRxCharacteristicUuid, ct)
             .ConfigureAwait(false);
@@ -125,6 +117,49 @@ public sealed class BleLeveltronicLink : ILeveltronicLink
             _connected = false;
             ConnectionChanged?.Invoke(this, false);
         }
+    }
+
+    /// <summary>
+    /// Finds the Transparent-UART service. Windows often answers the first discovery after
+    /// opening a device with Unreachable / AccessDenied (or an empty list), so it is retried,
+    /// then all services are enumerated. The failure text names the status and the services
+    /// that were found, because "not found" alone hides whether the link or the device is at fault.
+    /// </summary>
+    private static async Task<GattDeviceService> FindServiceAsync(BluetoothLEDevice device, CancellationToken ct)
+    {
+        GattCommunicationStatus lastStatus = GattCommunicationStatus.Unreachable;
+
+        for (int attempt = 0; attempt < 3; attempt++)
+        {
+            var result = await device
+                .GetGattServicesForUuidAsync(LeveltronicApi.BleServiceUuid, BluetoothCacheMode.Uncached)
+                .AsTask(ct).ConfigureAwait(false);
+            lastStatus = result.Status;
+            if (result.Status == GattCommunicationStatus.Success && result.Services.Count > 0)
+                return result.Services[0];
+
+            await Task.Delay(700, ct).ConfigureAwait(false);
+        }
+
+        // Fall back to listing everything the device offers.
+        var all = await device.GetGattServicesAsync(BluetoothCacheMode.Uncached).AsTask(ct).ConfigureAwait(false);
+        if (all.Status == GattCommunicationStatus.Success)
+        {
+            var match = all.Services.FirstOrDefault(x => x.Uuid == LeveltronicApi.BleServiceUuid);
+            if (match is not null) return match;
+
+            string found = all.Services.Count == 0
+                ? "none"
+                : string.Join(", ", all.Services.Select(x => x.Uuid.ToString()));
+            throw new InvalidOperationException(
+                "Transparent-UART service not found on the device (is it a Leveltronic?). " +
+                $"Services offered: {found}.");
+        }
+
+        throw new InvalidOperationException(
+            $"Could not read the device's services ({all.Status}; last attempt {lastStatus}). " +
+            "The module accepts one connection at a time: close the phone app (or switch the phone's " +
+            "Bluetooth off) and try again; if the PC never paired with it, pair it in Windows Bluetooth settings.");
     }
 
     private static async Task<GattCharacteristic> GetCharacteristicAsync(
