@@ -104,10 +104,14 @@
             </StackPanel>
         </Border>
 
-        <Pivot Grid.Row="2" x:Name="Tabs" SelectionChanged="OnTabChanged">
-            <PivotItem x:Name="LiveTab" Header="Live" Tag="live"/>
+        <!-- TabView, not Pivot: a PivotItem wraps its content in a ScrollViewer, which gives star-sized
+             content (the oscilloscope panels, the live cards) infinite height so it collapses. -->
+        <TabView Grid.Row="2" x:Name="Tabs" SelectionChanged="OnTabChanged"
+                 IsAddTabButtonVisible="False" TabWidthMode="SizeToContent"
+                 CanReorderTabs="False">
+            <TabViewItem IsClosable="False" x:Name="LiveTab" Header="Live" Tag="live"/>
 
-            <PivotItem Header="Info" Tag="info">
+            <TabViewItem IsClosable="False" Header="Info" Tag="info">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
                         <ItemsControl ItemsSource="{x:Bind ViewModel.InfoGroups}"
@@ -116,33 +120,33 @@
                                 Command="{x:Bind ViewModel.SetClockToPcCommand}" Margin="0,4,0,12"/>
                     </StackPanel>
                 </ScrollViewer>
-            </PivotItem>
+            </TabViewItem>
 
-            <PivotItem Header="Settings" Tag="settings">
+            <TabViewItem IsClosable="False" Header="Settings" Tag="settings">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <ItemsControl ItemsSource="{x:Bind ViewModel.SettingGroups}"
                                   ItemTemplate="{StaticResource ValueGroupTemplate}"/>
                 </ScrollViewer>
-            </PivotItem>
+            </TabViewItem>
 
-            <PivotItem Header="Actions" Tag="actions">
+            <TabViewItem IsClosable="False" Header="Actions" Tag="actions">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <ItemsControl ItemsSource="{x:Bind ViewModel.Actions}"
                                   ItemTemplate="{StaticResource ActionTemplate}"/>
                 </ScrollViewer>
-            </PivotItem>
+            </TabViewItem>
 
-            <PivotItem Header="Calibration values" Tag="calibration">
+            <TabViewItem IsClosable="False" Header="Calibration values" Tag="calibration">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <ItemsControl ItemsSource="{x:Bind ViewModel.CalibrationGroups}"
                                   ItemTemplate="{StaticResource ValueGroupTemplate}"/>
                 </ScrollViewer>
-            </PivotItem>
+            </TabViewItem>
 
-            <PivotItem x:Name="ScopeTab" Header="Oscilloscope" Tag="scope"/>
+            <TabViewItem IsClosable="False" x:Name="ScopeTab" Header="Oscilloscope" Tag="scope"/>
 
-            <PivotItem x:Name="DiagnosticsTab" Header="Diagnostics" Tag="diagnostics"/>
-        </Pivot>
+            <TabViewItem IsClosable="False" x:Name="DiagnosticsTab" Header="Diagnostics" Tag="diagnostics"/>
+        </TabView>
 
         <!-- Status -->
         <Grid Grid.Row="3" ColumnSpacing="8" ColumnDefinitions="Auto,*">

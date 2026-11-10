@@ -110,6 +110,26 @@
                                Style="{StaticResource BodyTextBlockStyle}"/>
                 </Border>
 
+                <!-- Last accepted reading, with a way back to repeat it -->
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        CornerRadius="8"
+                        Padding="16"
+                        Visibility="{x:Bind ViewModel.HasLastReading, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <TextBlock Text="Last reading"
+                                       Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock Text="{x:Bind ViewModel.LastReadingText, Mode=OneWay}"
+                                       Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                        </StackPanel>
+                        <Button Grid.Column="1"
+                                Content="&#x2190; Go back"
+                                Command="{x:Bind ViewModel.GoBackCommand}"
+                                VerticalAlignment="Center"/>
+                    </Grid>
+                </Border>
+
                 <!-- Instrument: live value, channel, take reading, zero (hidden for manual entry) -->
                 <controls:InstrumentReadingPanel ViewModel="{x:Bind ViewModel.InstrumentReading}"/>
 

@@ -28,10 +28,16 @@
                            Foreground="{ThemeResource SystemFillColorCautionBrush}"/>
             </StackPanel>
 
+            <Button x:Uid="Instrument_TakeAndAccept"
+                    Style="{StaticResource AccentButtonStyle}"
+                    HorizontalAlignment="Stretch"
+                    Command="{x:Bind ViewModel.TakeAndAcceptCommand}"
+                    IsEnabled="{x:Bind ViewModel.CanAct, Mode=OneWay}"
+                    Visibility="{x:Bind ViewModel.AutoAcceptEnabled, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                 <Button Grid.Column="0"
                         x:Uid="Instrument_TakeReading"
-                        Style="{StaticResource AccentButtonStyle}"
                         HorizontalAlignment="Stretch"
                         Command="{x:Bind ViewModel.TakeReadingCommand}"
                         IsEnabled="{x:Bind ViewModel.CanAct, Mode=OneWay}"/>

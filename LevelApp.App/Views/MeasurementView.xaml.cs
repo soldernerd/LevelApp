@@ -159,6 +159,7 @@ public sealed partial class MeasurementView : Page
                     Stroke          = new SolidColorBrush(edgeColor),
                     StrokeThickness = thickness
                 });
+                if (i < curIdx) AddReadingLabel(fx, fy, tx, ty, s, completedColor);
             }
         }
 
@@ -250,6 +251,7 @@ public sealed partial class MeasurementView : Page
                     Stroke          = new SolidColorBrush(edgeColor),
                     StrokeThickness = thickness
                 });
+                if (i < curIdx) AddReadingLabel(fx, fy, tx, ty, s, completedColor);
             }
         }
 
@@ -317,6 +319,7 @@ public sealed partial class MeasurementView : Page
                     Stroke          = new SolidColorBrush(edgeColor),
                     StrokeThickness = thickness
                 });
+                if (i < curIdx) AddReadingLabel(fx, fy, tx, ty, s, completedColor);
             }
         }
 
@@ -348,6 +351,34 @@ public sealed partial class MeasurementView : Page
     }
 
     // ── Shared helpers ────────────────────────────────────────────────────────
+
+    /// <summary>Writes a completed step's reading (µm/m) beside its green segment.</summary>
+    private void AddReadingLabel(double x1, double y1, double x2, double y2,
+                                 MeasurementStep step, Color color)
+    {
+        if (step.Reading is not { } mmPerM) return;
+
+        var label = new TextBlock
+        {
+            Text       = (mmPerM * 1000.0).ToString("+0.0;-0.0;0.0", System.Globalization.CultureInfo.InvariantCulture),
+            FontSize   = 9,
+            Foreground = new SolidColorBrush(color)
+        };
+        label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        Size size = label.DesiredSize;
+
+        double mx = (x1 + x2) / 2.0;
+        double my = (y1 + y2) / 2.0;
+        bool horizontal = Math.Abs(x2 - x1) >= Math.Abs(y2 - y1);
+
+        // Above a horizontal segment, to the right of a vertical one.
+        double left = horizontal ? mx - size.Width / 2.0 : mx + 3.0;
+        double top  = horizontal ? my - size.Height - 1.0 : my - size.Height / 2.0;
+
+        Canvas.SetLeft(label, left);
+        Canvas.SetTop(label, top);
+        GridCanvas.Children.Add(label);
+    }
 
     private void AddArrow(double x1, double y1, double x2, double y2, Color color, double thickness)
     {

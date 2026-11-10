@@ -36,6 +36,13 @@ public sealed partial class CorrectionViewModel : ViewModelBase
         InstrumentReading = instrumentReading;
         // The correction reading box is in mm/m; the instrument delivers µm/m.
         InstrumentReading.ReadingTaken += (_, microns) => Reading = Math.Round(microns / 1000.0, 4);
+        InstrumentReading.ReadingAccepted += (_, microns) =>
+        {
+            Reading = Math.Round(microns / 1000.0, 4);
+            if (AcceptReadingCommand.CanExecute(null))
+                _ = AcceptReadingCommand.ExecuteAsync(null);
+        };
+        InstrumentReading.AutoAcceptEnabled = true;
     }
 
     /// <summary>The instrument half of the reading entry (live value, channel, take reading, zero).</summary>

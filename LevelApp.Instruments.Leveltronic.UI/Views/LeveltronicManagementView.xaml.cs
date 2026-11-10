@@ -40,7 +40,7 @@ public sealed partial class LeveltronicManagementView : UserControl
 
     private void OnTabChanged(object sender, SelectionChangedEventArgs e)
     {
-        ViewModel.ActiveTab = (Tabs.SelectedItem as PivotItem)?.Tag as string ?? "";
+        ViewModel.ActiveTab = (Tabs.SelectedItem as TabViewItem)?.Tag as string ?? "";
     }
 
     private async Task<bool> ConfirmAsync(string title, string message)

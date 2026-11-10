@@ -218,6 +218,7 @@
   <data name="ReadingMicro_Help_Body.Text" xml:space="preserve"><value>Enter the value shown on the electronic level, or take it from the instrument. The unit is micrometres per metre (µm/m), i.e. 0.001 mm/m. A positive value means the instrument is tilted so the high end points in the direction of travel. A zero reading means the instrument is perfectly level on that span.</value></data>
   <data name="Instrument_Header.Text" xml:space="preserve"><value>Instrument</value></data>
   <data name="Instrument_Channel.Header" xml:space="preserve"><value>Channel</value></data>
+  <data name="Instrument_TakeAndAccept.Content" xml:space="preserve"><value>Take reading and accept</value></data>
   <data name="Instrument_TakeReading.Content" xml:space="preserve"><value>Take reading</value></data>
   <data name="Instrument_Cancel.Content" xml:space="preserve"><value>Cancel</value></data>
   <data name="Instrument_ZeroDiff.Content" xml:space="preserve"><value>Zero Diff</value></data>

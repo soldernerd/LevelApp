@@ -53,7 +53,9 @@ public static class ProjectSerializer
                 $"Unsupported schema version '{file.SchemaVersion}'. " +
                 $"Expected '1.0' or '1.1'.");
 
-        return file.Project ?? throw new JsonException("'project' field is missing or null.");
+        var project = file.Project ?? throw new JsonException("'project' field is missing or null.");
+        LegacyProjectRepair.Apply(project);
+        return project;
     }
 }
 

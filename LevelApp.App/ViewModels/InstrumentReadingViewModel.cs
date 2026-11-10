@@ -33,12 +33,21 @@ public sealed partial class InstrumentReadingViewModel : ObservableObject
     /// <summary>A settled measurement finished; the value is in µm/m, ready for the reading box.</summary>
     public event EventHandler<double>? ReadingTaken;
 
+    /// <summary>
+    /// A settled measurement finished from "Take reading and accept": the host puts the value
+    /// (µm/m) in the reading box and accepts it at once.
+    /// </summary>
+    public event EventHandler<double>? ReadingAccepted;
+
     /// <summary>Raised when the provider's connection state changed (the host refreshes its status bar).</summary>
     public event EventHandler? ConnectionChanged;
 
     public ObservableCollection<ReadingChannel> Channels { get; } = [];
 
     [ObservableProperty] private bool _isAvailable;
+
+    /// <summary>The host can accept a reading straight away; shows the "Take reading and accept" button.</summary>
+    [ObservableProperty] private bool _autoAcceptEnabled;
     [ObservableProperty] private ReadingChannel? _selectedChannel;
     [ObservableProperty] private string _liveText = "—";
     [ObservableProperty] private bool _isDoubtful;
@@ -156,6 +165,17 @@ public sealed partial class InstrumentReadingViewModel : ObservableObject
         {
             double v = await src.MeasureAsync(progress, ct);
             Post(() => ReadingTaken?.Invoke(this, v));
+        });
+    }
+
+    [RelayCommand]
+    private async Task TakeAndAcceptAsync()
+    {
+        if (_source is null || IsBusy) return;
+        await RunAsync(async (src, progress, ct) =>
+        {
+            double v = await src.MeasureAsync(progress, ct);
+            Post(() => ReadingAccepted?.Invoke(this, v));
         });
     }
 

@@ -218,6 +218,7 @@
   <data name="ReadingMicro_Help_Body.Text" xml:space="preserve"><value>Geben Sie den am elektronischen Nivelliergerät angezeigten Wert ein oder übernehmen Sie ihn vom Instrument. Die Einheit ist Mikrometer pro Meter (µm/m), also 0,001 mm/m. Ein positiver Wert bedeutet, dass das Instrument so geneigt ist, dass das hohe Ende in Fahrtrichtung zeigt. Ein Nullwert bedeutet, dass das Instrument auf dieser Strecke vollkommen waagerecht ist.</value></data>
   <data name="Instrument_Header.Text" xml:space="preserve"><value>Instrument</value></data>
   <data name="Instrument_Channel.Header" xml:space="preserve"><value>Kanal</value></data>
+  <data name="Instrument_TakeAndAccept.Content" xml:space="preserve"><value>Messen und übernehmen</value></data>
   <data name="Instrument_TakeReading.Content" xml:space="preserve"><value>Messwert übernehmen</value></data>
   <data name="Instrument_Cancel.Content" xml:space="preserve"><value>Abbrechen</value></data>
   <data name="Instrument_ZeroDiff.Content" xml:space="preserve"><value>Diff nullen</value></data>

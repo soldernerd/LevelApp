@@ -36,6 +36,8 @@ public sealed partial class MeasurementViewModel : ViewModelBase
     {
         InstrumentReading = instrumentReading;
         InstrumentReading.ReadingTaken      += OnInstrumentReadingTaken;
+        InstrumentReading.ReadingAccepted   += OnInstrumentReadingAccepted;
+        InstrumentReading.AutoAcceptEnabled  = true;
         InstrumentReading.ConnectionChanged += OnConnectionStateChanged;
         _navigation    = navigation;
         _mainViewModel = mainViewModel;
@@ -50,6 +52,14 @@ public sealed partial class MeasurementViewModel : ViewModelBase
     // A settled measurement from the instrument lands in the reading box (µm/m).
     private void OnInstrumentReadingTaken(object? sender, double microns) =>
         Reading = Math.Round(microns, 1);
+
+    // "Take reading and accept": the settled value is entered and accepted in one go.
+    private void OnInstrumentReadingAccepted(object? sender, double microns)
+    {
+        Reading = Math.Round(microns, 1);
+        if (AcceptReadingCommand.CanExecute(null))
+            _ = AcceptReadingCommand.ExecuteAsync(null);
+    }
 
     /// <summary>Releases the instrument when the page is left.</summary>
     public void Shutdown() => _ = InstrumentReading.DetachAsync();
@@ -126,6 +136,9 @@ public sealed partial class MeasurementViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(ProgressPercent))]
     [NotifyPropertyChangedFor(nameof(OrientationArrow))]
     [NotifyPropertyChangedFor(nameof(CurrentInstructionText))]
+    [NotifyPropertyChangedFor(nameof(HasLastReading))]
+    [NotifyPropertyChangedFor(nameof(LastReadingText))]
+    [NotifyCanExecuteChangedFor(nameof(GoBackCommand))]
     private int _currentStepIndex;
 
     /// <summary>
@@ -142,6 +155,7 @@ public sealed partial class MeasurementViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsInputEnabled))]
     [NotifyPropertyChangedFor(nameof(CalculatingVisibility))]
     [NotifyCanExecuteChangedFor(nameof(AcceptReadingCommand))]
+    [NotifyCanExecuteChangedFor(nameof(GoBackCommand))]
     private bool _isCalculating;
 
     // ── Computed display properties ───────────────────────────────────────────
@@ -164,6 +178,16 @@ public sealed partial class MeasurementViewModel : ViewModelBase
         Orientation.West  => "←",
         _ => "?"
     };
+
+    /// <summary>The previous step has a reading to show (and to go back to).</summary>
+    public bool HasLastReading =>
+        CurrentStepIndex > 0 && CurrentStepIndex <= _steps.Count && _steps[CurrentStepIndex - 1].Reading.HasValue;
+
+    /// <summary>The reading accepted for the previous step, in µm/m.</summary>
+    public string LastReadingText => HasLastReading
+        ? string.Format(System.Globalization.CultureInfo.InvariantCulture,
+            "Step {0}: {1:+0.0;-0.0;0.0} \u00b5m/m", CurrentStepIndex, _steps[CurrentStepIndex - 1].Reading!.Value * 1000.0)
+        : string.Empty;
 
     public string CurrentInstructionText => CurrentStep?.InstructionText ?? string.Empty;
 
@@ -257,6 +281,20 @@ public sealed partial class MeasurementViewModel : ViewModelBase
             _navigation.NavigateTo(PageKey.Results, new ResultsArgs(_project, _session));
         }
     }
+
+    /// <summary>
+    /// Returns to the previous step so its reading can be taken again. The old value is put in
+    /// the reading box; it stays stored until a new one is accepted.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanGoBack))]
+    private void GoBack()
+    {
+        CurrentStepIndex--;
+        var previous = _steps[CurrentStepIndex].Reading;
+        Reading = previous.HasValue ? Math.Round(previous.Value * 1000.0, 1) : double.NaN;
+    }
+
+    private bool CanGoBack() => CurrentStepIndex > 0 && !IsCalculating;
 
     private bool CanAcceptReading()
     {
