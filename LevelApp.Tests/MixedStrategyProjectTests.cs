@@ -44,7 +44,7 @@ public class MixedStrategyProjectTests
     }
 
     [Fact]
-    public void DefinitionFor_LaysTheSessionsOwnParametersOverTheProjects()
+    public void DefinitionFor_UsesTheSessionsOwnParameters_WithoutInheritingTheProjectsGrid()
     {
         var project = TwoStrategyProject();
 
@@ -53,7 +53,9 @@ public class MixedStrategyProjectTests
 
         Assert.Same(project.ObjectDefinition, grid);                       // no own parameters: the project's
         Assert.Equal(3, Convert.ToInt32(jack.Parameters["segments"]));
-        Assert.Equal(3, Convert.ToInt32(jack.Parameters["columnsCount"])); // inherited, harmless
+        // A Union Jack measurement must not look like a grid (the screens decide that from columnsCount).
+        Assert.False(jack.Parameters.ContainsKey("columnsCount"));
+        Assert.False(jack.Parameters.ContainsKey("rowsCount"));
         Assert.False(project.ObjectDefinition.Parameters.ContainsKey("segments"));
     }
 

@@ -24,7 +24,7 @@ public class KnownDeviceTests
     [Fact]
     public void UnrenamedDevice_DoesNotRepeatItsName()
     {
-        var d = new KnownDevice("id", "leveltronic", "usb-hid", "InclinationMeter \u00b7 205C30574D4D", "\\?\HID#...",
+        var d = new KnownDevice("id", "leveltronic", "usb-hid", "InclinationMeter \u00b7 205C30574D4D", "usb-interface-path",
                                 "InclinationMeter \u00b7 205C30574D4D");
 
         Assert.Equal("", d.GetTechnicalId());
