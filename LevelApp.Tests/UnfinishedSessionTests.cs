@@ -61,4 +61,23 @@ public class UnfinishedSessionTests
         Assert.Equal(8, session.InitialRound.Steps.FindIndex(s => !s.Reading.HasValue));
         Assert.Equal(0.007, session.InitialRound.Steps[7].Reading!.Value, 9);
     }
+
+    [Fact]
+    public void InstrumentNameAndDetails_AreSavedWithTheMeasurement()
+    {
+        var session = Session(2, 2);
+        session.InstrumentName = "Leveltronic — Prototyp Grün (BLE)";
+        session.InstrumentDetails = "serial 6DA98059 · firmware 0.15.0 · API 3.1";
+        var project = new Project
+        {
+            Name = "meta",
+            ObjectDefinition = new ObjectDefinition { GeometryModuleId = "SurfacePlate" },
+            Measurements = [session],
+        };
+
+        var loaded = ProjectSerializer.Deserialize(ProjectSerializer.Serialize(project)).Measurements.Single();
+
+        Assert.Equal(session.InstrumentName, loaded.InstrumentName);
+        Assert.Equal(session.InstrumentDetails, loaded.InstrumentDetails);
+    }
 }

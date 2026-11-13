@@ -70,8 +70,20 @@ public sealed partial class MeasurementViewModel : ViewModelBase
     /// <summary>Lets go of the instrument when the page is left; it stays connected.</summary>
     public void Shutdown() => _ = InstrumentReading.DetachAsync(disconnect: false);
 
+    // The physical instrument's own description (serial, firmware) is kept with the measurement.
+    private void CaptureInstrumentDetails()
+    {
+        if (_provider is IInstrumentDetails { Details: { Length: > 0 } details } &&
+            _session is not null && _session.InstrumentDetails != details)
+        {
+            _session.InstrumentDetails = details;
+            _mainViewModel.MarkDirty();
+        }
+    }
+
     private void OnConnectionStateChanged(object? sender, EventArgs e)
     {
+        CaptureInstrumentDetails();
         OnPropertyChanged(nameof(ShowRetry));
         OnPropertyChanged(nameof(ShowConnectionWarning));
         OnPropertyChanged(nameof(ConnectionSeverity));
@@ -252,6 +264,7 @@ public sealed partial class MeasurementViewModel : ViewModelBase
         if (CurrentStep is null) return;
 
         // Reading is entered by the user in µm/m; convert to mm/m for storage
+        CaptureInstrumentDetails();
         _steps[CurrentStepIndex].Reading = Reading / 1000.0;
         _mainViewModel.MarkDirty();
         Reading = double.NaN;

@@ -14,7 +14,7 @@ namespace LevelApp.Instruments.Leveltronic;
 /// precision measurement and the app-side "Zero Diff" offset, all in µm/m (the
 /// unit the guided measurement works in; the instrument reports mm/m).
 /// </summary>
-public sealed class LeveltronicProvider : IInstrumentProvider, ILiveReadingSource, IAsyncDisposable
+public sealed class LeveltronicProvider : IInstrumentProvider, ILiveReadingSource, IInstrumentDetails, IAsyncDisposable
 {
     public const string ChannelS1 = "s1";
     public const string ChannelS2 = "s2";
@@ -69,6 +69,11 @@ public sealed class LeveltronicProvider : IInstrumentProvider, ILiveReadingSourc
 
     /// <summary>The open session while connected (null otherwise).</summary>
     public LeveltronicSession? Session => _lease?.Session;
+
+    /// <inheritdoc/>
+    public string? Details => Session is { } s
+        ? $"serial {s.Serial} \u00b7 firmware {s.Identity.Firmware} \u00b7 API {s.Identity.ApiVersionText}"
+        : null;
 
     public async Task ConnectAsync(CancellationToken ct = default)
     {

@@ -9,6 +9,12 @@ public class MeasurementSession
     public DateTime TakenAt { get; set; }
     public string Operator { get; set; } = string.Empty;
     public string InstrumentId { get; set; } = string.Empty;
+
+    /// <summary>The instrument as the operator chose it, e.g. "Leveltronic — Prototyp Grün (BLE)". Informational.</summary>
+    public string InstrumentName { get; set; } = string.Empty;
+
+    /// <summary>What the instrument reported about itself while measuring (serial, firmware ...). Informational.</summary>
+    public string InstrumentDetails { get; set; } = string.Empty;
     public string StrategyId { get; set; } = string.Empty;
     public string Notes { get; set; } = string.Empty;
     public MeasurementRound InitialRound { get; set; } = new();

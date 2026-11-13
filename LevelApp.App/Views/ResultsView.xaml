@@ -128,6 +128,59 @@
                           VerticalScrollBarVisibility="Auto">
                 <StackPanel Spacing="16">
 
+                    <!-- Meta data of the measurement: which, when, who, with what -->
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            CornerRadius="8"
+                            Padding="16">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Measurement"
+                                       Style="{StaticResource BodyStrongTextBlockStyle}"
+                                       Margin="0,0,0,6"/>
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" RowSpacing="2">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Name"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{x:Bind ViewModel.MeasurementLabelText, Mode=OneWay}"
+                                           Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Taken"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{x:Bind ViewModel.TakenText, Mode=OneWay}"
+                                           Style="{StaticResource CaptionTextBlockStyle}"/>
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Completed"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{x:Bind ViewModel.CompletedText, Mode=OneWay}"
+                                           Style="{StaticResource CaptionTextBlockStyle}"/>
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Operator"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{x:Bind ViewModel.OperatorText, Mode=OneWay}"
+                                           Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Row="4" Grid.Column="0" Text="Instrument"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Grid.Row="4" Grid.Column="1" Text="{x:Bind ViewModel.InstrumentText, Mode=OneWay}"
+                                           Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Row="5" Grid.Column="0" Text="Notes"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           Visibility="{x:Bind ViewModel.NotesVisibility, Mode=OneWay}"/>
+                                <TextBlock Grid.Row="5" Grid.Column="1" Text="{x:Bind ViewModel.NotesText, Mode=OneWay}"
+                                           Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
+                                           Visibility="{x:Bind ViewModel.NotesVisibility, Mode=OneWay}"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
                     <!-- Object info card -->
                     <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                             CornerRadius="8"

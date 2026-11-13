@@ -103,6 +103,7 @@ public sealed partial class ResultsViewModel : ViewModelBase
         _project = args.Project;
         _session = args.Session;
         BuildSessionItems();
+        UpdateMetadata();
 
         if (CurrentDefinition.GeometryModuleId == "ParallelWays")
         {
@@ -207,6 +208,35 @@ public sealed partial class ResultsViewModel : ViewModelBase
         ActiveResult     = result;
         ActiveSteps      = _session.InitialRound.Steps;
         ActiveDefinition = CurrentDefinition;
+    }
+
+    // ── Measurement meta data (who, when, with what) ──────────────────────────
+
+    public string MeasurementLabelText { get; private set; } = string.Empty;
+    public string TakenText            { get; private set; } = string.Empty;
+    public string CompletedText        { get; private set; } = string.Empty;
+    public string OperatorText         { get; private set; } = string.Empty;
+    public string InstrumentText       { get; private set; } = string.Empty;
+    public string NotesText            { get; private set; } = string.Empty;
+    public Visibility NotesVisibility  => NotesText.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+    private static string FormatTime(DateTime utc) =>
+        utc.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
+
+    private void UpdateMetadata()
+    {
+        var s = _session;
+        MeasurementLabelText = s.Label;
+        TakenText      = s.TakenAt == default ? "\u2014" : FormatTime(s.TakenAt);
+        CompletedText  = s.InitialRound.CompletedAt is { } done ? FormatTime(done) : "not finished";
+        OperatorText   = string.IsNullOrWhiteSpace(s.Operator) ? "\u2014" : s.Operator;
+        NotesText      = s.Notes?.Trim() ?? string.Empty;
+
+        string name = !string.IsNullOrWhiteSpace(s.InstrumentName)
+            ? s.InstrumentName
+            : s.InstrumentId == "manual-entry" ? "Manual entry"
+            : s.InstrumentId.Length > 0 ? s.InstrumentId : "\u2014";
+        InstrumentText = string.IsNullOrWhiteSpace(s.InstrumentDetails) ? name : $"{name}\n{s.InstrumentDetails}";
     }
 
     // ── Info panel properties ─────────────────────────────────────────────────
@@ -329,6 +359,7 @@ public sealed partial class ResultsViewModel : ViewModelBase
             Operator     = operatorName,
             Notes        = notes,
             InstrumentId = instrument?.PluginId ?? "manual-entry",
+            InstrumentName = instrument?.Label ?? string.Empty,
             StrategyId   = strategyId,
             StrategyParameters = basis.StrategyParameters is null ? null : new Dictionary<string, object>(basis.StrategyParameters),
             InitialRound = new MeasurementRound { Steps = steps }
