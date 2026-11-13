@@ -104,6 +104,7 @@ public sealed partial class ResultsViewModel : ViewModelBase
         _session = args.Session;
         BuildSessionItems();
         UpdateMetadata();
+        UpdateProjectTab();
 
         if (CurrentDefinition.GeometryModuleId == "ParallelWays")
         {
@@ -220,6 +221,29 @@ public sealed partial class ResultsViewModel : ViewModelBase
     public string NotesText            { get; private set; } = string.Empty;
     public Visibility NotesVisibility  => NotesText.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
 
+    /// <summary>
+    /// The instrument of a measurement on up to three lines: its given name, its technical identifier and
+    /// what it reported about itself (serial, firmware). Measurements taken before these were recorded
+    /// show the plugin only.
+    /// </summary>
+    private string DescribeInstrument(MeasurementSession s)
+    {
+        if (!string.IsNullOrWhiteSpace(s.InstrumentName))
+        {
+            var lines = new List<string> { s.InstrumentName };
+            if (!string.IsNullOrWhiteSpace(s.InstrumentTechnicalId)) lines.Add(s.InstrumentTechnicalId);
+            if (!string.IsNullOrWhiteSpace(s.InstrumentDetails))     lines.Add(s.InstrumentDetails);
+            return string.Join("\n", lines);
+        }
+
+        if (s.InstrumentId == "manual-entry") return "Manual entry";
+        if (s.InstrumentId.Length == 0) return "\u2014";
+
+        string plugin = _catalog.PluginDisplayName(s.InstrumentId) ?? s.InstrumentId;
+        string text = $"{plugin}\n(device not recorded for this measurement)";
+        return string.IsNullOrWhiteSpace(s.InstrumentDetails) ? text : $"{text}\n{s.InstrumentDetails}";
+    }
+
     private static string FormatTime(DateTime utc) =>
         utc.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
 
@@ -232,11 +256,77 @@ public sealed partial class ResultsViewModel : ViewModelBase
         OperatorText   = string.IsNullOrWhiteSpace(s.Operator) ? "\u2014" : s.Operator;
         NotesText      = s.Notes?.Trim() ?? string.Empty;
 
-        string name = !string.IsNullOrWhiteSpace(s.InstrumentName)
-            ? s.InstrumentName
-            : s.InstrumentId == "manual-entry" ? "Manual entry"
-            : s.InstrumentId.Length > 0 ? s.InstrumentId : "\u2014";
-        InstrumentText = string.IsNullOrWhiteSpace(s.InstrumentDetails) ? name : $"{name}\n{s.InstrumentDetails}";
+        InstrumentText = DescribeInstrument(s);
+    }
+
+    // ── Project tab: what is known about the project and its object ───────────
+
+    public string ProjectCreatedText  { get; private set; } = string.Empty;
+    public string ProjectModifiedText { get; private set; } = string.Empty;
+    public string ProjectOperatorText { get; private set; } = string.Empty;
+    public string ProjectNotesText    { get; private set; } = string.Empty;
+    public string ProjectFileText     { get; private set; } = string.Empty;
+    public string ProjectObjectText   { get; private set; } = string.Empty;
+    public string ProjectDetailsText  { get; private set; } = string.Empty;
+    public string ProjectMeasurementCountText { get; private set; } = string.Empty;
+    public IReadOnlyList<ProjectMeasurementRow> ProjectMeasurements { get; private set; } = [];
+
+    private void UpdateProjectTab()
+    {
+        var p = _project;
+        ProjectCreatedText  = FormatTime(p.CreatedAt);
+        ProjectModifiedText = FormatTime(p.ModifiedAt);
+        ProjectOperatorText = string.IsNullOrWhiteSpace(p.Operator) ? "\u2014" : p.Operator;
+        ProjectNotesText    = string.IsNullOrWhiteSpace(p.Notes) ? "\u2014" : p.Notes.Trim();
+        ProjectFileText     = _mainViewModel.CurrentFilePath ?? "not saved yet";
+
+        // The object: from the project's own definition (each measurement's own settings are in the table).
+        var def = p.ObjectDefinition;
+        if (def.GeometryModuleId == "ParallelWays")
+        {
+            ProjectObjectText  = "Parallel ways";
+            ProjectDetailsText = $"{ParallelWaysParameters.From(def.Parameters).Rails.Count} rails";
+        }
+        else
+        {
+            ProjectObjectText  = "Surface plate";
+            ProjectDetailsText = FormatDimensions(def);
+        }
+
+        ProjectMeasurementCountText = p.Measurements.Count == 1 ? "1 measurement" : $"{p.Measurements.Count} measurements";
+        ProjectMeasurements = p.Measurements.Select(m => new ProjectMeasurementRow(
+            m.Label,
+            DescribeStrategy(m),
+            m.TakenAt == default ? "\u2014" : FormatTime(m.TakenAt),
+            FirstLine(DescribeInstrument(m)),
+            DescribeOutcome(m))).ToList();
+    }
+
+    private string DescribeStrategy(MeasurementSession m)
+    {
+        string name;
+        try { name = StrategyFactory.Create(m.StrategyId).DisplayName; }
+        catch { name = m.StrategyId; }
+
+        var def = _project.DefinitionFor(m);
+        return def.GeometryModuleId == "ParallelWays" ? name : $"{name} {FormatStrategyParams(def, m.StrategyId)}";
+    }
+
+    private static string FirstLine(string text)
+    {
+        int i = text.IndexOf('\n');
+        return i < 0 ? text : text[..i];
+    }
+
+    private static string DescribeOutcome(MeasurementSession m)
+    {
+        if (m.IsUnfinished())
+            return $"unfinished {m.ReadingCount()}/{m.InitialRound.Steps.Count}";
+
+        var result = m.Corrections.LastOrDefault()?.Result ?? m.InitialRound.Result;
+        return result is null
+            ? "done"
+            : $"flatness {result.FlatnessValueMm * 1000.0:F3} \u00b5m";
     }
 
     // ── Info panel properties ─────────────────────────────────────────────────
@@ -360,6 +450,7 @@ public sealed partial class ResultsViewModel : ViewModelBase
             Notes        = notes,
             InstrumentId = instrument?.PluginId ?? "manual-entry",
             InstrumentName = instrument?.Label ?? string.Empty,
+            InstrumentTechnicalId = instrument?.Technical ?? string.Empty,
             StrategyId   = strategyId,
             StrategyParameters = basis.StrategyParameters is null ? null : new Dictionary<string, object>(basis.StrategyParameters),
             InitialRound = new MeasurementRound { Steps = steps }

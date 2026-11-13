@@ -528,6 +528,7 @@ public sealed partial class ProjectSetupViewModel : ViewModelBase
                 Operator     = OperatorName,
                 InstrumentId = ActiveInstrumentId,
                 InstrumentName = ActiveChoice?.Label ?? string.Empty,
+                InstrumentTechnicalId = ActiveChoice?.Technical ?? string.Empty,
                 StrategyId   = strategy.StrategyId,
                 // Strategy, grid size ... of this measurement; the project's own definition stays as it is.
                 StrategyParameters = new Dictionary<string, object>(definition.Parameters),
@@ -546,6 +547,7 @@ public sealed partial class ProjectSetupViewModel : ViewModelBase
                 Operator     = OperatorName,
                 InstrumentId = ActiveInstrumentId,
                 InstrumentName = ActiveChoice?.Label ?? string.Empty,
+                InstrumentTechnicalId = ActiveChoice?.Technical ?? string.Empty,
                 StrategyId   = strategy.StrategyId,
                 InitialRound = new MeasurementRound { Steps = steps }
             };

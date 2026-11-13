@@ -10,7 +10,11 @@ namespace LevelApp.App.Services;
 /// <param name="PluginId">The plugin that measures.</param>
 /// <param name="Device">The registered device, or null for the manual-entry plugin.</param>
 /// <param name="Label">User-visible text.</param>
-public sealed record InstrumentChoice(string PluginId, KnownDevice? Device, string Label);
+public sealed record InstrumentChoice(string PluginId, KnownDevice? Device, string Label)
+{
+    /// <summary>The device's technical identifier (found-under name, Bluetooth address); empty for manual entry.</summary>
+    public string Technical => Device?.GetTechnicalId() ?? string.Empty;
+}
 
 /// <summary>
 /// Builds the instrument choices offered when a measurement is started and
@@ -39,6 +43,9 @@ public interface IInstrumentChoiceCatalog
     /// instead and <paramref name="warning"/> says why.
     /// </summary>
     IInstrumentProvider ResolveProvider(string pluginId, out string? warning);
+
+    /// <summary>The user-visible name of a plugin (for measurements that did not record a device), or null.</summary>
+    string? PluginDisplayName(string pluginId);
 
     /// <summary>
     /// Disconnects and forgets the providers this catalog handed out for <paramref name="pluginId"/>.

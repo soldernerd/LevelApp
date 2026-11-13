@@ -108,6 +108,9 @@ public sealed class InstrumentChoiceCatalog : IInstrumentChoiceCatalog
         }
     }
 
+    public string? PluginDisplayName(string pluginId) =>
+        _plugins.FirstOrDefault(p => p.PluginId == pluginId)?.DisplayName;
+
     public async Task DisconnectProvidersAsync(string pluginId)
     {
         List<IInstrumentProvider> doomed;

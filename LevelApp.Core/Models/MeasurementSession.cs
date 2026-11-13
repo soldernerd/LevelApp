@@ -13,6 +13,9 @@ public class MeasurementSession
     /// <summary>The instrument as the operator chose it, e.g. "Leveltronic — Prototyp Grün (BLE)". Informational.</summary>
     public string InstrumentName { get; set; } = string.Empty;
 
+    /// <summary>The technical identifier of the instrument at the time, e.g. "Leveltronic_4651 · 8C:71:12:93:46:51". Informational.</summary>
+    public string InstrumentTechnicalId { get; set; } = string.Empty;
+
     /// <summary>What the instrument reported about itself while measuring (serial, firmware ...). Informational.</summary>
     public string InstrumentDetails { get; set; } = string.Empty;
     public string StrategyId { get; set; } = string.Empty;

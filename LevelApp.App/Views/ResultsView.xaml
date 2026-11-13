@@ -2,6 +2,7 @@
     x:Class="LevelApp.App.Views.ResultsView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:LevelApp.App.ViewModels"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
     <Grid RowDefinitions="Auto,*">
@@ -118,6 +119,88 @@
                         </ScrollViewer>
 
                     </Grid>
+                </TabViewItem>
+
+                <!-- ── Tab 3: the project and its object ─────────────── -->
+                <TabViewItem Header="Project" IsClosable="False">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,16,16,16">
+                        <StackPanel Spacing="16" MaxWidth="900" HorizontalAlignment="Left">
+
+                            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    CornerRadius="8" Padding="16">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="Project" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,0,0,6"/>
+                                    <Grid ColumnDefinitions="110,*" ColumnSpacing="8" RowSpacing="3">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Grid.Row="0" Text="Name" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{x:Bind ViewModel.ProjectName, Mode=OneWay}" TextWrapping="Wrap"/>
+                                        <TextBlock Grid.Row="1" Text="Operator" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{x:Bind ViewModel.ProjectOperatorText, Mode=OneWay}" TextWrapping="Wrap"/>
+                                        <TextBlock Grid.Row="2" Text="Created" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{x:Bind ViewModel.ProjectCreatedText, Mode=OneWay}"/>
+                                        <TextBlock Grid.Row="3" Text="Last changed" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{x:Bind ViewModel.ProjectModifiedText, Mode=OneWay}"/>
+                                        <TextBlock Grid.Row="4" Text="File" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock Grid.Row="4" Grid.Column="1" Text="{x:Bind ViewModel.ProjectFileText, Mode=OneWay}"
+                                                   TextWrapping="Wrap" IsTextSelectionEnabled="True"/>
+                                        <TextBlock Grid.Row="5" Text="Notes" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock Grid.Row="5" Grid.Column="1" Text="{x:Bind ViewModel.ProjectNotesText, Mode=OneWay}" TextWrapping="Wrap"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    CornerRadius="8" Padding="16">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="Object" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,0,0,6"/>
+                                    <Grid ColumnDefinitions="110,*" ColumnSpacing="8" RowSpacing="3">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Grid.Row="0" Text="Geometry" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{x:Bind ViewModel.ProjectObjectText, Mode=OneWay}"/>
+                                        <TextBlock Grid.Row="1" Text="Size" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{x:Bind ViewModel.ProjectDetailsText, Mode=OneWay}"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    CornerRadius="8" Padding="16">
+                                <StackPanel Spacing="6">
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <TextBlock Text="Measurements" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                                        <TextBlock Text="{x:Bind ViewModel.ProjectMeasurementCountText, Mode=OneWay}"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    </StackPanel>
+                                    <Grid ColumnDefinitions="140,200,140,*,150" ColumnSpacing="12">
+                                        <TextBlock Grid.Column="0" Text="Name" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock Grid.Column="1" Text="Strategy" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock Grid.Column="2" Text="Taken" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock Grid.Column="3" Text="Instrument" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock Grid.Column="4" Text="Result" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    </Grid>
+                                    <ItemsControl ItemsSource="{x:Bind ViewModel.ProjectMeasurements, Mode=OneWay}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:ProjectMeasurementRow">
+                                                <Grid ColumnDefinitions="140,200,140,*,150" ColumnSpacing="12" Padding="0,3">
+                                                    <TextBlock Grid.Column="0" Text="{x:Bind Label}" TextWrapping="Wrap"/>
+                                                    <TextBlock Grid.Column="1" Text="{x:Bind Strategy}" TextWrapping="Wrap"/>
+                                                    <TextBlock Grid.Column="2" Text="{x:Bind Taken}"/>
+                                                    <TextBlock Grid.Column="3" Text="{x:Bind Instrument}" TextWrapping="Wrap"/>
+                                                    <TextBlock Grid.Column="4" Text="{x:Bind Outcome}" TextWrapping="Wrap"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+
+                        </StackPanel>
+                    </ScrollViewer>
                 </TabViewItem>
 
                 </TabView.TabItems>
