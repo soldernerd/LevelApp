@@ -52,10 +52,7 @@ public sealed class BleLeveltronicLink : ILeveltronicLink
 
         var service = await FindServiceAsync(device, ct).ConfigureAwait(false);
 
-        _rx = await GetCharacteristicAsync(service, LeveltronicApi.BleRxCharacteristicUuid, ct)
-            .ConfigureAwait(false);
-        _tx = await GetCharacteristicAsync(service, LeveltronicApi.BleTxCharacteristicUuid, ct)
-            .ConfigureAwait(false);
+        (_rx, _tx) = await FindCharacteristicsAsync(device, service, ct).ConfigureAwait(false);
 
         _tx.ValueChanged += OnTxValueChanged;
 
@@ -160,6 +157,50 @@ public sealed class BleLeveltronicLink : ILeveltronicLink
             $"Could not read the device's services ({all.Status}; last attempt {lastStatus}). " +
             "The module accepts one connection at a time: close the phone app (or switch the phone's " +
             "Bluetooth off) and try again; if the PC never paired with it, pair it in Windows Bluetooth settings.");
+    }
+
+    /// <summary>
+    /// Finds the receive and transmit characteristics. Right after a (re)connection Windows can report the
+    /// service but not yet its characteristics ("characteristic not found" although the device is fine);
+    /// so the lookup is retried, the service is looked up afresh once, and a final failure says which
+    /// characteristics the device did offer.
+    /// </summary>
+    private static async Task<(GattCharacteristic Rx, GattCharacteristic Tx)> FindCharacteristicsAsync(
+        BluetoothLEDevice device, GattDeviceService service, CancellationToken ct)
+    {
+        GattCommunicationStatus lastStatus = GattCommunicationStatus.Unreachable;
+
+        for (int attempt = 0; attempt < 5; attempt++)
+        {
+            var all = await service.GetCharacteristicsAsync(BluetoothCacheMode.Uncached).AsTask(ct).ConfigureAwait(false);
+            lastStatus = all.Status;
+            if (all.Status == GattCommunicationStatus.Success)
+            {
+                var rx = all.Characteristics.FirstOrDefault(c => c.Uuid == LeveltronicApi.BleRxCharacteristicUuid);
+                var tx = all.Characteristics.FirstOrDefault(c => c.Uuid == LeveltronicApi.BleTxCharacteristicUuid);
+                if (rx is not null && tx is not null) return (rx, tx);
+
+                if (attempt == 4)
+                {
+                    string found = all.Characteristics.Count == 0
+                        ? "none"
+                        : string.Join(", ", all.Characteristics.Select(c => c.Uuid.ToString()));
+                    throw new InvalidOperationException(
+                        "The instrument's Transparent-UART service has no usable characteristics " +
+                        $"(offered: {found}). Switch the instrument off and on and try again.");
+                }
+            }
+
+            await Task.Delay(700, ct).ConfigureAwait(false);
+
+            // The service object itself may be stale after a reconnection: look it up again once.
+            if (attempt == 1)
+                service = await FindServiceAsync(device, ct).ConfigureAwait(false);
+        }
+
+        throw new InvalidOperationException(
+            $"Could not read the instrument's characteristics ({lastStatus}). " +
+            "Close other programs or phones connected to it and try again.");
     }
 
     private static async Task<GattCharacteristic> GetCharacteristicAsync(
