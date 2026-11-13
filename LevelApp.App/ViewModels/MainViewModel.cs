@@ -22,11 +22,25 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly IProjectFileService _fileService;
     private readonly IActivityLogger     _logger;
     private readonly IWindowContext      _windowContext;
+    private readonly ISettingsService    _settings;
 
     // ── Global project state ──────────────────────────────────────────────────
 
     public Project? ActiveProject { get; private set; }
-    public string?  CurrentFilePath { get; private set; }
+    private string? _currentFilePath;
+
+    /// <summary>Where the active project is saved; remembered as the project to offer at the next start.</summary>
+    public string? CurrentFilePath
+    {
+        get => _currentFilePath;
+        private set
+        {
+            _currentFilePath = value;
+            if (value is null) return;
+            _settings.LastProjectPath = value;
+            _settings.Save();
+        }
+    }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveProjectCommand))]
@@ -46,8 +60,10 @@ public sealed partial class MainViewModel : ObservableObject
     // ── Constructor ───────────────────────────────────────────────────────────
 
     public MainViewModel(INavigationService navigation, IProjectFileService fileService,
-                         IActivityLogger logger, IWindowContext windowContext)
+                         IActivityLogger logger, IWindowContext windowContext,
+                         ISettingsService settings)
     {
+        _settings      = settings;
         _navigation    = navigation;
         _fileService   = fileService;
         _logger        = logger;
@@ -124,6 +140,47 @@ public sealed partial class MainViewModel : ObservableObject
 
         if (result.project is null) return; // user cancelled
 
+        await ActivateOpenedProjectAsync(result.project, result.path);
+    }
+
+    /// <summary>
+    /// At start-up: when a project was open last time and its file still exists, asks whether to
+    /// open it again, and opens it if so. Does nothing otherwise.
+    /// </summary>
+    public async Task OfferReopenLastProjectAsync()
+    {
+        string? path = _settings.LastProjectPath;
+        if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
+        if (_windowContext.XamlRoot is null) return;
+
+        var dialog = new ContentDialog
+        {
+            Title             = "Open the last project?",
+            Content           = $"You last worked on\n{path}\n\nOpen it again?",
+            PrimaryButtonText = "Open",
+            CloseButtonText   = "Not now",
+            DefaultButton     = ContentDialogButton.Primary,
+            XamlRoot          = _windowContext.XamlRoot
+        };
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+
+        Project project;
+        try
+        {
+            project = await _fileService.OpenFromPathAsync(path);
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorAsync("Open failed", ex.Message);
+            return;
+        }
+
+        await ActivateOpenedProjectAsync(project, path);
+    }
+
+    private async Task ActivateOpenedProjectAsync(Project project, string? path)
+    {
+        var result = (project, path);
         SetActiveProject(result.project, result.path);
 
         // Log File.Open and snapshot the project file

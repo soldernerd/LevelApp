@@ -65,9 +65,13 @@ public sealed partial class MainWindow : Window
 
         // XamlRoot is available once the content is in the visual tree;
         // kick off the update check at the same point so the window is rendered first.
-        RootFrame.Loaded += (_, _) =>
+        RootFrame.Loaded += async (_, _) =>
         {
             windowCtx.SetXamlRoot(RootFrame.XamlRoot);
+
+            // One dialog at a time: offer the last project first, then look for an update.
+            try { await ViewModel.OfferReopenLastProjectAsync(); }
+            catch { /* never block start-up on this */ }
             CheckForUpdateOnStartup();
         };
 

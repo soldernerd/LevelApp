@@ -59,6 +59,10 @@ public sealed class ProjectFileService : IProjectFileService
         return (ProjectSerializer.Deserialize(json), path);
     }
 
+    /// <inheritdoc/>
+    public async Task<Project> OpenFromPathAsync(string path)
+        => ProjectSerializer.Deserialize(await File.ReadAllTextAsync(path));
+
     /// <summary>
     /// Auto-generates a suggested filename from the project's object definition.
     /// Format: {GeometryType}_{WidthMm}x{HeightMm}  e.g. <c>SurfacePlate_1200x800</c>

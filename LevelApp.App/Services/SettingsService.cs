@@ -17,6 +17,7 @@ public sealed class SettingsService : ISettingsService
 
     private ElementTheme? _appTheme;
     private bool          _activityLoggingEnabled = true;
+    private string?       _lastProjectPath;
 
     public string DefaultProjectFolder
     {
@@ -36,6 +37,12 @@ public sealed class SettingsService : ISettingsService
         set => _activityLoggingEnabled = value;
     }
 
+    public string? LastProjectPath
+    {
+        get => _lastProjectPath;
+        set => _lastProjectPath = value;
+    }
+
     public void Load()
     {
         try
@@ -52,6 +59,8 @@ public sealed class SettingsService : ISettingsService
                 _appTheme = t;
             if (data?.ActivityLoggingEnabled is bool al)
                 _activityLoggingEnabled = al;
+            if (data?.LastProjectPath is { Length: > 0 } last)
+                _lastProjectPath = last;
         }
         catch { /* ignore corrupt or missing settings file */ }
     }
@@ -65,7 +74,8 @@ public sealed class SettingsService : ISettingsService
             {
                 DefaultProjectFolder   = _defaultProjectFolder,
                 AppTheme               = _appTheme?.ToString(),
-                ActivityLoggingEnabled = _activityLoggingEnabled
+                ActivityLoggingEnabled = _activityLoggingEnabled,
+                LastProjectPath        = _lastProjectPath
             };
             File.WriteAllText(path, JsonSerializer.Serialize(data, JsonOptions));
         }
@@ -86,5 +96,6 @@ public sealed class SettingsService : ISettingsService
         public string? DefaultProjectFolder  { get; set; }
         public string? AppTheme              { get; set; }
         public bool?   ActivityLoggingEnabled { get; set; }
+        public string? LastProjectPath        { get; set; }
     }
 }

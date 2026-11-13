@@ -74,7 +74,12 @@ public sealed partial class ScanForDevicesDialog : ContentDialog
             }
 
             if (found == 0)
+            {
+                string? why = (scanner as LevelApp.Core.Interfaces.IScanDiagnostics)?.LastScanSummary;
+                NoCandidatesText.Text = string.IsNullOrEmpty(why) ? "No devices found." : $"No devices found. {why}";
+                NoCandidatesText.TextWrapping = TextWrapping.Wrap;
                 NoCandidatesText.Visibility = Visibility.Visible;
+            }
         }
         catch (OperationCanceledException) { /* user cancelled or new scan started */ }
         catch (Exception ex)

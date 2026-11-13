@@ -8,6 +8,9 @@ public interface ISettingsService
     ElementTheme AppTheme                { get; set; }
     bool         ActivityLoggingEnabled  { get; set; }
 
+    /// <summary>Path of the project that was open last; offered for reopening at the next start.</summary>
+    string?      LastProjectPath         { get; set; }
+
     void Load();
     void Save();
 }

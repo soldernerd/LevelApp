@@ -3,6 +3,7 @@ using System.Threading.Channels;
 using LevelApp.Core.Instruments;
 using LevelApp.Core.Interfaces;
 using Windows.Devices.Enumeration;
+using Windows.Devices.Enumeration.Pnp;
 
 namespace LevelApp.Instruments.UsbHid;
 
@@ -55,17 +56,38 @@ public sealed class UsbHidDeviceScanner : IDeviceScanner
             new UnboundedChannelOptions { SingleWriter = false, SingleReader = true });
 
         // ── Phase 1: enumerate already-connected devices ──────────────────────
-        var existing = await DeviceInformation.FindAllAsync(selector)
+        // One physical instrument must give one entry: the watcher below announces the devices
+        // found here again, a device can expose several HID interfaces, and Windows keeps
+        // disabled "ghost" interfaces of ports the instrument was once plugged into.
+        var reported = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        async Task ReportAsync(DeviceInformation info)
+        {
+            if (!info.IsEnabled) return;
+
+            string? serial = await GetUsbSerialAsync(info).ConfigureAwait(false);
+            string key = serial ?? info.Id;
+            lock (reported)
+                if (!reported.Add(key)) return;
+
+            channel.Writer.TryWrite(MakeCandidate(info, serial));
+        }
+
+        var existing = await DeviceInformation.FindAllAsync(selector, ExtraProperties)
             .AsTask(cts.Token)
             .ConfigureAwait(false);
 
         foreach (var info in existing)
-            channel.Writer.TryWrite(MakeCandidate(info));
+            await ReportAsync(info).ConfigureAwait(false);
 
         // ── Phase 2: watch for new arrivals ───────────────────────────────────
-        var watcher = DeviceInformation.CreateWatcher(selector);
+        var watcher = DeviceInformation.CreateWatcher(selector, ExtraProperties);
 
-        watcher.Added   += (_, info) => channel.Writer.TryWrite(MakeCandidate(info));
+        watcher.Added   += async (_, info) =>
+        {
+            try { await ReportAsync(info).ConfigureAwait(false); }
+            catch { /* a device that cannot be described is simply not listed */ }
+        };
         watcher.Stopped += (_, _)    => channel.Writer.TryComplete();
 
         watcher.Start();
@@ -140,7 +162,48 @@ public sealed class UsbHidDeviceScanner : IDeviceScanner
         }
     }
 
-    private static DeviceCandidate MakeCandidate(DeviceInformation info)
+    private static readonly string[] ExtraProperties = ["System.Devices.DeviceInstanceId"];
+
+    /// <summary>
+    /// The USB serial number of the physical device behind a HID interface: the last segment of
+    /// the parent USB device instance id (USB\VID_xxxx&amp;PID_xxxx\serial). Null when the
+    /// device has no serial string (Windows then invents one containing '&amp;').
+    /// </summary>
+    private static async Task<string?> GetUsbSerialAsync(DeviceInformation info)
+    {
+        try
+        {
+            if (!info.Properties.TryGetValue("System.Devices.DeviceInstanceId", out var value) ||
+                value is not string instanceId)
+                return null;
+
+            for (int depth = 0; depth < 4; depth++)
+            {
+                var pnp = await PnpObject.CreateFromIdAsync(
+                    PnpObjectType.Device, instanceId, ["System.Devices.Parent"]).AsTask().ConfigureAwait(false);
+
+                if (!pnp.Properties.TryGetValue("System.Devices.Parent", out var p) || p is not string parent)
+                    return null;
+
+                // A composite device nests one more level (USB\...&MI_00\...) below the real one.
+                if (parent.StartsWith("USB\\", StringComparison.OrdinalIgnoreCase) &&
+                    !parent.Contains("&MI_", StringComparison.OrdinalIgnoreCase))
+                {
+                    string serial = parent[(parent.LastIndexOf('\\') + 1)..];
+                    return serial.Length == 0 || serial.Contains('&') ? null : serial;
+                }
+
+                instanceId = parent;
+            }
+        }
+        catch
+        {
+            // fall through: no serial known
+        }
+        return null;
+    }
+
+    private static DeviceCandidate MakeCandidate(DeviceInformation info, string? serial)
     {
         // DeviceInformation.Id for a HID device is the device-interface path,
         // e.g. \\?\HID#VID_1234&PID_5678#...
@@ -149,6 +212,8 @@ public sealed class UsbHidDeviceScanner : IDeviceScanner
         var name = string.IsNullOrWhiteSpace(info.Name)
             ? info.Id
             : info.Name;
+        if (serial is not null)
+            name = $"{name} \u00b7 {serial}";
 
         return new DeviceCandidate(
             CandidateId:   info.Id,
