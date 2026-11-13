@@ -42,6 +42,8 @@ public sealed partial class CalibrationHubViewModel : ObservableObject, IAsyncDi
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ServiceTitle))]
     [NotifyPropertyChangedFor(nameof(ServiceText))]
+    [NotifyPropertyChangedFor(nameof(ServiceAccent))]
+    [NotifyPropertyChangedFor(nameof(ServiceGlyph))]
     private bool _serviceMode;
 
     [ObservableProperty]
@@ -52,6 +54,15 @@ public sealed partial class CalibrationHubViewModel : ObservableObject, IAsyncDi
     public bool ShowHub => IsConnected && ActiveWizard is null;
     public bool ShowWizard => ActiveWizard is not null;
     public bool ShowRetry => !IsConnected;
+
+    /// <summary>Green while service mode is on, amber while it is off (the phone app's card).</summary>
+    public Microsoft.UI.Xaml.Media.Brush ServiceAccent => new Microsoft.UI.Xaml.Media.SolidColorBrush(
+        ServiceMode
+            ? Windows.UI.Color.FromArgb(255, 0x43, 0xA0, 0x47)
+            : Windows.UI.Color.FromArgb(255, 0xFF, 0xA0, 0x00));
+
+    /// <summary>Open padlock while service mode is on, closed while it is off.</summary>
+    public string ServiceGlyph => ServiceMode ? "\uE785" : "\uE72E";
 
     public string ServiceTitle => ServiceMode ? "Service mode is on" : "Service mode is off";
     public string ServiceText => ServiceMode

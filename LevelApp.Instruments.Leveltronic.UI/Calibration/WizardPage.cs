@@ -155,21 +155,79 @@ public abstract partial class WizardViewModelBase : ObservableObject, IDisposabl
     public bool MaskS2 { get => CurrentMask == SensorMask.S2; set { if (value) ApplyMask(SensorMask.S2); } }
     public bool MaskBoth { get => CurrentMask == SensorMask.Both; set { if (value) ApplyMask(SensorMask.Both); } }
 
+    private static readonly TimeSpan MinRefreshInterval = TimeSpan.FromMilliseconds(100);
+    private DateTime _lastRefresh = DateTime.MinValue;
+    private bool _refreshPending;
+    private bool _disposed;
+
+    /// <summary>
+    /// Rebuilds the page. A wizard reports progress up to some forty times a second; the page is rebuilt
+    /// at most ten times a second (a trailing rebuild follows, so the last state is never lost). Faster
+    /// than that only makes the page flicker.
+    /// </summary>
     protected void Refresh() => Post(() =>
     {
-        Page = BuildPage();
+        var since = DateTime.UtcNow - _lastRefresh;
+        if (since >= MinRefreshInterval)
+        {
+            RefreshNow();
+            return;
+        }
+
+        if (_refreshPending) return;
+        _refreshPending = true;
+        _ = Task.Delay(MinRefreshInterval - since).ContinueWith(_ => Post(() =>
+        {
+            _refreshPending = false;
+            RefreshNow();
+        }), TaskScheduler.Default);
+    });
+
+    private void RefreshNow()
+    {
+        if (_disposed) return;
+        _lastRefresh = DateTime.UtcNow;
+
+        var next = BuildPage();
+
+        // The buttons must stay the same objects while nothing about them changed: a page that is rebuilt
+        // several times a second (the instrument's live feed, the measurement progress) replaces them under
+        // the pointer, and a click whose press and release land on different buttons is lost.
+        if (Page.Actions is { } before && next.Actions is { } after && SameActions(before, after))
+            next = next with { Actions = before };
+
+        Page = next;
         OnPropertyChanged(nameof(MaskS1));
         OnPropertyChanged(nameof(MaskS2));
         OnPropertyChanged(nameof(MaskBoth));
         OnPageRefreshed();
-    });
+    }
 
     /// <summary>Lets a wizard raise change notifications for its own bound properties.</summary>
     protected virtual void OnPageRefreshed() { }
 
     protected void RequestClose() => Post(() => CloseRequested?.Invoke(this, EventArgs.Empty));
 
-    private void OnFeedUpdated(object? sender, InstrumentSnapshot e) => Refresh();
+    private static bool SameActions(IReadOnlyList<WizardAction> a, IReadOnlyList<WizardAction> b)
+    {
+        if (a.Count != b.Count) return false;
+        for (int i = 0; i < a.Count; i++)
+            if (a[i].Label != b[i].Label || a[i].Primary != b[i].Primary || a[i].Enabled != b[i].Enabled)
+                return false;
+        return true;
+    }
+
+    private bool? _lastServiceMode;
+
+    // The feed arrives about six times a second. The page only depends on it through service mode
+    // (what can be written, whether the service card shows), so only a change of that rebuilds it.
+    private void OnFeedUpdated(object? sender, InstrumentSnapshot e)
+    {
+        bool service = e.ServiceMode;
+        if (_lastServiceMode == service) return;
+        _lastServiceMode = service;
+        Refresh();
+    }
 
     protected void Post(Action a)
     {
@@ -183,5 +241,9 @@ public abstract partial class WizardViewModelBase : ObservableObject, IDisposabl
     protected static WizardAction Act(string label, Action run, bool primary = false, bool enabled = true) =>
         new(label, new RelayCommand(run), primary, enabled);
 
-    public virtual void Dispose() => Session.Feed.Updated -= OnFeedUpdated;
+    public virtual void Dispose()
+    {
+        _disposed = true;
+        Session.Feed.Updated -= OnFeedUpdated;
+    }
 }

@@ -8,9 +8,21 @@
 
     <UserControl.Resources>
         <conv:PresenceToVisibilityConverter x:Key="Present"/>
+
+        <!-- One step of the hub: number, icon, title, text, chevron (as the phone app's cards) -->
+        <Style x:Key="HubCardStyle" TargetType="Button">
+            <Setter Property="Background" Value="#1E1E1E"/>
+            <Setter Property="BorderBrush" Value="#1FFFFFFF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="14"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        </Style>
     </UserControl.Resources>
 
-    <Grid Padding="4" RowSpacing="10" RowDefinitions="Auto,Auto,*,Auto">
+    <Grid RequestedTheme="Dark" Background="#121212" CornerRadius="10" Padding="16"
+          RowSpacing="12" RowDefinitions="Auto,Auto,*,Auto">
 
         <!-- Header -->
         <Grid Grid.Row="0" ColumnSpacing="8" ColumnDefinitions="*,Auto,Auto">
@@ -22,18 +34,24 @@
         </Grid>
 
         <!-- Service mode card -->
-        <Border Grid.Row="1" CornerRadius="6" Padding="12"
-                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+        <Border Grid.Row="1" CornerRadius="14" Padding="16" BorderThickness="1.5"
+                Background="#1B261B"
+                BorderBrush="{x:Bind ViewModel.ServiceAccent, Mode=OneWay}"
                 Visibility="{x:Bind ViewModel.IsConnected, Mode=OneWay, Converter={StaticResource Present}}">
-            <StackPanel Spacing="2">
-                <TextBlock Text="{x:Bind ViewModel.ServiceTitle, Mode=OneWay}" FontWeight="SemiBold"/>
-                <TextBlock Text="{x:Bind ViewModel.ServiceText, Mode=OneWay}" TextWrapping="Wrap"
-                           Style="{StaticResource CaptionTextBlockStyle}"
-                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                <HyperlinkButton Content="Leave service mode" Padding="0"
-                                 Command="{x:Bind ViewModel.LeaveServiceModeCommand}"
-                                 Visibility="{x:Bind ViewModel.ServiceMode, Mode=OneWay, Converter={StaticResource Present}}"/>
-            </StackPanel>
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
+                <FontIcon Grid.Column="0" FontSize="28" VerticalAlignment="Top"
+                          Glyph="{x:Bind ViewModel.ServiceGlyph, Mode=OneWay}"
+                          Foreground="{x:Bind ViewModel.ServiceAccent, Mode=OneWay}"/>
+                <StackPanel Grid.Column="1" Spacing="4">
+                    <TextBlock Text="{x:Bind ViewModel.ServiceTitle, Mode=OneWay}" FontSize="18" FontWeight="SemiBold"
+                               Foreground="{x:Bind ViewModel.ServiceAccent, Mode=OneWay}"/>
+                    <TextBlock Text="{x:Bind ViewModel.ServiceText, Mode=OneWay}" TextWrapping="Wrap"
+                               Foreground="#B3FFFFFF"/>
+                    <HyperlinkButton Content="Leave service mode" Padding="0"
+                                     Command="{x:Bind ViewModel.LeaveServiceModeCommand}"
+                                     Visibility="{x:Bind ViewModel.ServiceMode, Mode=OneWay, Converter={StaticResource Present}}"/>
+                </StackPanel>
+            </Grid>
         </Border>
 
         <!-- Hub: the three wizards in order -->
@@ -43,29 +61,79 @@
                 <TextBlock TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                            Text="Run them in this order — each step assumes the one before it. Writing calibration values needs service mode, which can only be switched on at the instrument."/>
 
-                <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="14"
-                        Command="{x:Bind ViewModel.OpenPhaseCommand}">
-                    <StackPanel>
-                        <TextBlock Text="1  Phase" FontWeight="SemiBold"/>
-                        <TextBlock TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}"
-                                   Text="Finds the phase of each sensor's signal from a clear positive and/or negative tilt. S1, S2 or both."/>
-                    </StackPanel>
+                <!-- 1  Phase -->
+                <Button Style="{StaticResource HubCardStyle}" Command="{x:Bind ViewModel.OpenPhaseCommand}">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
+                        <Grid Grid.Column="0" Width="52" Height="52" VerticalAlignment="Center">
+                            <Ellipse Fill="#263238"/>
+                            <TextBlock Text="1" FontSize="22" FontWeight="SemiBold" Foreground="White"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+                        <StackPanel Grid.Column="1" Spacing="4">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <Viewbox Width="26" Height="26">
+                                    <!-- three waves -->
+                                    <Path Width="24" Height="24" Stroke="White" StrokeThickness="2" StrokeLineJoin="Round"
+                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                          Data="M2,5 C5,1 8,9 11,5 S17,1 22,5 M2,12 C5,8 8,16 11,12 S17,8 22,12 M2,19 C5,15 8,23 11,19 S17,15 22,19"/>
+                                </Viewbox>
+                                <TextBlock Text="Phase" FontSize="22" FontWeight="SemiBold" Foreground="White"/>
+                            </StackPanel>
+                            <TextBlock TextWrapping="Wrap" Foreground="#B3FFFFFF"
+                                       Text="Finds the phase of each sensor's signal from a clear positive and/or negative tilt. S1, S2 or both."/>
+                        </StackPanel>
+                        <FontIcon Grid.Column="2" Glyph="&#xE76C;" FontSize="16" Foreground="#B3FFFFFF" VerticalAlignment="Center"/>
+                    </Grid>
                 </Button>
-                <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="14"
-                        Command="{x:Bind ViewModel.OpenGainCommand}">
-                    <StackPanel>
-                        <TextBlock Text="2  Gain (sensitivity)" FontWeight="SemiBold"/>
-                        <TextBlock TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}"
-                                   Text="Sets k from a shim of known height under an edge of known length. S1, S2 or both."/>
-                    </StackPanel>
+
+                <!-- 2  Gain -->
+                <Button Style="{StaticResource HubCardStyle}" Command="{x:Bind ViewModel.OpenGainCommand}">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
+                        <Grid Grid.Column="0" Width="52" Height="52" VerticalAlignment="Center">
+                            <Ellipse Fill="#263238"/>
+                            <TextBlock Text="2" FontSize="22" FontWeight="SemiBold" Foreground="White"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+                        <StackPanel Grid.Column="1" Spacing="4">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <Viewbox Width="26" Height="26">
+                                    <!-- a ruler -->
+                                    <Path Width="24" Height="24" Stroke="White" StrokeThickness="2" StrokeLineJoin="Round"
+                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                          Data="M2,8 L22,8 L22,16 L2,16 Z M6,8 L6,12 M10,8 L10,13 M14,8 L14,12 M18,8 L18,13"/>
+                                </Viewbox>
+                                <TextBlock Text="Gain (sensitivity)" FontSize="22" FontWeight="SemiBold" Foreground="White"/>
+                            </StackPanel>
+                            <TextBlock TextWrapping="Wrap" Foreground="#B3FFFFFF"
+                                       Text="Sets k from a shim of known height under an edge of known length. S1, S2 or both."/>
+                        </StackPanel>
+                        <FontIcon Grid.Column="2" Glyph="&#xE76C;" FontSize="16" Foreground="#B3FFFFFF" VerticalAlignment="Center"/>
+                    </Grid>
                 </Button>
-                <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="14"
-                        Command="{x:Bind ViewModel.OpenFlipCommand}">
-                    <StackPanel>
-                        <TextBlock Text="3  Zero (flip)" FontWeight="SemiBold"/>
-                        <TextBlock TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}"
-                                   Text="The 180° reversal test: measure, turn the instrument, measure again. S1, S2 or both."/>
-                    </StackPanel>
+
+                <!-- 3  Zero (flip) -->
+                <Button Style="{StaticResource HubCardStyle}" Command="{x:Bind ViewModel.OpenFlipCommand}">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
+                        <Grid Grid.Column="0" Width="52" Height="52" VerticalAlignment="Center">
+                            <Ellipse Fill="#263238"/>
+                            <TextBlock Text="3" FontSize="22" FontWeight="SemiBold" Foreground="White"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+                        <StackPanel Grid.Column="1" Spacing="4">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <Viewbox Width="26" Height="26">
+                                    <!-- two arrows chasing each other: turn 180 degrees -->
+                                    <Path Width="24" Height="24" Stroke="White" StrokeThickness="2" StrokeLineJoin="Round"
+                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                          Data="M5,12 A7,7 0 0 1 17,7 M17,3 L17,8 L12,8 M19,12 A7,7 0 0 1 7,17 M7,21 L7,16 L12,16"/>
+                                </Viewbox>
+                                <TextBlock Text="Zero (flip)" FontSize="22" FontWeight="SemiBold" Foreground="White"/>
+                            </StackPanel>
+                            <TextBlock TextWrapping="Wrap" Foreground="#B3FFFFFF"
+                                       Text="The 180° reversal test: measure, turn the instrument, measure again. S1, S2 or both."/>
+                        </StackPanel>
+                        <FontIcon Grid.Column="2" Glyph="&#xE76C;" FontSize="16" Foreground="#B3FFFFFF" VerticalAlignment="Center"/>
+                    </Grid>
                 </Button>
 
                 <TextBlock TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}"
