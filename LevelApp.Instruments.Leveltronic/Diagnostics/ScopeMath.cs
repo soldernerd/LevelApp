@@ -12,8 +12,11 @@ public static class ScopeMath
     /// <summary>The ADC's input range, ± this many mV (excitation panel).</summary>
     public const double FullScaleMv = 1200;
 
-    /// <summary>The selectable full scales of the sensor panel, ± mV.</summary>
-    public static readonly IReadOnlyList<double> ScalesMv = [1200, 600, 200, 100, 50, 20];
+    /// <summary>
+    /// The selectable full scales of the sensor panel, ± mV. 10 and 5 mV are for the small
+    /// signals of the original Wyler sensors.
+    /// </summary>
+    public static readonly IReadOnlyList<double> ScalesMv = [1200, 600, 200, 100, 50, 20, 10, 5];
 
     /// <summary>Vertical shift of S2 against S1 as a fraction of the panel's half height.</summary>
     public const double S2Shift = 0.02;

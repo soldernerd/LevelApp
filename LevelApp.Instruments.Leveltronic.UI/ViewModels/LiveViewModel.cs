@@ -76,7 +76,10 @@ public sealed partial class LiveViewModel : SessionViewModelBase
 
     [ObservableProperty] private bool _isPanelOpen;
     [ObservableProperty] private bool _isPanelRunning;
-    [ObservableProperty] private bool _isPanelDone;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowSingleResult))]
+    [NotifyPropertyChangedFor(nameof(ShowComparison))]
+    private bool _isPanelDone;
     [ObservableProperty] private bool _isPanelFailed;
     [ObservableProperty] private string _panelHeading = "Precision measurement";
     [ObservableProperty] private string _panelSubtitle = "Starting";
@@ -87,6 +90,28 @@ public sealed partial class LiveViewModel : SessionViewModelBase
     /// <summary>Progress 0..100 of the running measurement.</summary>
     [ObservableProperty] private double _progress;
     [ObservableProperty] private bool _isProgressIndeterminate = true;
+
+    // The result before the current one, kept while the panel stays open so that "Measure again"
+    // can show both side by side with their difference.
+    private readonly record struct Result(double S1, double S2, double Diff);
+    private Result? _last;
+    private Result? _previous;
+
+    /// <summary>A previous result is shown next to the new one.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowSingleResult))]
+    [NotifyPropertyChangedFor(nameof(ShowComparison))]
+    private bool _hasPrevious;
+
+    public bool ShowSingleResult => IsPanelDone && !HasPrevious;
+    public bool ShowComparison => IsPanelDone && HasPrevious;
+
+    [ObservableProperty] private string _previousS1 = "";
+    [ObservableProperty] private string _previousS2 = "";
+    [ObservableProperty] private string _previousDiff = "";
+    [ObservableProperty] private string _deltaS1 = "";
+    [ObservableProperty] private string _deltaS2 = "";
+    [ObservableProperty] private string _deltaDiff = "";
 
     [ObservableProperty] private string _resultS1 = "";
     [ObservableProperty] private string _resultS2 = "";
@@ -234,6 +259,9 @@ public sealed partial class LiveViewModel : SessionViewModelBase
         _run = run;
         _purpose = purpose;
 
+        // Measuring again from a shown result: that result becomes the "previous" one.
+        _previous = purpose == Purpose.Measure && IsPanelOpen ? _last : null;
+
         PanelHeading = purpose == Purpose.Zero ? "Zero Diff" : "Precision measurement";
         PanelSubtitle = "Starting";
         PanelWarning = "";
@@ -271,10 +299,13 @@ public sealed partial class LiveViewModel : SessionViewModelBase
             else
             {
                 _resultDiffRaw = result.TiltDiff;
+                var current = new Result(result.TiltS1, result.TiltS2, result.TiltDiff);
                 ResultS1 = LiveFormat.Micro(result.TiltS1);
                 ResultS2 = LiveFormat.Micro(result.TiltS2);
                 ResultDiff = LiveFormat.Micro(LiveFormat.ApplyTare(_resultDiffRaw, _tare));
                 ResultDiffNote = _tare is not null ? "zeroed" : "";
+                ShowComparisonWith(current);
+                _last = current;
                 SetPanel(running: false, done: true, failed: false);
             }
         }
@@ -293,6 +324,24 @@ public sealed partial class LiveViewModel : SessionViewModelBase
         }
     }
 
+    /// <summary>Fills the previous / difference texts when there is a previous result.</summary>
+    private void ShowComparisonWith(Result current)
+    {
+        if (_previous is not { } old)
+        {
+            HasPrevious = false;
+            return;
+        }
+
+        PreviousS1   = LiveFormat.Micro(old.S1);
+        PreviousS2   = LiveFormat.Micro(old.S2);
+        PreviousDiff = LiveFormat.Micro(LiveFormat.ApplyTare(old.Diff, _tare));
+        DeltaS1      = LiveFormat.Micro(current.S1 - old.S1);
+        DeltaS2      = LiveFormat.Micro(current.S2 - old.S2);
+        DeltaDiff    = LiveFormat.Micro(current.Diff - old.Diff);
+        HasPrevious  = true;
+    }
+
     private void SetPanel(bool running, bool done, bool failed)
     {
         IsPanelRunning = running;
@@ -304,6 +353,9 @@ public sealed partial class LiveViewModel : SessionViewModelBase
 
     private void ClosePanelCore()
     {
+        _last = null;
+        _previous = null;
+        HasPrevious = false;
         IsPanelRunning = false;
         IsPanelDone = false;
         IsPanelFailed = false;

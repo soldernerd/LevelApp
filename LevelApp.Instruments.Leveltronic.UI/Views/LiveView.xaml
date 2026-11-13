@@ -143,7 +143,7 @@
 
                 <!-- done: the result -->
                 <StackPanel Spacing="4"
-                            Visibility="{x:Bind ViewModel.IsPanelDone, Mode=OneWay, Converter={StaticResource Vis}}">
+                            Visibility="{x:Bind ViewModel.ShowSingleResult, Mode=OneWay, Converter={StaticResource Vis}}">
                     <Grid ColumnDefinitions="70,*,Auto" ColumnSpacing="8">
                         <TextBlock Grid.Column="0" Text="S1" FontSize="17" Foreground="#8AFFFFFF" VerticalAlignment="Center"/>
                         <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.ResultS1, Mode=OneWay}" FontSize="28"
@@ -169,6 +169,35 @@
                         <TextBlock Grid.Column="2" Text="µm/m" FontSize="13" Foreground="#8AFFFFFF" VerticalAlignment="Bottom" Margin="0,0,0,8"/>
                     </Grid>
                 </StackPanel>
+
+                <!-- done, measured again: previous and new side by side with the difference -->
+                <Grid ColumnSpacing="12" RowSpacing="6"
+                      ColumnDefinitions="70,*,*,*"
+                      RowDefinitions="Auto,Auto,Auto,Auto"
+                      Visibility="{x:Bind ViewModel.ShowComparison, Mode=OneWay, Converter={StaticResource Vis}}">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="µm/m" FontSize="12" Foreground="#62FFFFFF" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Text="Previous" FontSize="13" Foreground="#8AFFFFFF" HorizontalAlignment="Right"/>
+                    <TextBlock Grid.Row="0" Grid.Column="2" Text="New" FontSize="13" Foreground="#8AFFFFFF" HorizontalAlignment="Right"/>
+                    <TextBlock Grid.Row="0" Grid.Column="3" Text="Difference" FontSize="13" Foreground="#FF4FC3F7" HorizontalAlignment="Right"/>
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="S1" FontSize="17" Foreground="#8AFFFFFF" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{x:Bind ViewModel.PreviousS1, Mode=OneWay}" FontSize="22" Foreground="#B3FFFFFF" HorizontalAlignment="Right" Typography.NumeralAlignment="Tabular"/>
+                    <TextBlock Grid.Row="1" Grid.Column="2" Text="{x:Bind ViewModel.ResultS1, Mode=OneWay}" FontSize="22" FontWeight="Bold" Foreground="White" HorizontalAlignment="Right" Typography.NumeralAlignment="Tabular"/>
+                    <TextBlock Grid.Row="1" Grid.Column="3" Text="{x:Bind ViewModel.DeltaS1, Mode=OneWay}" FontSize="22" Foreground="#FF4FC3F7" HorizontalAlignment="Right" Typography.NumeralAlignment="Tabular"/>
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="S2" FontSize="17" Foreground="#8AFFFFFF" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{x:Bind ViewModel.PreviousS2, Mode=OneWay}" FontSize="22" Foreground="#B3FFFFFF" HorizontalAlignment="Right" Typography.NumeralAlignment="Tabular"/>
+                    <TextBlock Grid.Row="2" Grid.Column="2" Text="{x:Bind ViewModel.ResultS2, Mode=OneWay}" FontSize="22" FontWeight="Bold" Foreground="White" HorizontalAlignment="Right" Typography.NumeralAlignment="Tabular"/>
+                    <TextBlock Grid.Row="2" Grid.Column="3" Text="{x:Bind ViewModel.DeltaS2, Mode=OneWay}" FontSize="22" Foreground="#FF4FC3F7" HorizontalAlignment="Right" Typography.NumeralAlignment="Tabular"/>
+
+                    <StackPanel Grid.Row="3" Grid.Column="0" VerticalAlignment="Center">
+                        <TextBlock Text="DIFF" FontSize="20" Foreground="#8AFFFFFF"/>
+                        <TextBlock Text="{x:Bind ViewModel.ResultDiffNote, Mode=OneWay}" FontSize="11" Foreground="#62FFFFFF"/>
+                    </StackPanel>
+                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{x:Bind ViewModel.PreviousDiff, Mode=OneWay}" FontSize="28" Foreground="#B3FFFFFF" HorizontalAlignment="Right" Typography.NumeralAlignment="Tabular"/>
+                    <TextBlock Grid.Row="3" Grid.Column="2" Text="{x:Bind ViewModel.ResultDiff, Mode=OneWay}" FontSize="28" FontWeight="Bold" Foreground="White" HorizontalAlignment="Right" Typography.NumeralAlignment="Tabular"/>
+                    <TextBlock Grid.Row="3" Grid.Column="3" Text="{x:Bind ViewModel.DeltaDiff, Mode=OneWay}" FontSize="28" FontWeight="Bold" Foreground="#FF4FC3F7" HorizontalAlignment="Right" Typography.NumeralAlignment="Tabular"/>
+                </Grid>
 
                 <!-- failed -->
                 <TextBlock Text="{x:Bind ViewModel.PanelMessage, Mode=OneWay}" FontSize="14" Foreground="White"

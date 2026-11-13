@@ -51,7 +51,9 @@ public sealed class ScopeAndDiagnosticsMathTests
     [Fact]
     public void ScaleTexts()
     {
-        Assert.Equal(6, ScopeMath.ScalesMv.Count);
+        Assert.Equal(8, ScopeMath.ScalesMv.Count);
+        Assert.Equal(5, ScopeMath.ScalesMv[^1]);
+        Assert.Equal(10, ScopeMath.ScalesMv[^2]);
         Assert.Equal("S1/S2 ±200 mV", ScopeMath.ScaleItemText(200));
         Assert.Equal("±1200 mV full scale", ScopeMath.FullScaleText(1200));
     }
