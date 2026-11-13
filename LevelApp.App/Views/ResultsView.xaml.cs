@@ -138,6 +138,6 @@ public sealed partial class ResultsView : Page
         var result = await dialog.ShowAsync();
         if (result == ContentDialogResult.Primary)
             ViewModel.StartNewMeasurement(dialog.OperatorName, dialog.Notes, dialog.StrategyId,
-                                          dialog.SelectedInstrument);
+                                          dialog.SelectedInstrument, dialog.Label);
     }
 }

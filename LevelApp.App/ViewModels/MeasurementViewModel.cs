@@ -61,8 +61,8 @@ public sealed partial class MeasurementViewModel : ViewModelBase
             _ = AcceptReadingCommand.ExecuteAsync(null);
     }
 
-    /// <summary>Releases the instrument when the page is left.</summary>
-    public void Shutdown() => _ = InstrumentReading.DetachAsync();
+    /// <summary>Lets go of the instrument when the page is left; it stays connected.</summary>
+    public void Shutdown() => _ = InstrumentReading.DetachAsync(disconnect: false);
 
     private void OnConnectionStateChanged(object? sender, EventArgs e)
     {

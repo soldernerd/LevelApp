@@ -10,6 +10,11 @@ public sealed class InstrumentChoiceCatalog : IInstrumentChoiceCatalog
     private readonly IReadOnlyList<IInstrumentPlugin> _plugins;
     private readonly IDeviceRegistry                  _registry;
 
+    // One provider per device, kept alive: the instrument stays connected from one measurement to
+    // the next instead of being closed and reopened (which takes seconds, especially over Bluetooth).
+    private readonly Dictionary<string, (string PluginId, IInstrumentProvider Provider)> _providers = [];
+    private readonly object _gate = new();
+
     public InstrumentChoiceCatalog(IEnumerable<IInstrumentPlugin> plugins, IDeviceRegistry registry)
     {
         _plugins  = plugins.ToList();
@@ -71,12 +76,12 @@ public sealed class InstrumentChoiceCatalog : IInstrumentChoiceCatalog
         if (plugin is not null)
         {
             if (IsManual(plugin))
-                return plugin.CreateProvider(ManualEntryProvider.BuiltInDevice);
+                return ProviderFor(plugin, ManualEntryProvider.BuiltInDevice);
 
             var device = _registry.GetPreferredDevice(plugin.PluginId)
                       ?? _registry.GetKnownDevices(plugin.PluginId).FirstOrDefault();
             if (device is not null)
-                return plugin.CreateProvider(device);
+                return ProviderFor(plugin, device);
 
             warning = $"No {plugin.DisplayName} instrument is registered — add one on the " +
                       "Instruments tab. Readings are typed in by hand until then.";
@@ -87,7 +92,36 @@ public sealed class InstrumentChoiceCatalog : IInstrumentChoiceCatalog
                       "Readings are typed in by hand.";
         }
 
-        var manual = _plugins.First(IsManual);
-        return manual.CreateProvider(ManualEntryProvider.BuiltInDevice);
+        return ProviderFor(_plugins.First(IsManual), ManualEntryProvider.BuiltInDevice);
+    }
+
+    private IInstrumentProvider ProviderFor(IInstrumentPlugin plugin, KnownDevice device)
+    {
+        lock (_gate)
+        {
+            if (!_providers.TryGetValue(device.DeviceId, out var entry))
+            {
+                entry = (plugin.PluginId, plugin.CreateProvider(device));
+                _providers[device.DeviceId] = entry;
+            }
+            return entry.Provider;
+        }
+    }
+
+    public async Task DisconnectProvidersAsync(string pluginId)
+    {
+        List<IInstrumentProvider> doomed;
+        lock (_gate)
+        {
+            var keys = _providers.Where(kv => kv.Value.PluginId == pluginId).Select(kv => kv.Key).ToList();
+            doomed = keys.Select(k => _providers[k].Provider).ToList();
+            foreach (var k in keys) _providers.Remove(k);
+        }
+
+        foreach (var provider in doomed)
+        {
+            try { await provider.DisconnectAsync(); }
+            catch { /* going away anyway */ }
+        }
     }
 }

@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using LevelApp.App.Services;
 using LevelApp.Core.Interfaces;
 using System.Collections.ObjectModel;
 
@@ -19,10 +20,11 @@ public sealed class InstrumentsViewModel : ObservableObject
 
     public InstrumentsViewModel(
         IEnumerable<IInstrumentPlugin> plugins,
-        IDeviceRegistry                registry)
+        IDeviceRegistry                registry,
+        IInstrumentChoiceCatalog       catalog)
     {
         Plugins = new ObservableCollection<InstrumentPluginTabViewModel>(
-            plugins.Select(p => new InstrumentPluginTabViewModel(p, registry)));
+            plugins.Select(p => new InstrumentPluginTabViewModel(p, registry, catalog)));
 
         RegistryWarning = registry.LoadError;
     }

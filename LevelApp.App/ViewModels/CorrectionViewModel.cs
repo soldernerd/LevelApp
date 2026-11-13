@@ -49,7 +49,7 @@ public sealed partial class CorrectionViewModel : ViewModelBase
     public InstrumentReadingViewModel InstrumentReading { get; }
 
     /// <summary>Releases the instrument when the page is left.</summary>
-    public void Shutdown() => _ = InstrumentReading.DetachAsync();
+    public void Shutdown() => _ = InstrumentReading.DetachAsync(disconnect: false);
 
     // ── Initialisation ────────────────────────────────────────────────────────
 

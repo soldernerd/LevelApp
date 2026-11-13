@@ -110,6 +110,7 @@ public sealed partial class InstrumentPluginTabView : UserControl
             if (vm.IsConnected)
             {
                 await _host.DisconnectAsync();
+                await ViewModel.DisconnectMeasurementLinkAsync();
             }
             else
             {
@@ -176,6 +177,7 @@ public sealed partial class InstrumentPluginTabView : UserControl
         // A device that is connected is disconnected before it is forgotten.
         if (_host?.ConnectedDevice?.DeviceId == vm.Device.DeviceId)
             await _host.DisconnectAsync();
+        await ViewModel.DisconnectMeasurementLinkAsync();
 
         ViewModel.ForgetDevice(vm);
     }

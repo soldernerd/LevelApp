@@ -1,3 +1,4 @@
+using LevelApp.App.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using LevelApp.Core.Interfaces;
 using System.Collections.ObjectModel;
@@ -12,6 +13,7 @@ public sealed partial class InstrumentPluginTabViewModel : ObservableObject
 {
     private readonly IInstrumentPlugin _plugin;
     private readonly IDeviceRegistry   _registry;
+    private readonly IInstrumentChoiceCatalog _catalog;
 
     // ── Identity ──────────────────────────────────────────────────────────────
 
@@ -41,10 +43,12 @@ public sealed partial class InstrumentPluginTabViewModel : ObservableObject
 
     // ── Constructor ───────────────────────────────────────────────────────────
 
-    public InstrumentPluginTabViewModel(IInstrumentPlugin plugin, IDeviceRegistry registry)
+    public InstrumentPluginTabViewModel(IInstrumentPlugin plugin, IDeviceRegistry registry,
+                                        IInstrumentChoiceCatalog catalog)
     {
         _plugin   = plugin;
         _registry = registry;
+        _catalog  = catalog;
         RefreshDevices();
     }
 
@@ -68,6 +72,12 @@ public sealed partial class InstrumentPluginTabViewModel : ObservableObject
         });
         RefreshDevices();
     }
+
+    /// <summary>
+    /// Ends the connection the guided measurement kept open for this plugin. Measurements leave the
+    /// instrument connected; an explicit Disconnect (or forgetting the device) closes it for good.
+    /// </summary>
+    public Task DisconnectMeasurementLinkAsync() => _catalog.DisconnectProvidersAsync(_plugin.PluginId);
 
     public void ForgetDevice(KnownDeviceViewModel vm)
     {

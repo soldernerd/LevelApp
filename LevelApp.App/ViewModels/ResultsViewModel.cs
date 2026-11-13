@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.Input;
+using System.Globalization;
 using LevelApp.App.DisplayModules.ParallelWaysDisplay;
 using LevelApp.App.DisplayModules.SurfacePlot3D;
 using LevelApp.App.Navigation;
@@ -37,10 +38,71 @@ public sealed partial class ResultsViewModel : ViewModelBase
 
     // ── Initialisation ────────────────────────────────────────────────────────
 
+    // ── Measurement selector (all measurements of the project) ───────────────
+
+    /// <summary>One entry of the "Measurement" pull-down.</summary>
+    public sealed record SessionItem(MeasurementSession Session, string Text)
+    {
+        public override string ToString() => Text;
+    }
+
+    /// <summary>Every measurement in the project, finished or not.</summary>
+    public IReadOnlyList<SessionItem> SessionItems { get; private set; } = [];
+
+    private SessionItem? _selectedSessionItem;
+
+    /// <summary>
+    /// The measurement shown. Picking another one opens it: its results when it is finished,
+    /// the measurement screen (resuming where it stopped) when it is not.
+    /// </summary>
+    public SessionItem? SelectedSessionItem
+    {
+        get => _selectedSessionItem;
+        set
+        {
+            // A ComboBox reports null while its list is rebuilt; that is not a choice.
+            if (value is null || ReferenceEquals(value, _selectedSessionItem)) return;
+            bool another = !ReferenceEquals(value.Session, _session);
+            _selectedSessionItem = value;
+            OnPropertyChanged();
+            if (another) OpenSession(value.Session);
+        }
+    }
+
+    private void BuildSessionItems()
+    {
+        SessionItems = _project.Measurements.Select(m => new SessionItem(m, DescribeSession(m))).ToList();
+        _selectedSessionItem = SessionItems.FirstOrDefault(i => ReferenceEquals(i.Session, _session));
+    }
+
+    private static string DescribeSession(MeasurementSession s)
+    {
+        string strategy;
+        try { strategy = StrategyFactory.Create(s.StrategyId).DisplayName; }
+        catch { strategy = s.StrategyId; }
+
+        string when = s.TakenAt == default
+            ? ""
+            : " \u00b7 " + s.TakenAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
+        string state = s.IsUnfinished()
+            ? $" \u00b7 unfinished {s.ReadingCount()}/{s.InitialRound.Steps.Count}"
+            : "";
+        return $"{s.Label} \u00b7 {strategy}{when}{state}";
+    }
+
+    private void OpenSession(MeasurementSession session)
+    {
+        if (session.IsUnfinished())
+            _navigation.NavigateTo(PageKey.Measurement, new MeasurementArgs(_project, session));
+        else
+            _navigation.NavigateTo(PageKey.Results, new ResultsArgs(_project, session));
+    }
+
     public void Initialize(ResultsArgs args)
     {
         _project = args.Project;
         _session = args.Session;
+        BuildSessionItems();
 
         if (_project.ObjectDefinition.GeometryModuleId == "ParallelWays")
         {
@@ -214,7 +276,7 @@ public sealed partial class ResultsViewModel : ViewModelBase
         => _navigation.NavigateTo(PageKey.Correction, new CorrectionArgs(_project, _session));
 
     public void StartNewMeasurement(string operatorName, string notes, string strategyId,
-                                    InstrumentChoice? instrument = null)
+                                    InstrumentChoice? instrument = null, string? label = null)
     {
         if (instrument is not null)
             _catalog.Select(instrument);
@@ -225,7 +287,7 @@ public sealed partial class ResultsViewModel : ViewModelBase
 
         var session = new MeasurementSession
         {
-            Label        = $"Measurement {_project.Measurements.Count + 1}",
+            Label        = string.IsNullOrWhiteSpace(label) ? $"Measurement {_project.Measurements.Count + 1}" : label.Trim(),
             TakenAt      = DateTime.UtcNow,
             Operator     = operatorName,
             Notes        = notes,

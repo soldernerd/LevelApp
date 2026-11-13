@@ -132,8 +132,12 @@ public sealed partial class InstrumentReadingViewModel : ObservableObject
         });
     }
 
-    /// <summary>Stops any measurement, releases the instrument.</summary>
-    public async Task DetachAsync()
+    /// <summary>
+    /// Stops any measurement and lets go of the provider. With <paramref name="disconnect"/> false
+    /// the instrument stays connected (leaving a measurement page must not drop the link; the
+    /// next page picks the same connected provider up again).
+    /// </summary>
+    public async Task DetachAsync(bool disconnect = true)
     {
         _cts?.Cancel();
         var provider = _provider;
@@ -145,7 +149,10 @@ public sealed partial class InstrumentReadingViewModel : ObservableObject
         if (provider is not null)
         {
             provider.ConnectionStateChanged -= OnProviderStateChanged;
-            try { await provider.DisconnectAsync().ConfigureAwait(false); } catch { /* going away anyway */ }
+            if (disconnect)
+            {
+                try { await provider.DisconnectAsync().ConfigureAwait(false); } catch { /* going away anyway */ }
+            }
         }
         Post(() =>
         {

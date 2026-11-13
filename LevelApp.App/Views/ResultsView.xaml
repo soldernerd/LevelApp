@@ -8,21 +8,30 @@
 
         <!-- ── Header ─────────────────────────────────────────────────────── -->
         <Grid Grid.Row="0" Padding="24,16,24,12"
-              ColumnDefinitions="*,Auto,Auto">
+              ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
 
             <TextBlock Grid.Column="0"
                        Text="{x:Bind ViewModel.ProjectName, Mode=OneWay}"
                        Style="{StaticResource TitleTextBlockStyle}"
                        VerticalAlignment="Center"/>
 
-            <Button Grid.Column="1"
+            <!-- Every measurement of the project, finished or not -->
+            <ComboBox Grid.Column="1"
+                      Header="Measurement"
+                      MinWidth="320"
+                      ItemsSource="{x:Bind ViewModel.SessionItems, Mode=OneWay}"
+                      SelectedItem="{x:Bind ViewModel.SelectedSessionItem, Mode=TwoWay}"
+                      VerticalAlignment="Center"
+                      Margin="0,0,8,0"/>
+
+            <Button Grid.Column="2"
                     x:Uid="Results_Recalculate"
                     Click="OnRecalculateClicked"
                     Visibility="{x:Bind ViewModel.SurfacePlateOnlyVisibility, Mode=OneWay}"
                     VerticalAlignment="Center"
                     Margin="0,0,8,0"/>
 
-            <Button Grid.Column="2"
+            <Button Grid.Column="3"
                     x:Uid="Results_NewMeasurement"
                     Click="OnNewMeasurementClicked"
                     VerticalAlignment="Center"/>

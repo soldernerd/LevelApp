@@ -39,4 +39,10 @@ public interface IInstrumentChoiceCatalog
     /// instead and <paramref name="warning"/> says why.
     /// </summary>
     IInstrumentProvider ResolveProvider(string pluginId, out string? warning);
+
+    /// <summary>
+    /// Disconnects and forgets the providers this catalog handed out for <paramref name="pluginId"/>.
+    /// Providers stay connected between measurements; this is for an explicit Disconnect.
+    /// </summary>
+    Task DisconnectProvidersAsync(string pluginId);
 }
