@@ -120,11 +120,51 @@ public sealed partial class LeveltronicManagementViewModel : ObservableObject, I
 
     private LeveltronicSession? Session => _lease?.Session;
 
+    /// <summary>The device this view is connected to, or null while disconnected.</summary>
+    public KnownDevice? ConnectedDevice => IsConnected ? _target : null;
+
+    /// <summary>Raised on the UI thread when a connection is made, closed or lost.</summary>
+    public event EventHandler? ConnectionChanged;
+
+    partial void OnIsConnectedChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ConnectedDevice));
+        ConnectionChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Connects <paramref name="device"/>, disconnecting a different one first, and remembers it
+    /// as the preferred device (the guided measurement uses it). Returns null on success,
+    /// otherwise the message to show.
+    /// </summary>
+    public async Task<string?> ConnectToAsync(KnownDevice device)
+    {
+        if (IsBusy) return "Busy, try again in a moment.";
+
+        if (IsConnected)
+        {
+            if (_target?.DeviceId == device.DeviceId) return null;
+            await ReleaseAsync();
+        }
+
+        _target = device;
+        HasDevice = true;
+        DeviceName = device.DisplayName;
+        _registry.SetPreferredDevice(PluginId, device.DeviceId);
+
+        await ConnectAsync();
+        return IsConnected ? null : StatusMessage;
+    }
+
+    /// <summary>Disconnects the connected device, if any.</summary>
+    public Task DisconnectDeviceAsync() => IsConnected ? DisconnectAsync() : Task.CompletedTask;
+
     // ── Target device ────────────────────────────────────────────────────────
 
     /// <summary>Re-read which device this view targets (call when returning to the tab).</summary>
     public void UpdateTargetDevice()
     {
+        if (IsConnected) return; // never retarget a live connection
         _target = _registry.GetPreferredDevice(PluginId)
                ?? _registry.GetKnownDevices(PluginId).FirstOrDefault();
         HasDevice = _target is not null;

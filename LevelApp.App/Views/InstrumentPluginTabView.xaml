@@ -4,115 +4,120 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="using:LevelApp.App.ViewModels">
 
-    <!-- Devices and actions sit in a collapsible header; the plugin's own view (for the
-         Leveltronic: live screen, scope, diagnostics, settings...) gets the rest of the page. -->
-    <Grid RowDefinitions="Auto,*" RowSpacing="12" Padding="0,12,0,0">
+    <!-- Top: all known devices, each with its own Connect button, and Add Device.
+         Below: what belongs to the connected device (actions, live screen, settings...),
+         shown only while a device is connected. -->
+    <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12" Padding="0,12,0,0">
 
-        <Expander x:Name="DevicesExpander"
-                  Grid.Row="0"
-                  Header="Devices and actions"
-                  IsExpanded="True"
-                  HorizontalAlignment="Stretch"
-                  HorizontalContentAlignment="Left">
-            <ScrollViewer MaxHeight="320" VerticalScrollBarVisibility="Auto">
-                <StackPanel Spacing="24" MaxWidth="600" HorizontalAlignment="Left">
+        <!-- Devices -->
+        <StackPanel Grid.Row="0" Spacing="8" MaxWidth="760" HorizontalAlignment="Left">
 
-                <!-- ── Section: Known Devices ─────────────────────────────────────── -->
-                <StackPanel Spacing="12">
+            <TextBlock Text="Devices"
+                       Style="{StaticResource SubtitleTextBlockStyle}"/>
 
-                <TextBlock Text="Known Devices"
-                           Style="{StaticResource SubtitleTextBlockStyle}"/>
-
-                    <!-- Device list — shown only when there are known devices -->
-                <ItemsControl x:Name="DeviceList"
-                              ItemsSource="{x:Bind ViewModel.KnownDevices, Mode=OneWay}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:KnownDeviceViewModel">
-                            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                    CornerRadius="4"
-                                    Padding="12,8"
-                                    Margin="0,0,0,4">
-                                <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
-                                    <TextBlock Grid.Column="0"
-                                               Text="{x:Bind DisplayName}"
+            <ItemsControl x:Name="DeviceList"
+                          ItemsSource="{x:Bind ViewModel.KnownDevices, Mode=OneWay}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:KnownDeviceViewModel">
+                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                CornerRadius="4"
+                                Padding="12,8"
+                                Margin="0,0,0,4">
+                            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8"
+                                            VerticalAlignment="Center">
+                                    <TextBlock Text="{x:Bind DisplayName}"
                                                VerticalAlignment="Center"
                                                Style="{StaticResource BodyTextBlockStyle}"/>
-                                    <Border Grid.Column="1"
-                                            Background="{ThemeResource AccentFillColorTertiaryBrush}"
-                                            CornerRadius="2"
-                                            Padding="4,2"
-                                            VerticalAlignment="Center">
-                                        <TextBlock Text="{x:Bind TransportLabel}"
-                                                   Style="{StaticResource CaptionTextBlockStyle}"
-                                                   Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
-                                    </Border>
-                                    <Button Grid.Column="2"
-                                            VerticalAlignment="Center"
-                                            ToolTipService.ToolTip="Give this device a name"
-                                            Click="OnRenameDeviceClicked">
-                                        <FontIcon Glyph="&#xE70F;" FontSize="12"/>
-                                    </Button>
-                                    <Button Grid.Column="3"
-                                            VerticalAlignment="Center"
-                                            ToolTipService.ToolTip="Forget this device"
-                                            Click="OnForgetDeviceClicked">
-                                        <FontIcon Glyph="&#xE711;" FontSize="12"/>
-                                    </Button>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                                    <TextBlock Text="connected"
+                                               VerticalAlignment="Center"
+                                               Foreground="{ThemeResource SystemFillColorSuccessBrush}"
+                                               Style="{StaticResource CaptionTextBlockStyle}"
+                                               Visibility="{x:Bind ConnectedVisibility, Mode=OneWay}"/>
+                                    <ProgressRing Width="16" Height="16" IsActive="True"
+                                                  Visibility="{x:Bind BusyVisibility, Mode=OneWay}"/>
+                                </StackPanel>
+                                <Border Grid.Column="1"
+                                        Background="{ThemeResource AccentFillColorTertiaryBrush}"
+                                        CornerRadius="2"
+                                        Padding="4,2"
+                                        VerticalAlignment="Center">
+                                    <TextBlock Text="{x:Bind TransportLabel}"
+                                               Style="{StaticResource CaptionTextBlockStyle}"
+                                               Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
+                                </Border>
+                                <Button Grid.Column="2"
+                                        Content="{x:Bind ConnectButtonText, Mode=OneWay}"
+                                        IsEnabled="{x:Bind IsIdle, Mode=OneWay}"
+                                        Visibility="{x:Bind ConnectVisibility, Mode=OneWay}"
+                                        VerticalAlignment="Center"
+                                        MinWidth="96"
+                                        Click="OnConnectDeviceClicked"/>
+                                <Button Grid.Column="3"
+                                        VerticalAlignment="Center"
+                                        ToolTipService.ToolTip="Give this device a name"
+                                        Click="OnRenameDeviceClicked">
+                                    <FontIcon Glyph="&#xE70F;" FontSize="12"/>
+                                </Button>
+                                <Button Grid.Column="4"
+                                        VerticalAlignment="Center"
+                                        ToolTipService.ToolTip="Forget this device"
+                                        Click="OnForgetDeviceClicked">
+                                    <FontIcon Glyph="&#xE711;" FontSize="12"/>
+                                </Button>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
 
-                    <!-- Empty state -->
-                <TextBlock x:Name="NoDevicesText"
-                           Text="No devices registered."
-                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                           Style="{StaticResource BodyTextBlockStyle}"
-                           Visibility="Collapsed"/>
+            <TextBlock x:Name="NoDevicesText"
+                       Text="No devices registered."
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                       Style="{StaticResource BodyTextBlockStyle}"
+                       Visibility="Collapsed"/>
 
-                    <!-- Add Device button — hidden for always-connected plugins -->
-                <Button x:Name="AddDeviceButton"
-                        Content="+ Add Device"
-                        Click="OnAddDeviceClicked"
-                        Visibility="Collapsed"/>
+            <InfoBar x:Name="ConnectError"
+                     Severity="Error"
+                     IsClosable="True"
+                     IsOpen="False"/>
 
-            </StackPanel>
+            <!-- Add Device button: hidden for always-connected plugins (manual transport) -->
+            <Button x:Name="AddDeviceButton"
+                    Content="+ Add Device"
+                    Click="OnAddDeviceClicked"
+                    Visibility="Collapsed"/>
+        </StackPanel>
 
-                <!-- ── Section: Actions ───────────────────────────────────────────── -->
-                <StackPanel Spacing="8">
+        <!-- Actions of the connected device -->
+        <StackPanel x:Name="ConnectedActions"
+                    Grid.Row="1"
+                    Orientation="Horizontal"
+                    Spacing="8"
+                    Visibility="Collapsed">
+            <TextBlock x:Name="ConnectedTitle"
+                       VerticalAlignment="Center"
+                       Style="{StaticResource BodyStrongTextBlockStyle}"/>
+            <Button x:Name="CalibrationButton"
+                    Content="Calibration"
+                    Click="OnCalibrationClicked"
+                    Visibility="Collapsed"/>
+            <Button x:Name="FirmwareUpdateButton"
+                    Content="Firmware Update"
+                    Click="OnFirmwareUpdateClicked"
+                    Visibility="Collapsed"/>
+        </StackPanel>
 
-                <TextBlock Text="Actions"
-                           Style="{StaticResource SubtitleTextBlockStyle}"/>
-
-                <StackPanel Orientation="Horizontal" Spacing="8">
-
-                    <Button x:Name="CalibrationButton"
-                            Content="Calibration"
-                            Click="OnCalibrationClicked"
-                            Visibility="Collapsed"/>
-
-                    <Button x:Name="FirmwareUpdateButton"
-                            Content="Firmware Update"
-                            Click="OnFirmwareUpdateClicked"
-                            Visibility="Collapsed"/>
-
-                </StackPanel>
-
-            </StackPanel>
-
-
-                </StackPanel>
-            </ScrollViewer>
-        </Expander>
-
-        <!-- ── Plugin-specific view (if any) ─────────────────────────────── -->
-        <ContentPresenter x:Name="PluginSpecificContent"
-                          Grid.Row="1"
-                          HorizontalContentAlignment="Stretch"
-                          VerticalContentAlignment="Stretch"
-                          Visibility="Collapsed"/>
+        <!-- The plugin surface for the connected device (and the calibration view, one at a time) -->
+        <Grid x:Name="PluginHost" Grid.Row="2" Visibility="Collapsed">
+            <ContentPresenter x:Name="PluginSpecificContent"
+                              HorizontalContentAlignment="Stretch"
+                              VerticalContentAlignment="Stretch"/>
+            <ContentPresenter x:Name="CalibrationContent"
+                              HorizontalContentAlignment="Stretch"
+                              VerticalContentAlignment="Stretch"
+                              Visibility="Collapsed"/>
+        </Grid>
 
     </Grid>
-
 </UserControl>

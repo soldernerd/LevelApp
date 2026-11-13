@@ -1,3 +1,4 @@
+using LevelApp.Core.Instruments;
 using LevelApp.Core.Interfaces;
 using LevelApp.Instruments.Leveltronic.Preferences;
 using LevelApp.Instruments.Leveltronic.UI.ViewModels;
@@ -12,7 +13,7 @@ namespace LevelApp.Instruments.Leveltronic.UI.Views;
 /// phone app offers besides the live screen and the wizards. Embedded by
 /// <c>InstrumentPluginTabView</c> via <see cref="LeveltronicPlugin.CreateDeviceManagementView"/>.
 /// </summary>
-public sealed partial class LeveltronicManagementView : UserControl
+public sealed partial class LeveltronicManagementView : UserControl, IDeviceManagementHost
 {
     public LeveltronicManagementViewModel ViewModel { get; }
 
@@ -35,8 +36,21 @@ public sealed partial class LeveltronicManagementView : UserControl
             ViewModel.UpdateTargetDevice();
             OnTabChanged(Tabs, null!);
         };
-        Unloaded += async (_, _) => await ViewModel.DisposeAsync();
+        // No dispose on Unloaded: the Instruments tab swaps this view out of the tree when the
+        // operator looks at another plugin tab, which must not drop the connection. The
+        // connection ends with Disconnect, a lost link, or the process.
+        ViewModel.ConnectionChanged += (_, _) => ConnectionChanged?.Invoke(this, EventArgs.Empty);
     }
+
+    // ── IDeviceManagementHost ────────────────────────────────────────────────
+
+    public KnownDevice? ConnectedDevice => ViewModel.ConnectedDevice;
+
+    public event EventHandler? ConnectionChanged;
+
+    public Task<string?> ConnectAsync(KnownDevice device) => ViewModel.ConnectToAsync(device);
+
+    public Task DisconnectAsync() => ViewModel.DisconnectDeviceAsync();
 
     private void OnTabChanged(object sender, SelectionChangedEventArgs e)
     {

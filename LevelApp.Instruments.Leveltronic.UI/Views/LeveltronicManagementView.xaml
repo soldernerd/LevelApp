@@ -80,13 +80,10 @@
     <Grid x:Name="Root" Padding="4" RowSpacing="8" RowDefinitions="Auto,Auto,*,Auto">
 
         <!-- Connection bar -->
-        <Grid Grid.Row="0" ColumnSpacing="8" ColumnDefinitions="*,Auto,Auto,Auto">
+        <Grid Grid.Row="0" ColumnSpacing="8" ColumnDefinitions="*,Auto">
             <TextBlock Grid.Column="0" VerticalAlignment="Center" FontWeight="SemiBold"
                        Text="{x:Bind ViewModel.DeviceName, Mode=OneWay}"/>
-            <Button Grid.Column="1" Content="Connect" Command="{x:Bind ViewModel.ConnectCommand}"/>
-            <Button Grid.Column="2" Content="Read all values" Command="{x:Bind ViewModel.RefreshAllValuesCommand}"/>
-            <Button Grid.Column="3" Content="Disconnect" Command="{x:Bind ViewModel.DisconnectCommand}"
-                    IsEnabled="{x:Bind ViewModel.IsConnected, Mode=OneWay}"/>
+            <Button Grid.Column="1" Content="Read all values" Command="{x:Bind ViewModel.RefreshAllValuesCommand}"/>
         </Grid>
 
         <!-- Service mode card -->

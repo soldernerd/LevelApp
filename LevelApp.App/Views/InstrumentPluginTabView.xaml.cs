@@ -1,5 +1,6 @@
 using LevelApp.App.ViewModels;
 using LevelApp.App.Views.Dialogs;
+using LevelApp.Core.Interfaces;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
@@ -7,15 +8,18 @@ namespace LevelApp.App.Views;
 
 /// <summary>
 /// UserControl displayed as the content of each plugin tab in
-/// <see cref="InstrumentsPage"/>.
+/// <see cref="InstrumentsPage"/>: the plugin's known devices (each with a Connect button when
+/// the plugin has a live connection to offer), and — only while a device is connected — the
+/// actions and the plugin's own surface for that device.
 /// </summary>
 public sealed partial class InstrumentPluginTabView : UserControl
 {
     public InstrumentPluginTabViewModel ViewModel { get; }
 
     // The plugin's management view is created once: it owns the instrument connection, so
-    // rebuilding it on every device-list change (as before) would drop the connection.
+    // rebuilding it on every device-list change would drop the connection.
     private UIElement? _managementView;
+    private IDeviceManagementHost? _host;
     private UIElement? _calibrationView;
     private bool _wired;
 
@@ -28,39 +32,100 @@ public sealed partial class InstrumentPluginTabView : UserControl
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        EnsureManagementView();
         RefreshUI();
         if (_wired) return;
         _wired = true;
         ViewModel.KnownDevices.CollectionChanged += (_, _) => RefreshUI();
     }
 
+    private void EnsureManagementView()
+    {
+        if (_managementView is not null) return;
+
+        _managementView = ViewModel.Plugin.CreateDeviceManagementView(ViewModel.Registry) as UIElement;
+        if (_managementView is null) return;
+
+        PluginSpecificContent.Content = _managementView;
+        _host = _managementView as IDeviceManagementHost;
+        if (_host is not null)
+            _host.ConnectionChanged += (_, _) => UpdateConnectedUi();
+    }
+
     private void RefreshUI()
     {
         bool hasDevices = ViewModel.KnownDevices.Count > 0;
 
-        // Empty-state text
         NoDevicesText.Visibility = hasDevices ? Visibility.Collapsed : Visibility.Visible;
 
-        // Add Device — hidden for always-connected plugins (manual transport)
+        // Add Device: hidden for always-connected plugins (manual transport)
         AddDeviceButton.Visibility = ViewModel.ShowAddDevice
             ? Visibility.Visible : Visibility.Collapsed;
 
-        // Capability buttons — hidden when plugin doesn't support the capability
-        CalibrationButton.Visibility    = ViewModel.CanCalibrate
-            ? Visibility.Visible : Visibility.Collapsed;
-        FirmwareUpdateButton.Visibility = ViewModel.CanUpdateFirmware
-            ? Visibility.Visible : Visibility.Collapsed;
-        FirmwareUpdateButton.IsEnabled  = true; // fine-grained readiness handled at click time
+        foreach (var device in ViewModel.KnownDevices)
+            device.CanConnect = _host is not null;
 
-        // Plugin-specific management view (created once, see _managementView)
-        _managementView ??= ViewModel.Plugin.CreateDeviceManagementView(ViewModel.Registry) as UIElement;
-        if (_managementView is not null && _calibrationView is null)
+        UpdateConnectedUi();
+    }
+
+    /// <summary>
+    /// Shows what belongs to the connected device (its name, actions, the plugin's surface) and
+    /// hides all of it while nothing is connected; marks the connected row in the device list.
+    /// </summary>
+    private void UpdateConnectedUi()
+    {
+        var connected = _host?.ConnectedDevice;
+
+        foreach (var device in ViewModel.KnownDevices)
+            device.IsConnected = connected is not null && device.Device.DeviceId == connected.DeviceId;
+
+        if (connected is null)
         {
-            PluginSpecificContent.Content    = _managementView;
-            PluginSpecificContent.Visibility = Visibility.Visible;
+            if (_calibrationView is not null) CloseCalibration();
+            ConnectedActions.Visibility = Visibility.Collapsed;
+            PluginHost.Visibility       = Visibility.Collapsed;
+            return;
+        }
 
-            // The instrument's own tabs get the room; the device list folds away once a device exists.
-            DevicesExpander.IsExpanded = !hasDevices;
+        ConnectedTitle.Text = $"{connected.DisplayName}:";
+        CalibrationButton.Visibility = ViewModel.Plugin.CreateCalibrationWorkflow(connected) is not null
+            ? Visibility.Visible : Visibility.Collapsed;
+        FirmwareUpdateButton.Visibility = ViewModel.Plugin.CreateFirmwareUpdater(connected) is not null
+            ? Visibility.Visible : Visibility.Collapsed;
+
+        ConnectedActions.Visibility = Visibility.Visible;
+        PluginHost.Visibility       = Visibility.Visible;
+    }
+
+    // ── Connect / disconnect ──────────────────────────────────────────────────
+
+    private async void OnConnectDeviceClicked(object sender, RoutedEventArgs e)
+    {
+        if (_host is null || sender is not Button { DataContext: KnownDeviceViewModel vm }) return;
+
+        ConnectError.IsOpen = false;
+        vm.IsBusy = true;
+        try
+        {
+            if (vm.IsConnected)
+            {
+                await _host.DisconnectAsync();
+            }
+            else
+            {
+                string? error = await _host.ConnectAsync(vm.Device);
+                if (error is not null)
+                {
+                    ConnectError.Title   = $"Could not connect {vm.DisplayName}";
+                    ConnectError.Message = error;
+                    ConnectError.IsOpen  = true;
+                }
+            }
+        }
+        finally
+        {
+            vm.IsBusy = false;
+            UpdateConnectedUi();
         }
     }
 
@@ -94,21 +159,25 @@ public sealed partial class InstrumentPluginTabView : UserControl
 
     private async void OnForgetDeviceClicked(object sender, RoutedEventArgs e)
     {
-        if (sender is Button btn && btn.DataContext is KnownDeviceViewModel vm)
-        {
-            var dialog = new ContentDialog
-            {
-                Title               = "Forget Device",
-                Content             = $"Remove \"{vm.DisplayName}\" from the device list?",
-                PrimaryButtonText   = "Remove",
-                CloseButtonText     = "Cancel",
-                DefaultButton       = ContentDialogButton.Close,
-                XamlRoot            = this.XamlRoot
-            };
+        if (sender is not Button { DataContext: KnownDeviceViewModel vm }) return;
 
-            if (await dialog.ShowAsync() == ContentDialogResult.Primary)
-                ViewModel.ForgetDevice(vm);
-        }
+        var dialog = new ContentDialog
+        {
+            Title             = "Forget Device",
+            Content           = $"Remove \"{vm.DisplayName}\" from the device list?",
+            PrimaryButtonText = "Remove",
+            CloseButtonText   = "Cancel",
+            DefaultButton     = ContentDialogButton.Close,
+            XamlRoot          = this.XamlRoot
+        };
+
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+
+        // A device that is connected is disconnected before it is forgotten.
+        if (_host?.ConnectedDevice?.DeviceId == vm.Device.DeviceId)
+            await _host.DisconnectAsync();
+
+        ViewModel.ForgetDevice(vm);
     }
 
     // ── Add Device ────────────────────────────────────────────────────────────
@@ -126,51 +195,49 @@ public sealed partial class InstrumentPluginTabView : UserControl
             ViewModel.RefreshDevices();
     }
 
-    // ── Calibration ───────────────────────────────────────────────────────────
+    // ── Calibration (of the connected device) ─────────────────────────────────
 
     private void OnCalibrationClicked(object sender, RoutedEventArgs e)
     {
-        // No device selected — operate on first device as default when list has items.
-        // Second click goes back to the instrument's own view.
+        // A second click goes back to the instrument's own view.
         if (_calibrationView is not null)
         {
             CloseCalibration();
             return;
         }
 
-        var deviceVm = ViewModel.KnownDevices.FirstOrDefault();
-        if (deviceVm is null) return;
+        var connected = _host?.ConnectedDevice;
+        if (connected is null) return;
 
-        var workflow = ViewModel.Plugin.CreateCalibrationWorkflow(deviceVm.Device);
-        if (workflow is null) return;
+        var workflow = ViewModel.Plugin.CreateCalibrationWorkflow(connected);
+        if (workflow?.CreateView() is not UIElement view) return;
 
-        // Show the calibration view in the plugin-specific area, in place of the instrument view.
-        if (workflow.CreateView() is UIElement uiElement)
-        {
-            _calibrationView                 = uiElement;
-            PluginSpecificContent.Content    = uiElement;
-            PluginSpecificContent.Visibility = Visibility.Visible;
-            CalibrationButton.Content        = "← Back to instrument";
-            DevicesExpander.IsExpanded       = false;
-        }
+        // Both views stay in the tree (hidden when not shown): taking the management view out
+        // would let it unload while it holds the connection.
+        _calibrationView                = view;
+        CalibrationContent.Content      = view;
+        CalibrationContent.Visibility   = Visibility.Visible;
+        PluginSpecificContent.Visibility = Visibility.Collapsed;
+        CalibrationButton.Content       = "← Back to instrument";
     }
 
     private void CloseCalibration()
     {
-        _calibrationView          = null;
-        CalibrationButton.Content = "Calibration";
-        if (_managementView is not null)
-            PluginSpecificContent.Content = _managementView;
+        _calibrationView                 = null;
+        CalibrationContent.Content       = null;
+        CalibrationContent.Visibility    = Visibility.Collapsed;
+        PluginSpecificContent.Visibility = Visibility.Visible;
+        CalibrationButton.Content        = "Calibration";
     }
 
-    // ── Firmware Update ───────────────────────────────────────────────────────
+    // ── Firmware Update (of the connected device) ─────────────────────────────
 
     private async void OnFirmwareUpdateClicked(object sender, RoutedEventArgs e)
     {
-        var deviceVm = ViewModel.KnownDevices.FirstOrDefault();
-        if (deviceVm is null) return;
+        var connected = _host?.ConnectedDevice;
+        if (connected is null) return;
 
-        var updater = ViewModel.Plugin.CreateFirmwareUpdater(deviceVm.Device);
+        var updater = ViewModel.Plugin.CreateFirmwareUpdater(connected);
         if (updater is null) return;
 
         if (!updater.IsReady)
