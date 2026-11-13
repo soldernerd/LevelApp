@@ -65,16 +65,23 @@ public sealed class ClientTests
     }
 
     [Fact]
-    public async Task NewerRequestForTheSameOpcode_SupersedesTheOlder()
+    public async Task Requests_AreSentOneAtATime_EachAfterTheAnswerToThePreviousOne()
     {
+        // The instrument drops requests that arrive back to back (firmware 0.15 over USB HID), so
+        // a second request waits until the first was answered, even for the same opcode.
         var link = new StubLink();
         await using var client = new LeveltronicDeviceClient(link, new FakeTimeProvider());
 
         var first = client.RequestAsync(0x0001);
         var second = client.RequestAsync(0x0001);
-        link.Inject(0x0001, (byte)ApiStatus.Ok, 42);
+        await TestKit.WithTimeout(Task.Run(async () => { while (link.Sent.Count < 1) await Task.Delay(1); }));
+        Assert.Single(link.Sent);
 
-        await Assert.ThrowsAsync<LinkException>(() => TestKit.WithTimeout(first));
+        link.Inject(0x0001, (byte)ApiStatus.Ok, 41);
+        Assert.Equal(new byte[] { 41 }, (await TestKit.WithTimeout(first)).Data);
+
+        await TestKit.WithTimeout(Task.Run(async () => { while (link.Sent.Count < 2) await Task.Delay(1); }));
+        link.Inject(0x0001, (byte)ApiStatus.Ok, 42);
         Assert.Equal(new byte[] { 42 }, (await TestKit.WithTimeout(second)).Data);
     }
 

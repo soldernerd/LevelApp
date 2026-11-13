@@ -195,3 +195,13 @@ warning.
    compared with the phone app on the same unit.
 6. Check the Diagnostics channel labels (firmware reference: S2, B, A, S1; the phone shows A, B, S1, S2).
 7. BLE: walk out of range and back — the connection bar should show Connecting and recover.
+
+## One request at a time
+
+Verified on firmware 0.15.0 over USB HID: requests that reach the instrument back to back (for example a
+SUBSCRIBE immediately followed by an EXECUTE, or the first GET right after the connection is opened) are dropped
+without an answer. `LeveltronicDeviceClient` therefore keeps a single request in flight: the next one is sent after the
+previous one was answered (or timed out), and UNSUBSCRIBE is sent as a request too (the device acknowledges it). Before
+this, Zero Diff and Precision failed with "Could not complete the measurement" because the EXECUTE sent right after the
+PRECISION subscription was lost.
+

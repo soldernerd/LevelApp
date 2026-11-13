@@ -26,6 +26,12 @@ public sealed class LeveltronicDeviceClient : IAsyncDisposable
     private readonly Dictionary<ushort, SubscriptionEntry> _subs = [];
     private bool _closed;
 
+    // The instrument handles one request per scheduler tick: requests that arrive back to back
+    // are dropped without an answer (seen over USB HID with firmware 0.15, where a SUBSCRIBE
+    // immediately followed by an EXECUTE lost the EXECUTE). So only one request is in flight at
+    // a time; the next is sent once the previous was answered (or timed out).
+    private readonly SemaphoreSlim _requestGate = new(1, 1);
+
     public LeveltronicDeviceClient(ILeveltronicLink link, TimeProvider? time = null)
     {
         _link = link ?? throw new ArgumentNullException(nameof(link));
@@ -56,6 +62,20 @@ public sealed class LeveltronicDeviceClient : IAsyncDisposable
     }
 
     private async Task<ApiFrame> ExchangeAsync(
+        ushort opcode, ReadOnlyMemory<byte> payload, TimeSpan? timeout, CancellationToken ct)
+    {
+        await _requestGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            return await ExchangeCoreAsync(opcode, payload, timeout, ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            _requestGate.Release();
+        }
+    }
+
+    private async Task<ApiFrame> ExchangeCoreAsync(
         ushort opcode, ReadOnlyMemory<byte> payload, TimeSpan? timeout, CancellationToken ct)
     {
         var tcs = new TaskCompletionSource<ApiFrame>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -175,8 +195,10 @@ public sealed class LeveltronicDeviceClient : IAsyncDisposable
     {
         try
         {
-            await _link.SendAsync(
-                ApiV3Codec.BuildFrame(ApiV3Codec.WithVerb(subscribeOpcode, ApiVerb.Unsubscribe))).ConfigureAwait(false);
+            // A request like any other: the device answers it, and waiting for that answer keeps
+            // the next request from arriving in the same scheduler tick (it would be dropped).
+            await ExchangeAsync(ApiV3Codec.WithVerb(subscribeOpcode, ApiVerb.Unsubscribe),
+                ReadOnlyMemory<byte>.Empty, TimeSpan.FromSeconds(1), CancellationToken.None).ConfigureAwait(false);
         }
         catch { /* best effort: the device also clears subscriptions on disconnect */ }
     }
