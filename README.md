@@ -23,13 +23,18 @@ The software guides the operator through a defined measurement procedure, acquir
   - Per-rail straightness (peak-to-valley after best-fit line removal) and per-pair parallelism results
 - **Flatness / straightness result** — peak-to-valley value and residual RMS displayed alongside the plot
 - **Project persistence** — projects are saved as `.levelproj` files (JSON), human-readable and version-control friendly
+  - **Nothing is lost** — every accepted reading is saved at once (atomic writes); a project that was never saved is kept in a recovery copy and offered at the next start; an unfinished measurement is offered for resuming exactly where it stopped
+  - **Several measurements per project** — each with its own strategy and geometry settings; a pull-down on the results page switches between them. *Measure again* repeats the last strategy, *With a different strategy…* returns to the setup page. A measurement can be cancelled (discard, keep to resume later, or continue)
+  - **Project tab** — project, object and the list of measurements (strategy, date, instrument, result); project name, operator, notes and measurement names are editable
+  - **Measurement meta data** — name, when taken / completed, operator, and the instrument (given name, technical id, serial and firmware) recorded with every measurement
+- **Reopen last project** — at start the app offers the project that was open last time
 - **Open existing project** — load a `.levelproj` file at any time; if the file contains all readings but no computed result the solver runs automatically on load
 - **Preferences** — configurable default project folder and Light / Dark / Follow system theme, both remembered across sessions
 - **About dialog** — Help → About LevelApp shows the current version, copyright, license, and links to the license text and GitHub repository
 - **Auto-update** — checks for new releases on GitHub at startup; if a newer version is available the app offers to download and install it automatically
 - **Contextual help** — ⓘ flyout buttons on all section headers and algorithmic concepts (least-squares, flagged steps, sigma threshold, correction rounds, etc.); tooltips on all metric labels and input fields
 - **Localised UI** — full English (en-US) and German (de-DE) localisation; the OS language setting selects the active locale automatically
-- **Instrument integration** — the **Leveltronic** precision electronic level over USB or Bluetooth LE (firmware 0.11+, API v3): live S1 / S2 / Diff reading and a settled "Take reading" right in the guided measurement, Zero Diff, a management view (info and health, settings, actions, calibration values, signal diagnostics) and the phase / gain / zero calibration wizards. Manual keyboard entry always remains available. See [`docs/leveltronic.md`](docs/leveltronic.md)
+- **Instrument integration** — the **Leveltronic** precision electronic level over USB or Bluetooth LE (firmware 0.11+, API v3.1): a live screen (S1 / S2 / Diff in µm/m, battery, vibration, Zero Diff, Precision with side-by-side comparison), an oscilloscope view and diagnostics, "Take reading" and "Take reading and accept" right in the guided measurement (with last reading and Go back), a management view (info, settings, actions, calibration values), and the phase / gain / zero calibration wizards with an animated instrument diagram. Devices are listed with a Connect button each; the instrument stays connected between measurements. USB and Bluetooth scanning list one entry per instrument with its technical id. Manual keyboard entry always remains available. See [`docs/leveltronic.md`](docs/leveltronic.md)
 - **Extensible architecture** — geometry modules, measurement strategies, instrument providers and display modules are all plugin-style interfaces; new object types and instruments can be added without touching existing code
 
 ---
