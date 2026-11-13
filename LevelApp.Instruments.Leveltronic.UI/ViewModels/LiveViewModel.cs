@@ -282,11 +282,13 @@ public sealed partial class LiveViewModel : SessionViewModelBase
         {
             // cancelled via the button or by a detach; the panel is already closed
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             if (!ReferenceEquals(_run, run)) return;
             _run = null;
-            PanelMessage = "Could not complete the measurement.";
+            // Say what went wrong (the instrument's refusal or the link problem), not just that it did.
+            string reason = ex is ApiException api ? api.UserMessage : ex.Message;
+            PanelMessage = $"Could not complete the measurement: {reason}";
             SetPanel(running: false, done: false, failed: true);
         }
     }
