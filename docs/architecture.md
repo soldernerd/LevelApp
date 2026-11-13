@@ -583,10 +583,12 @@ Row pass:
   Row 2:  (0,2)→...→(cols-2,2)          orientation: East
   ...
 
-Column pass:
-  Col 0:  (0,0)→(0,1)→...→(0,rows-2)   orientation: South
-  Col 1:  (1,rows-1)→...→(1,1)          orientation: North
-  ...
+Column pass (continues where the row pass ended: bottom right for an odd number of rows,
+bottom left for an even number; the first column is measured upwards from there, the next downwards, ...):
+  rows odd:   Col cols-1: (cols-1,rows-1)→...→(cols-1,1)   orientation: North
+              Col cols-2: (cols-2,0)→...→(cols-2,rows-2)    orientation: South
+              ...  ending at column 0
+  rows even:  the same, starting at column 0 and moving right
 ```
 
 

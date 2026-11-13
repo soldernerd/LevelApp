@@ -11,10 +11,13 @@ namespace LevelApp.Core.Geometry.SurfacePlate.Strategies;
 ///   Row 1 (West):  (cols-1,1)→ … →(1,1)
 ///   Row 2 (East):  (0,2)→ … →(cols-2,2)  …
 ///
-/// Column pass — traverses every column top-to-bottom then bottom-to-top alternately:
-///   Col 0 (South): (0,0)→(0,1)→ … →(0,rows-2)
-///   Col 1 (North): (1,rows-1)→ … →(1,1)
-///   Col 2 (South): (2,0)→ … →(2,rows-2)  …
+/// Column pass — continues seamlessly where the row pass ended (bottom right for an odd number
+/// of rows, bottom left for an even number): the first column is measured upwards from there,
+/// the next one downwards, and so on across the plate. For 3 rows × 3 columns (row pass ends
+/// bottom right):
+///   Col 2 (North): (2,rows-1)→ … →(2,1)
+///   Col 1 (South): (1,0)→ … →(1,rows-2)
+///   Col 0 (North): (0,rows-1)→ … →(0,1)
 ///
 /// GridCol/GridRow on each step is the "from" endpoint; Orientation points to the "to" endpoint.
 /// Total steps = rows × (cols − 1) + cols × (rows − 1)
@@ -54,19 +57,27 @@ public sealed class FullGridStrategy : IMeasurementStrategy
         }
 
         // ── Column pass ───────────────────────────────────────────────────────
-        for (int col = 0; col < cols; col++, passId++)
+        // Continues where the row pass ended: the last row is traversed East when the number of
+        // rows is odd (the instrument ends at the bottom right) and West when it is even (bottom
+        // left). The first column is that end column, measured upwards (North) from the bottom;
+        // the next column is measured downwards (South), and so on towards the opposite side.
+        bool startRight = rows % 2 == 1;
+
+        for (int k = 0; k < cols; k++, passId++)
         {
-            if (col % 2 == 0)
+            int col = startRight ? cols - 1 - k : k;
+
+            if (k % 2 == 0)
             {
-                // Even columns: top → bottom (South)
-                for (int row = 0; row < rows - 1; row++)
-                    steps.Add(Make(index++, col, row, Orientation.South, passId));
+                // bottom → top (North); gridRow is the bottom endpoint
+                for (int row = rows - 1; row >= 1; row--)
+                    steps.Add(Make(index++, col, row, Orientation.North, passId));
             }
             else
             {
-                // Odd columns: bottom → top (North); gridRow is the bottom endpoint
-                for (int row = rows - 1; row >= 1; row--)
-                    steps.Add(Make(index++, col, row, Orientation.North, passId));
+                // top → bottom (South)
+                for (int row = 0; row < rows - 1; row++)
+                    steps.Add(Make(index++, col, row, Orientation.South, passId));
             }
         }
 

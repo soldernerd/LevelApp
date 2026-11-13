@@ -280,12 +280,16 @@ The `orientation` field is restricted to `"East"`, `"West"`, `"North"`, `"South"
 
 Number of row-pass steps = `rowsCount × (columnsCount − 1)`.
 
-**Column passes** (boustrophedon, one pass per column, after all row passes):
+**Column passes** (boustrophedon, one pass per column, after all row passes; since v0.20.18 they
+continue where the last row pass ended, files written before that keep their stored order):
 
-- Even columns (col 0, 2, 4, …) go **South**: `gridRow` increases from `0` to `rowsCount − 2`.
-  `orientation = "South"`, `nodeId = "col{c}_row{r}"`, `toNodeId = "col{c}_row{r+1}"`.
-- Odd columns go **North**: `gridRow` decreases from `rowsCount − 1` to `1`.
+- The last row is traversed East when `rowsCount` is odd (the instrument ends at the bottom right) and West
+  when it is even (bottom left). The columns are measured starting at that end column and moving across the
+  plate to the other side: first column = `columnsCount − 1` (odd rows) or `0` (even rows).
+- The first column (and every second one after it) goes **North**: `gridRow` decreases from `rowsCount − 1` to `1`.
   `orientation = "North"`, `nodeId = "col{c}_row{r}"`, `toNodeId = "col{c}_row{r-1}"`.
+- The other columns go **South**: `gridRow` increases from `0` to `rowsCount − 2`.
+  `orientation = "South"`, `nodeId = "col{c}_row{r}"`, `toNodeId = "col{c}_row{r+1}"`.
 
 Number of column-pass steps = `columnsCount × (rowsCount − 1)`.
 

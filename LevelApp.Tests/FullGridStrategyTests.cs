@@ -81,37 +81,65 @@ public class FullGridStrategyTests
     // ── Column-pass boustrophedon ──────────────────────────────────────────────
 
     [Theory]
+    [InlineData(3, 3)]   // odd rows: the row pass ends bottom right
     [InlineData(4, 3)]
     [InlineData(8, 5)]
-    public void ColumnPass_EvenColsGoSouth_OddColsGoNorth(int cols, int rows)
+    [InlineData(4, 4)]   // even rows: the row pass ends bottom left
+    [InlineData(5, 2)]
+    public void ColumnPass_StartsWhereTheRowPassEnded_MeasuringUpwards(int cols, int rows)
+    {
+        var steps = _sut.GenerateSteps(Def(cols, rows));
+        var lastRowStep = steps.Last(s => s.Orientation is Orientation.East or Orientation.West);
+        var firstColumnStep = steps.First(s => s.Orientation is Orientation.North or Orientation.South);
+
+        // The instrument ends the row pass at the to-node of the last row step ...
+        Assert.Equal(lastRowStep.ToNodeId, firstColumnStep.NodeId);
+        // ... on the bottom row, and the column pass goes up from there.
+        Assert.Equal(rows - 1, firstColumnStep.GridRow);
+        Assert.Equal(Orientation.North, firstColumnStep.Orientation);
+    }
+
+    [Theory]
+    [InlineData(3, 3)]
+    [InlineData(4, 3)]
+    [InlineData(8, 5)]
+    [InlineData(4, 4)]
+    public void ColumnPass_AlternatesNorthAndSouth_AcrossTheWholePlate(int cols, int rows)
     {
         var steps = _sut.GenerateSteps(Def(cols, rows))
-                        .Where(s => s.Orientation is Orientation.South or Orientation.North);
+                        .Where(s => s.Orientation is Orientation.North or Orientation.South)
+                        .ToList();
 
-        foreach (var step in steps)
+        // Columns in the order they are measured.
+        var columns = steps.Select(s => s.GridCol).Distinct().ToList();
+        Assert.Equal(cols, columns.Count);
+        bool descending = columns[0] > columns[^1];
+        Assert.Equal(
+            descending ? Enumerable.Range(0, cols).Reverse().ToList() : Enumerable.Range(0, cols).ToList(),
+            columns);
+
+        for (int k = 0; k < columns.Count; k++)
         {
-            var expected = step.GridCol % 2 == 0 ? Orientation.South : Orientation.North;
-            Assert.Equal(expected, step.Orientation);
+            var expected = k % 2 == 0 ? Orientation.North : Orientation.South;
+            Assert.All(steps.Where(s => s.GridCol == columns[k]), s => Assert.Equal(expected, s.Orientation));
         }
     }
 
     [Fact]
-    public void ColumnPass_RowSequenceIsBoustrophedon()
+    public void ColumnPass_RowSequenceWithinAColumn()
     {
-        int cols = 4, rows = 3;
+        int cols = 3, rows = 3; // odd rows: the first column is the right one (col 2), measured upwards
         var steps = _sut.GenerateSteps(Def(cols, rows));
 
-        // Col 0 (South): gridRow should increase 0 → rows-2
-        var col0Rows = steps
-            .Where(s => s.GridCol == 0 && s.Orientation == Orientation.South)
+        var col2Rows = steps
+            .Where(s => s.GridCol == 2 && s.Orientation == Orientation.North)
             .Select(s => s.GridRow).ToList();
-        Assert.Equal(Enumerable.Range(0, rows - 1).ToList(), col0Rows);
+        Assert.Equal(Enumerable.Range(1, rows - 1).Reverse().ToList(), col2Rows);
 
-        // Col 1 (North): gridRow should decrease rows-1 → 1
         var col1Rows = steps
-            .Where(s => s.GridCol == 1 && s.Orientation == Orientation.North)
+            .Where(s => s.GridCol == 1 && s.Orientation == Orientation.South)
             .Select(s => s.GridRow).ToList();
-        Assert.Equal(Enumerable.Range(1, rows - 1).Reverse().ToList(), col1Rows);
+        Assert.Equal(Enumerable.Range(0, rows - 1).ToList(), col1Rows);
     }
 
     // ── Grid bounds ───────────────────────────────────────────────────────────
