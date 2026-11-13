@@ -327,9 +327,29 @@ public sealed partial class ProjectSetupViewModel : ViewModelBase
 
     // ── Initialisation from a loaded project ─────────────────────────────────
 
+    // An unfinished measurement of the loaded project, offered for resuming.
+    private MeasurementSession? _unfinished;
+
+    public bool HasUnfinished => _unfinished is not null;
+
+    public string UnfinishedText => _unfinished is null
+        ? string.Empty
+        : $"\u201c{_unfinished.Label}\u201d has {_unfinished.ReadingCount()} of " +
+          $"{_unfinished.InitialRound.Steps.Count} readings.";
+
+    [RelayCommand]
+    private void ResumeMeasurement()
+    {
+        if (_loadedProject is null || _unfinished is null) return;
+        _navigation.NavigateTo(PageKey.Measurement, new MeasurementArgs(_loadedProject, _unfinished));
+    }
+
     public void Initialize(Project project)
     {
         _loadedProject = project;
+        _unfinished    = project.Measurements.LastOrDefault(m => m.IsUnfinished());
+        OnPropertyChanged(nameof(HasUnfinished));
+        OnPropertyChanged(nameof(UnfinishedText));
         ProjectName    = project.Name;
         OperatorName   = project.Operator;
         Notes          = project.Notes;

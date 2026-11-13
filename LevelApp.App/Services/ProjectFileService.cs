@@ -31,8 +31,49 @@ public sealed class ProjectFileService : IProjectFileService
     /// <summary>Saves the project to a known path without showing a dialog.</summary>
     public Task SaveToPathAsync(Project project, string path)
     {
+        // Serialised here, on the caller's thread: the project may be edited while the write runs.
         string json = ProjectSerializer.Serialize(project);
-        return File.WriteAllTextAsync(path, json);
+        return WriteAtomicAsync(path, json);
+    }
+
+    /// <summary>
+    /// Writes to a temporary file and moves it over the target, so an interruption (power, crash,
+    /// closing the app) in the middle of a save never leaves a half-written project behind.
+    /// </summary>
+    private static async Task WriteAtomicAsync(string path, string json)
+    {
+        string temp = path + ".tmp";
+        await File.WriteAllTextAsync(temp, json);
+        File.Move(temp, path, overwrite: true);
+    }
+
+    private static string RecoveryPath => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "LevelApp", "recovery", "unsaved.levelproj");
+
+    public Task SaveRecoveryAsync(Project project)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(RecoveryPath)!);
+        return WriteAtomicAsync(RecoveryPath, ProjectSerializer.Serialize(project));
+    }
+
+    public async Task<Project?> TryLoadRecoveryAsync()
+    {
+        try
+        {
+            if (!File.Exists(RecoveryPath)) return null;
+            return ProjectSerializer.Deserialize(await File.ReadAllTextAsync(RecoveryPath));
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public void DeleteRecovery()
+    {
+        try { if (File.Exists(RecoveryPath)) File.Delete(RecoveryPath); }
+        catch { /* best effort */ }
     }
 
     /// <summary>
@@ -43,7 +84,7 @@ public sealed class ProjectFileService : IProjectFileService
     {
         string? path = await ShowSaveDialogAsync(_hwnd, _settings.DefaultProjectFolder, suggestedFileName);
         if (path is null) return null;
-        await File.WriteAllTextAsync(path, ProjectSerializer.Serialize(project));
+        await WriteAtomicAsync(path, ProjectSerializer.Serialize(project));
         return path;
     }
 

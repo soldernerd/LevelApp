@@ -112,8 +112,13 @@ public sealed partial class MeasurementViewModel : ViewModelBase
             HeightMm    = _definition.Parameters.TryGetValue("heightMm",     out var h) ? Convert.ToDouble(h) : 0.0;
         }
 
-        CurrentStepIndex = 0;
-        Reading          = double.NaN;
+        // Resume where the measurement stopped: at the first step without a reading. A session whose
+        // readings are all in (the calculation never ran) opens on its last step, reading filled in.
+        int firstOpen = _steps.FindIndex(s => !s.Reading.HasValue);
+        CurrentStepIndex = firstOpen >= 0 ? firstOpen : Math.Max(0, _steps.Count - 1);
+        Reading = firstOpen < 0 && _steps.Count > 0 && _steps[^1].Reading is { } last
+            ? Math.Round(last * 1000.0, 2)
+            : double.NaN;
         IsCalculating    = false;
 
         OnPropertyChanged(string.Empty); // refresh all computed properties at once
@@ -245,6 +250,9 @@ public sealed partial class MeasurementViewModel : ViewModelBase
         _mainViewModel.MarkDirty();
         Reading = double.NaN;
 
+        // Every accepted reading goes to disk at once, so an interruption loses nothing.
+        _ = _mainViewModel.AutoSaveAsync();
+
         if (CurrentStepIndex < TotalSteps - 1)
         {
             CurrentStepIndex++;
@@ -276,6 +284,7 @@ public sealed partial class MeasurementViewModel : ViewModelBase
 
             round.CompletedAt   = DateTime.UtcNow;
             _project.ModifiedAt = DateTime.UtcNow;
+            await _mainViewModel.AutoSaveAsync();
 
             IsCalculating = false;
             _navigation.NavigateTo(PageKey.Results, new ResultsArgs(_project, _session));

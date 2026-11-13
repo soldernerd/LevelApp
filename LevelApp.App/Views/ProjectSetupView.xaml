@@ -19,6 +19,19 @@
                            Style="{StaticResource TitleTextBlockStyle}"
                            Margin="0,0,0,32"/>
 
+                <!-- ── Unfinished measurement of the loaded project ─────────── -->
+                <InfoBar Severity="Informational"
+                         IsClosable="False"
+                         Title="Unfinished measurement"
+                         Message="{x:Bind ViewModel.UnfinishedText, Mode=OneWay}"
+                         IsOpen="{x:Bind ViewModel.HasUnfinished, Mode=OneWay}"
+                         Margin="0,0,0,16">
+                    <InfoBar.ActionButton>
+                        <Button Content="Resume measurement"
+                                Command="{x:Bind ViewModel.ResumeMeasurementCommand}"/>
+                    </InfoBar.ActionButton>
+                </InfoBar>
+
                 <!-- ── Project Information ───────────────────────────────── -->
                 <TextBlock x:Uid="ProjectInfo_SectionHeader"
                            Style="{StaticResource SubtitleTextBlockStyle}"

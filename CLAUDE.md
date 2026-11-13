@@ -67,7 +67,7 @@ public static class AppVersion
 {
     public const int Major = 0;
     public const int Minor = 20;
-    public const int Patch = 18;
+    public const int Patch = 19;
 
     public static string Full    => $"{Major}.{Minor}.{Patch}";
     public static string Display => $"v{Full}";

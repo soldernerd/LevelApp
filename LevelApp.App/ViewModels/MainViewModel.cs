@@ -23,6 +23,7 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly IActivityLogger     _logger;
     private readonly IWindowContext      _windowContext;
     private readonly ISettingsService    _settings;
+    private readonly SemaphoreSlim       _autoSaveGate = new(1, 1);
 
     // ── Global project state ──────────────────────────────────────────────────
 
@@ -149,9 +150,13 @@ public sealed partial class MainViewModel : ObservableObject
     /// </summary>
     public async Task OfferReopenLastProjectAsync()
     {
+        if (_windowContext.XamlRoot is null) return;
+
+        // An unsaved project that was interrupted comes first.
+        if (await OfferRecoveryAsync()) return;
+
         string? path = _settings.LastProjectPath;
         if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
-        if (_windowContext.XamlRoot is null) return;
 
         var dialog = new ContentDialog
         {
@@ -178,6 +183,40 @@ public sealed partial class MainViewModel : ObservableObject
         await ActivateOpenedProjectAsync(project, path);
     }
 
+    /// <summary>
+    /// Offers the project that was being measured when the app last ended without saving it.
+    /// Returns true when it was recovered (and opened).
+    /// </summary>
+    private async Task<bool> OfferRecoveryAsync()
+    {
+        var recovered = await _fileService.TryLoadRecoveryAsync();
+        if (recovered is null) return false;
+
+        var dialog = new ContentDialog
+        {
+            Title               = "Recover the unsaved project?",
+            Content             = $"The last session ended before \u201c{recovered.Name}\u201d was saved. " +
+                                  "Its measurements were kept. Open it now and save it with Save As?",
+            PrimaryButtonText   = "Recover",
+            SecondaryButtonText = "Discard it",
+            CloseButtonText     = "Not now",
+            DefaultButton       = ContentDialogButton.Primary,
+            XamlRoot            = _windowContext.XamlRoot
+        };
+
+        var answer = await dialog.ShowAsync();
+        if (answer == ContentDialogResult.Secondary)
+        {
+            _fileService.DeleteRecovery();
+            return false;
+        }
+        if (answer != ContentDialogResult.Primary) return false;
+
+        await ActivateOpenedProjectAsync(recovered, null);
+        MarkDirty(); // it has no file yet
+        return true;
+    }
+
     private async Task ActivateOpenedProjectAsync(Project project, string? path)
     {
         var result = (project, path);
@@ -192,6 +231,13 @@ public sealed partial class MainViewModel : ObservableObject
             await RecalculateMissingResultsAsync(result.project);
         }
         catch { /* proceed without calculated results; user can start a new measurement */ }
+
+        // A measurement that was started and not finished is offered first: its readings are kept.
+        if (FindUnfinished(result.project) is { } unfinished && await AskResumeAsync(unfinished))
+        {
+            _navigation.NavigateTo(PageKey.Measurement, new MeasurementArgs(result.project, unfinished));
+            return;
+        }
 
         var completedSession = result.project.Measurements
             .LastOrDefault(m => m.InitialRound.Result is not null
@@ -231,6 +277,7 @@ public sealed partial class MainViewModel : ObservableObject
         if (path is null) return; // user cancelled
 
         CurrentFilePath = path;
+        _fileService.DeleteRecovery();
         IsDirty         = false;
         OnPropertyChanged(nameof(WindowTitle));
         _logger.Log("File.SaveAs", path);
@@ -274,9 +321,74 @@ public sealed partial class MainViewModel : ObservableObject
         return result switch
         {
             ContentDialogResult.Primary   => await SaveInternalAsync(),
-            ContentDialogResult.Secondary => true,
+            ContentDialogResult.Secondary => DiscardRecovery(),
             _                             => false
         };
+    }
+
+    private bool DiscardRecovery()
+    {
+        // The operator chose to throw the unsaved work away: no recovery offer for it at the next start.
+        if (CurrentFilePath is null) _fileService.DeleteRecovery();
+        return true;
+    }
+
+    // ── Auto-save ─────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Keeps the work on disk while measuring, so an interruption (the app closing, a crash, a
+    /// power cut) loses nothing: a project with a file is saved to it, a project without one to
+    /// the recovery file that is offered at the next start. Called after every accepted reading.
+    /// Best effort: a failure here must never interrupt the measurement.
+    /// </summary>
+    public async Task AutoSaveAsync()
+    {
+        var project = ActiveProject;
+        if (project is null) return;
+
+        await _autoSaveGate.WaitAsync();
+        try
+        {
+            if (CurrentFilePath is { } path)
+            {
+                await _fileService.SaveToPathAsync(project, path);
+                IsDirty = false;
+                OnPropertyChanged(nameof(WindowTitle));
+            }
+            else
+            {
+                await _fileService.SaveRecoveryAsync(project);
+            }
+        }
+        catch
+        {
+            // The explicit Save (and the unsaved-changes prompt on exit) still works.
+        }
+        finally
+        {
+            _autoSaveGate.Release();
+        }
+    }
+
+    /// <summary>True for a project that was started and not finished: it can be resumed.</summary>
+    private static MeasurementSession? FindUnfinished(Project project) =>
+        project.Measurements.LastOrDefault(m => m.IsUnfinished());
+
+    private async Task<bool> AskResumeAsync(MeasurementSession session)
+    {
+        if (_windowContext.XamlRoot is null) return false;
+
+        var dialog = new ContentDialog
+        {
+            Title             = "Resume the unfinished measurement?",
+            Content           = $"\u201c{session.Label}\u201d has {session.ReadingCount()} of " +
+                                $"{session.InitialRound.Steps.Count} readings. Continue it where it stopped?",
+            PrimaryButtonText = "Resume",
+            CloseButtonText   = "Not now",
+            DefaultButton     = ContentDialogButton.Primary,
+            XamlRoot          = _windowContext.XamlRoot
+        };
+        return await dialog.ShowAsync() == ContentDialogResult.Primary;
     }
 
     // ── Post-load calculation ─────────────────────────────────────────────────
@@ -349,6 +461,7 @@ public sealed partial class MainViewModel : ObservableObject
             try
             {
                 await _fileService.SaveToPathAsync(ActiveProject, CurrentFilePath);
+                _fileService.DeleteRecovery();
                 IsDirty = false;
                 OnPropertyChanged(nameof(WindowTitle));
                 _logger.Log("File.Save", CurrentFilePath);
@@ -377,6 +490,7 @@ public sealed partial class MainViewModel : ObservableObject
         if (path is null) return false; // user cancelled
 
         CurrentFilePath = path;
+        _fileService.DeleteRecovery();
         IsDirty         = false;
         OnPropertyChanged(nameof(WindowTitle));
         _logger.Log("File.SaveAs", CurrentFilePath);

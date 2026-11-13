@@ -11,4 +11,16 @@ public class MeasurementSession
     public string Notes { get; set; } = string.Empty;
     public MeasurementRound InitialRound { get; set; } = new();
     public List<CorrectionRound> Corrections { get; set; } = [];
+
+    /// <summary>
+    /// True while the measurement has steps but no result yet: it was started and not finished
+    /// (or all readings are in but the calculation never ran). Such a session can be resumed.
+    /// </summary>
+    public bool IsUnfinished() =>
+        InitialRound.Steps.Count > 0
+        && InitialRound.Result is null
+        && InitialRound.ParallelWaysResult is null;
+
+    /// <summary>How many steps of the initial round already have a reading.</summary>
+    public int ReadingCount() => InitialRound.Steps.Count(s => s.Reading.HasValue);
 }
