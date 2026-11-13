@@ -110,7 +110,8 @@ public sealed partial class ScanForDevicesDialog : ContentDialog
             PluginId:         _plugin.PluginId,
             TransportId:      candidate.TransportId,
             DisplayName:      candidate.DisplayName,
-            TransportAddress: candidate.CandidateId
+            TransportAddress: candidate.CandidateId,
+            TechnicalName:    candidate.DisplayName
         );
 
         _registry.RegisterDevice(device);

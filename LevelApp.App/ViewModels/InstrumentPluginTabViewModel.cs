@@ -60,7 +60,12 @@ public sealed partial class InstrumentPluginTabViewModel : ObservableObject
     /// <summary>Gives a registered device a user-chosen name and refreshes the list.</summary>
     public void RenameDevice(KnownDeviceViewModel vm, string newName)
     {
-        _registry.RegisterDevice(vm.Device with { DisplayName = newName });
+        // The name the device had so far (found-under name or an earlier custom one) stays visible next to the new one.
+        _registry.RegisterDevice(vm.Device with
+        {
+            DisplayName   = newName,
+            TechnicalName = vm.Device.TechnicalName ?? vm.Device.DisplayName
+        });
         RefreshDevices();
     }
 

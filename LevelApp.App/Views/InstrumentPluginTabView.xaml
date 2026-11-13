@@ -29,6 +29,11 @@
                                     <TextBlock Text="{x:Bind DisplayName}"
                                                VerticalAlignment="Center"
                                                Style="{StaticResource BodyTextBlockStyle}"/>
+                                    <TextBlock Text="{x:Bind TechnicalLabel}"
+                                               VerticalAlignment="Center"
+                                               Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                               Style="{StaticResource CaptionTextBlockStyle}"
+                                               Visibility="{x:Bind TechnicalVisibility}"/>
                                     <TextBlock Text="connected"
                                                VerticalAlignment="Center"
                                                Foreground="{ThemeResource SystemFillColorSuccessBrush}"

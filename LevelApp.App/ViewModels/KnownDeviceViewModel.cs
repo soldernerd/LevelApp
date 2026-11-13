@@ -15,6 +15,30 @@ public sealed partial class KnownDeviceViewModel : ObservableObject
     public string DisplayName    => Device.DisplayName;
     public string TransportLabel => Device.TransportId.ToUpperInvariant();
 
+    /// <summary>
+    /// The technical identifier shown next to a custom name: the name the device was found under
+    /// (e.g. <c>Leveltronic_4651</c>), or for a Bluetooth device registered without one its address
+    /// (<c>8C:71:12:93:46:51</c>). Empty when it adds nothing.
+    /// </summary>
+    public string TechnicalLabel
+    {
+        get
+        {
+            string? technical = Device.TechnicalName;
+            if (string.IsNullOrEmpty(technical) && Device.TransportId == "ble")
+                technical = FormatMac(Device.TransportAddress);
+            return string.IsNullOrEmpty(technical) || technical == Device.DisplayName ? "" : technical;
+        }
+    }
+
+    public Visibility TechnicalVisibility =>
+        TechnicalLabel.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+    private static string FormatMac(string address) =>
+        address.Length == 12 && address.All(Uri.IsHexDigit)
+            ? string.Join(":", Enumerable.Range(0, 6).Select(i => address.Substring(i * 2, 2)))
+            : address;
+
     public KnownDeviceViewModel(KnownDevice device) => Device = device;
 
     /// <summary>The plugin has a live connection to offer (shows the Connect button).</summary>
