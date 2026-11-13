@@ -14,10 +14,16 @@
                         HorizontalAlignment="Center"
                         Spacing="0">
 
-                <!-- ── Title ─────────────────────────────────────────────── -->
+                <!-- Title: a new project, or a new measurement of the loaded one -->
                 <TextBlock x:Uid="ProjectSetup_PageTitle"
                            Style="{StaticResource TitleTextBlockStyle}"
-                           Margin="0,0,0,32"/>
+                           Margin="0,0,0,32"
+                           Visibility="{x:Bind ViewModel.NewProjectVisibility, Mode=OneWay}"/>
+                <TextBlock Text="{x:Bind ViewModel.LoadedProjectTitle, Mode=OneWay}"
+                           Style="{StaticResource TitleTextBlockStyle}"
+                           Margin="0,0,0,32"
+                           TextWrapping="Wrap"
+                           Visibility="{x:Bind ViewModel.LoadedProjectVisibility, Mode=OneWay}"/>
 
                 <!-- ── Unfinished measurement of the loaded project ─────────── -->
                 <InfoBar Severity="Informational"
@@ -32,6 +38,8 @@
                     </InfoBar.ActionButton>
                 </InfoBar>
 
+                <!-- Project and object are given once the project exists: only a new project asks for them -->
+                <StackPanel Visibility="{x:Bind ViewModel.NewProjectVisibility, Mode=OneWay}">
                 <!-- ── Project Information ───────────────────────────────── -->
                 <TextBlock x:Uid="ProjectInfo_SectionHeader"
                            Style="{StaticResource SubtitleTextBlockStyle}"
@@ -76,6 +84,7 @@
                              TextWrapping="Wrap"/>
                 </StackPanel>
 
+                </StackPanel>
                 <!-- ── Instrument ───────────────────────────────────────────── -->
                 <TextBlock Text="Instrument"
                            Style="{StaticResource SubtitleTextBlockStyle}"
@@ -95,6 +104,7 @@
                                Visibility="{x:Bind ViewModel.NoHardwareInstrumentsVisibility, Mode=OneWay}"/>
                 </StackPanel>
 
+                <StackPanel Visibility="{x:Bind ViewModel.NewProjectVisibility, Mode=OneWay}">
                 <!-- ── Object ─────────────────────────────────────────────── -->
                 <TextBlock x:Uid="Object_SectionHeader"
                            Style="{StaticResource SubtitleTextBlockStyle}"
@@ -151,6 +161,7 @@
                                    ValueChanged="OnParameterChanged"/>
                     </StackPanel>
                 </Grid>
+                </StackPanel>
 
                 <!-- Parallel Ways: orientation + rails -->
                 <StackPanel Margin="0,0,0,32"

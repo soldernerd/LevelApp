@@ -330,6 +330,18 @@ public sealed partial class ProjectSetupViewModel : ViewModelBase
     // An unfinished measurement of the loaded project, offered for resuming.
     private MeasurementSession? _unfinished;
 
+    // A loaded project already has its name, operator and object: the page then only asks for the
+    // instrument and the strategy of one more measurement.
+    public Microsoft.UI.Xaml.Visibility NewProjectVisibility =>
+        _loadedProject is null ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
+
+    public Microsoft.UI.Xaml.Visibility LoadedProjectVisibility =>
+        _loadedProject is null ? Microsoft.UI.Xaml.Visibility.Collapsed : Microsoft.UI.Xaml.Visibility.Visible;
+
+    public string LoadedProjectTitle => _loadedProject is null
+        ? string.Empty
+        : $"{_loadedProject.Name}: new measurement";
+
     public bool HasUnfinished => _unfinished is not null;
 
     public string UnfinishedText => _unfinished is null
@@ -350,6 +362,9 @@ public sealed partial class ProjectSetupViewModel : ViewModelBase
         _unfinished    = project.Measurements.LastOrDefault(m => m.IsUnfinished());
         OnPropertyChanged(nameof(HasUnfinished));
         OnPropertyChanged(nameof(UnfinishedText));
+        OnPropertyChanged(nameof(NewProjectVisibility));
+        OnPropertyChanged(nameof(LoadedProjectVisibility));
+        OnPropertyChanged(nameof(LoadedProjectTitle));
         ProjectName    = project.Name;
         OperatorName   = project.Operator;
         Notes          = project.Notes;
