@@ -295,11 +295,81 @@ public sealed partial class ResultsViewModel : ViewModelBase
 
         ProjectMeasurementCountText = p.Measurements.Count == 1 ? "1 measurement" : $"{p.Measurements.Count} measurements";
         ProjectMeasurements = p.Measurements.Select(m => new ProjectMeasurementRow(
-            m.Label,
+            m,
             DescribeStrategy(m),
             m.TakenAt == default ? "\u2014" : FormatTime(m.TakenAt),
             FirstLine(DescribeInstrument(m)),
-            DescribeOutcome(m))).ToList();
+            DescribeOutcome(m),
+            OnMeasurementRenamed)).ToList();
+    }
+
+    // ── Editing the project from the project tab ──────────────────────────────
+
+    /// <summary>The project name, editable. An empty name is not accepted (the old one stays).</summary>
+    public string EditName
+    {
+        get => _project?.Name ?? string.Empty;
+        set
+        {
+            string name = value.Trim();
+            if (_project is null || name.Length == 0 || name == _project.Name)
+            {
+                OnPropertyChanged();
+                return;
+            }
+            _project.Name = name;
+            ProjectName = name;
+            OnPropertyChanged(nameof(ProjectName));
+            PersistEdit();
+        }
+    }
+
+    public string EditOperator
+    {
+        get => _project?.Operator ?? string.Empty;
+        set
+        {
+            if (_project is null || value == _project.Operator) return;
+            _project.Operator = value.Trim();
+            ProjectOperatorText = _project.Operator.Length == 0 ? "\u2014" : _project.Operator;
+            PersistEdit();
+        }
+    }
+
+    public string EditNotes
+    {
+        get => _project?.Notes ?? string.Empty;
+        set
+        {
+            if (_project is null || value == _project.Notes) return;
+            _project.Notes = value;
+            PersistEdit();
+        }
+    }
+
+    /// <summary>A measurement was renamed on the project tab: refresh every place that shows its name.</summary>
+    private void OnMeasurementRenamed(MeasurementSession session)
+    {
+        PersistEdit();
+
+        // The pull-down texts contain the names: rebuild them, keeping the shown measurement selected.
+        BuildSessionItems();
+        OnPropertyChanged(nameof(SessionItems));
+        OnPropertyChanged(nameof(SelectedSessionItem));
+
+        if (ReferenceEquals(session, _session))
+        {
+            MeasurementLabelText = session.Label;
+            OnPropertyChanged(nameof(MeasurementLabelText));
+        }
+    }
+
+    /// <summary>Marks the project changed and writes it to disk at once, like every accepted reading.</summary>
+    private void PersistEdit()
+    {
+        _project.ModifiedAt = DateTime.UtcNow;
+        _mainViewModel.MarkDirty();
+        _ = _mainViewModel.AutoSaveAsync();
     }
 
     private string DescribeStrategy(MeasurementSession m)

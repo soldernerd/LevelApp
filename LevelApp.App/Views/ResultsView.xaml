@@ -136,9 +136,9 @@
                                             <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
                                         <TextBlock Grid.Row="0" Text="Name" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{x:Bind ViewModel.ProjectName, Mode=OneWay}" TextWrapping="Wrap"/>
+                                        <TextBox Grid.Row="0" Grid.Column="1" Text="{x:Bind ViewModel.EditName, Mode=TwoWay}" MaxWidth="420" HorizontalAlignment="Left"/>
                                         <TextBlock Grid.Row="1" Text="Operator" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{x:Bind ViewModel.ProjectOperatorText, Mode=OneWay}" TextWrapping="Wrap"/>
+                                        <TextBox Grid.Row="1" Grid.Column="1" Text="{x:Bind ViewModel.EditOperator, Mode=TwoWay}" MaxWidth="420" HorizontalAlignment="Left"/>
                                         <TextBlock Grid.Row="2" Text="Created" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                         <TextBlock Grid.Row="2" Grid.Column="1" Text="{x:Bind ViewModel.ProjectCreatedText, Mode=OneWay}"/>
                                         <TextBlock Grid.Row="3" Text="Last changed" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
@@ -147,7 +147,9 @@
                                         <TextBlock Grid.Row="4" Grid.Column="1" Text="{x:Bind ViewModel.ProjectFileText, Mode=OneWay}"
                                                    TextWrapping="Wrap" IsTextSelectionEnabled="True"/>
                                         <TextBlock Grid.Row="5" Text="Notes" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                        <TextBlock Grid.Row="5" Grid.Column="1" Text="{x:Bind ViewModel.ProjectNotesText, Mode=OneWay}" TextWrapping="Wrap"/>
+                                        <TextBox Grid.Row="5" Grid.Column="1" Text="{x:Bind ViewModel.EditNotes, Mode=TwoWay}"
+                                                 AcceptsReturn="True" TextWrapping="Wrap" MinHeight="72" MaxWidth="600"
+                                                 HorizontalAlignment="Left" PlaceholderText="Notes about this project"/>
                                     </Grid>
                                 </StackPanel>
                             </Border>
@@ -187,7 +189,7 @@
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate x:DataType="vm:ProjectMeasurementRow">
                                                 <Grid ColumnDefinitions="140,200,140,*,150" ColumnSpacing="12" Padding="0,3">
-                                                    <TextBlock Grid.Column="0" Text="{x:Bind Label}" TextWrapping="Wrap"/>
+                                                    <TextBox Grid.Column="0" Text="{x:Bind Label, Mode=TwoWay}" VerticalAlignment="Center"/>
                                                     <TextBlock Grid.Column="1" Text="{x:Bind Strategy}" TextWrapping="Wrap"/>
                                                     <TextBlock Grid.Column="2" Text="{x:Bind Taken}"/>
                                                     <TextBlock Grid.Column="3" Text="{x:Bind Instrument}" TextWrapping="Wrap"/>
