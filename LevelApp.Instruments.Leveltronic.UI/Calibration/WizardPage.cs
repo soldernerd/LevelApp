@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -19,6 +20,22 @@ public sealed record ResultTable(string Title, IReadOnlyList<ResultRow> Rows);
 
 /// <summary>One sensor's computed result with a plain-language verdict.</summary>
 public sealed record VerdictCard(string Sensor, VerdictSeverity Severity, string Headline, string Detail, string Verdict);
+
+/// <summary>What the instrument diagram shows (as the phone app's <c>DiagramPose</c>).</summary>
+public enum DiagramPose
+{
+    /// <summary>On a level plate, the mark facing you.</summary>
+    Level,
+
+    /// <summary>The same, turned by 180° (the mark now faces away).</summary>
+    Rotated,
+
+    /// <summary>The plate raised at the back end (the end without the red mark) by a shim: the front is low, reads negative.</summary>
+    Shim,
+
+    /// <summary>The plate raised at the front end (the red mark): reads positive.</summary>
+    ShimFront,
+}
 
 public sealed record WizardAction(string Label, ICommand Command, bool Primary = false, bool Enabled = true);
 
@@ -48,7 +65,36 @@ public sealed record WizardPage(
     string? Footer = null,
     string? Error = null,
     bool ShowServiceCard = false,
-    IReadOnlyList<WizardAction>? Actions = null);
+    IReadOnlyList<WizardAction>? Actions = null,
+    DiagramPose? Pose = null,
+    string? PoseLabel = null)
+{
+    private static readonly Regex StepPattern = new(@"^Step (\d+) of (\d+) \u2014 (.*)$", RegexOptions.Compiled);
+
+    private Match? StepMatch => StepText is null ? null : StepPattern.Match(StepText);
+
+    /// <summary>"Step 2 of 3 — Title" split up for the step header (the phone app's <c>StepHeader</c>).</summary>
+    public bool HasStep => StepMatch is { Success: true };
+    public int StepNumber => StepMatch is { Success: true } m ? int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture) : 0;
+    public int StepTotal  => StepMatch is { Success: true } m ? int.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture) : 0;
+    public string StepTitle => StepMatch is { Success: true } m ? m.Groups[3].Value : StepText ?? string.Empty;
+
+    /// <summary>"STEP 2 OF 3".</summary>
+    public string StepCaption => HasStep ? $"STEP {StepNumber} OF {StepTotal}" : string.Empty;
+
+    /// <summary>Progress line of the step header, 0..1.</summary>
+    public double StepFraction => HasStep && StepTotal > 0 ? (double)StepNumber / StepTotal : 0;
+
+    /// <summary>The instructions, numbered "1.  ..." (a bulleted list in the phone app).</summary>
+    public IReadOnlyList<string> NumberedInstructions =>
+        Instructions is null
+            ? []
+            : [.. Instructions.Select((text, i) => $"{i + 1}.  {text}")];
+
+    /// <summary>Percentage text inside the progress ring.</summary>
+    public string ProgressPercentText =>
+        Progress is { Value: { } v } ? $"{Math.Round(Math.Clamp(v, 0, 1) * 100):0}%" : string.Empty;
+}
 
 /// <summary>Display formatting shared by the wizards. Signs use a real minus (U+2212).</summary>
 public static class Fmt

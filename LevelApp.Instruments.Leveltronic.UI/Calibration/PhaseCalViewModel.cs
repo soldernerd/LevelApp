@@ -46,6 +46,7 @@ public sealed class PhaseCalViewModel : WizardViewModelBase
         {
             case PhaseStage.Select:
                 return new WizardPage(Title,
+                    Pose: DiagramPose.ShimFront,
                     Intro: "Each sensor's signal is rotated by a calibrated phase so that a tilt falls entirely in the " +
                            "in-phase part. To find it the app records the signal with a clear tilt: a positive tilt points " +
                            "along the phase, a negative one the opposite way. The size of the tilt does not matter — only " +
@@ -65,6 +66,7 @@ public sealed class PhaseCalViewModel : WizardViewModelBase
             {
                 bool positive = s.Tilt == PhaseTilt.Positive;
                 return new WizardPage(Title, StepText: StepText(s),
+                    Pose: positive ? DiagramPose.ShimFront : DiagramPose.Shim,
                     Instructions:
                     [
                         positive
@@ -83,6 +85,7 @@ public sealed class PhaseCalViewModel : WizardViewModelBase
 
             case PhaseStage.Capturing:
                 return new WizardPage(Title, StepText: StepText(s),
+                    Pose: s.Tilt == PhaseTilt.Positive ? DiagramPose.ShimFront : DiagramPose.Shim,
                     Progress: new WizardProgress(s.CaptureProgress, "Capturing… hold still", $"{s.Samples} batches"),
                     Actions: [Act("Cancel", () => _w.BackToStart())]);
 

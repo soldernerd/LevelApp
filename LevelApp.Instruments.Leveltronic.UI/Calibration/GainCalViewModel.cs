@@ -59,6 +59,7 @@ public sealed class GainCalViewModel : WizardViewModelBase
                         .Select(i => $"S{i + 1}: {tilts[i].ToString("0.0000", CultureInfo.InvariantCulture)} mm/m"))
                     : "Enter shim height and edge length for each sensor.";
                 return new WizardPage(Title,
+                    Pose: DiagramPose.Shim,
                     Intro: "Sets the sensitivity k: how many mm/m a given signal means. It is found by measuring a tilt step " +
                            "you know exactly — a shim of known height under one end of an edge of known length.",
                     ShowSensorSelector: true,
@@ -72,7 +73,7 @@ public sealed class GainCalViewModel : WizardViewModelBase
             }
 
             case GainStage.Baseline:
-                return new WizardPage(Title, StepText: "Step 1 of 3 — Baseline",
+                return new WizardPage(Title, StepText: "Step 1 of 3 — Baseline", Pose: DiagramPose.Level,
                     Intro: s.Message,
                     Instructions:
                     [
@@ -91,13 +92,15 @@ public sealed class GainCalViewModel : WizardViewModelBase
                 bool baseline = s.Stage == GainStage.MeasuringBaseline;
                 return new WizardPage(Title,
                     StepText: $"Step {(baseline ? 1 : 2)} of 3 — " + (baseline ? "Baseline" : "With the shim"),
+                    Pose: baseline ? DiagramPose.Level : DiagramPose.Shim,
+                    PoseLabel: baseline ? null : ShimLabel(s),
                     Progress: new WizardProgress(Math.Clamp(s.Progress, 0.0, 1.0), "Measuring… hold still",
                         Warning: s.Disturbed ? "The table is not quiet yet — wait for it to calm down." : null),
                     Actions: [Act("Cancel", () => _w.BackToStart())]);
             }
 
             case GainStage.Shim:
-                return new WizardPage(Title, StepText: "Step 2 of 3 — With the shim",
+                return new WizardPage(Title, StepText: "Step 2 of 3 — With the shim", Pose: DiagramPose.Shim, PoseLabel: ShimLabel(s),
                     Intro: s.Message,
                     Instructions:
                     [
@@ -200,6 +203,10 @@ public sealed class GainCalViewModel : WizardViewModelBase
             (e is null ? "" : $"  (known {e.TrueTilt.ToString("0.0000", CultureInfo.InvariantCulture)})   ·   k {Fmt.Signed(e.ChangePercent, 1, "%")}"),
             verdict);
     }
+
+    /// <summary>"0.100 mm": the shim height drawn under the shim in the diagram.</summary>
+    private static string ShimLabel(GainCalState s) =>
+        $"{Fmt.Num(s.ShimHeights[SensorMask.Has(s.Mask, 0) ? 0 : 1])} mm";
 
     public override void Dispose()
     {

@@ -30,6 +30,7 @@ public sealed class FlipCalViewModel : WizardViewModelBase
         {
             case FlipStage.Select:
                 return new WizardPage(Title,
+                    Pose: DiagramPose.Level,
                     Intro: "A real tilt reverses its sign when the instrument is turned 180°; the instrument's own zero " +
                            "error does not. Measuring both ways and averaging gives the zero error, which is then stored.",
                     Instructions:
@@ -44,11 +45,11 @@ public sealed class FlipCalViewModel : WizardViewModelBase
                     Actions: [Act("Start step 1", () => _w.StartAsync(), primary: true, enabled: service)]);
 
             case FlipStage.Measuring1:
-                return new WizardPage(Title, StepText: "Step 1 of 3 — Measure in the starting position",
+                return new WizardPage(Title, StepText: "Step 1 of 3 — Measure in the starting position", Pose: DiagramPose.Level,
                     Progress: Hold(s), Actions: [Act("Cancel", () => _w.CancelAsync())]);
 
             case FlipStage.Turn:
-                return new WizardPage(Title, StepText: "Step 2 of 3 — Turn the instrument 180°",
+                return new WizardPage(Title, StepText: "Step 2 of 3 — Turn the instrument 180°", Pose: DiagramPose.Rotated,
                     Instructions:
                     [
                         "Turn the instrument 180° in place — same spot, same surface. The mark now faces away from you.",
@@ -62,7 +63,7 @@ public sealed class FlipCalViewModel : WizardViewModelBase
                     ]);
 
             case FlipStage.Measuring2:
-                return new WizardPage(Title, StepText: "Step 3 of 3 — Measure in the turned position",
+                return new WizardPage(Title, StepText: "Step 3 of 3 — Measure in the turned position", Pose: DiagramPose.Rotated,
                     Progress: Hold(s), Actions: [Act("Cancel", () => _w.CancelAsync())]);
 
             case FlipStage.Result:
