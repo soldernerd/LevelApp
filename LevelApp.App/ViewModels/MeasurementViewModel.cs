@@ -9,6 +9,9 @@ using LevelApp.Core.Interfaces;
 using LevelApp.Core.Models;
 using LevelApp.Instruments.Manual;
 using Microsoft.UI.Xaml;
+using ContentDialog = Microsoft.UI.Xaml.Controls.ContentDialog;
+using ContentDialogButton = Microsoft.UI.Xaml.Controls.ContentDialogButton;
+using ContentDialogResult = Microsoft.UI.Xaml.Controls.ContentDialogResult;
 using InfoBarSeverity = Microsoft.UI.Xaml.Controls.InfoBarSeverity;
 
 namespace LevelApp.App.ViewModels;
@@ -28,12 +31,15 @@ public sealed partial class MeasurementViewModel : ViewModelBase
     private MeasurementSession    _session    = null!;
     private List<MeasurementStep> _steps      = [];
     private ObjectDefinition      _definition = null!;
+    private readonly IWindowContext _windowContext;
 
     public MeasurementViewModel(INavigationService navigation, MainViewModel mainViewModel,
                                 ParallelWaysCalculator pwCalculator, ILocalisationService loc,
                                 IInstrumentChoiceCatalog catalog,
-                                InstrumentReadingViewModel instrumentReading)
+                                InstrumentReadingViewModel instrumentReading,
+                                IWindowContext windowContext)
     {
+        _windowContext = windowContext;
         InstrumentReading = instrumentReading;
         InstrumentReading.ReadingTaken      += OnInstrumentReadingTaken;
         InstrumentReading.ReadingAccepted   += OnInstrumentReadingAccepted;
@@ -289,6 +295,54 @@ public sealed partial class MeasurementViewModel : ViewModelBase
             IsCalculating = false;
             _navigation.NavigateTo(PageKey.Results, new ResultsArgs(_project, _session));
         }
+    }
+
+    /// <summary>
+    /// Leaves this measurement: discard it, keep it unfinished to resume later (its readings are
+    /// already on disk), or carry on. Works at any step.
+    /// </summary>
+    [RelayCommand]
+    private async Task CancelMeasurementAsync()
+    {
+        if (IsCalculating || _windowContext.XamlRoot is null) return;
+
+        int taken = _session.ReadingCount();
+        var dialog = new ContentDialog
+        {
+            Title = "Cancel this measurement?",
+            Content = taken == 0
+                ? "No readings have been taken yet."
+                : $"{taken} of {TotalSteps} readings have been taken. They are kept unless you discard the measurement.",
+            PrimaryButtonText   = "Discard it",
+            SecondaryButtonText = "Keep it to resume later",
+            CloseButtonText     = "Continue measuring",
+            DefaultButton       = ContentDialogButton.Close,
+            XamlRoot            = _windowContext.XamlRoot
+        };
+
+        switch (await dialog.ShowAsync())
+        {
+            case ContentDialogResult.Primary:
+                _project.Measurements.Remove(_session);
+                _mainViewModel.MarkDirty();
+                await _mainViewModel.AutoSaveAsync();
+                LeaveToProject();
+                break;
+            case ContentDialogResult.Secondary:
+                await _mainViewModel.AutoSaveAsync();
+                LeaveToProject();
+                break;
+        }
+    }
+
+    /// <summary>Back to the project: the results of its last finished measurement, else the setup page.</summary>
+    private void LeaveToProject()
+    {
+        var last = _project.Measurements.LastOrDefault(m => !m.IsUnfinished());
+        if (last is not null)
+            _navigation.NavigateTo(PageKey.Results, new ResultsArgs(_project, last));
+        else
+            _navigation.NavigateTo(PageKey.ProjectSetup, _project);
     }
 
     /// <summary>

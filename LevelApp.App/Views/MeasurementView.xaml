@@ -16,11 +16,14 @@
                        Style="{StaticResource SubtitleTextBlockStyle}"
                        VerticalAlignment="Center"/>
 
-            <ProgressBar Grid.Column="2"
-                         Width="240"
-                         Minimum="0" Maximum="100"
-                         Value="{x:Bind ViewModel.ProgressPercent, Mode=OneWay}"
-                         VerticalAlignment="Center"/>
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                <ProgressBar Width="240"
+                             Minimum="0" Maximum="100"
+                             Value="{x:Bind ViewModel.ProgressPercent, Mode=OneWay}"
+                             VerticalAlignment="Center"/>
+                <Button Content="Cancel measurement"
+                        Command="{x:Bind ViewModel.CancelMeasurementCommand}"/>
+            </StackPanel>
         </Grid>
 
         <!-- ── Connection status InfoBar ─────────────────────────────────── -->

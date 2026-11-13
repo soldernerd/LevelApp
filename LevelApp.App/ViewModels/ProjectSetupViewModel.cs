@@ -349,6 +349,20 @@ public sealed partial class ProjectSetupViewModel : ViewModelBase
         : $"\u201c{_unfinished.Label}\u201d has {_unfinished.ReadingCount()} of " +
           $"{_unfinished.InitialRound.Steps.Count} readings.";
 
+    // Cancel is offered when the page was opened for one more measurement of an existing project:
+    // it returns to the results of the project's last finished measurement.
+    private MeasurementSession? LastFinished => _loadedProject?.Measurements.LastOrDefault(m => !m.IsUnfinished());
+
+    public Microsoft.UI.Xaml.Visibility CancelVisibility =>
+        LastFinished is null ? Microsoft.UI.Xaml.Visibility.Collapsed : Microsoft.UI.Xaml.Visibility.Visible;
+
+    [RelayCommand]
+    private void CancelSetup()
+    {
+        if (_loadedProject is { } project && LastFinished is { } session)
+            _navigation.NavigateTo(PageKey.Results, new ResultsArgs(project, session));
+    }
+
     [RelayCommand]
     private void ResumeMeasurement()
     {
@@ -362,6 +376,7 @@ public sealed partial class ProjectSetupViewModel : ViewModelBase
         _unfinished    = project.Measurements.LastOrDefault(m => m.IsUnfinished());
         OnPropertyChanged(nameof(HasUnfinished));
         OnPropertyChanged(nameof(UnfinishedText));
+        OnPropertyChanged(nameof(CancelVisibility));
         OnPropertyChanged(nameof(NewProjectVisibility));
         OnPropertyChanged(nameof(LoadedProjectVisibility));
         OnPropertyChanged(nameof(LoadedProjectTitle));

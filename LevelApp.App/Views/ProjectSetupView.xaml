@@ -572,11 +572,16 @@
                 </StackPanel>
 
                 <!-- ── Action ─────────────────────────────────────────────── -->
-                <Button x:Uid="StartMeasurement_Button"
-                        Command="{x:Bind ViewModel.StartMeasurementCommand}"
-                        Style="{StaticResource AccentButtonStyle}"
-                        HorizontalAlignment="Right"
-                        Padding="24,8"/>
+                <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
+                    <Button Content="Cancel"
+                            Command="{x:Bind ViewModel.CancelSetupCommand}"
+                            Visibility="{x:Bind ViewModel.CancelVisibility, Mode=OneWay}"
+                            Padding="24,8"/>
+                    <Button x:Uid="StartMeasurement_Button"
+                            Command="{x:Bind ViewModel.StartMeasurementCommand}"
+                            Style="{StaticResource AccentButtonStyle}"
+                            Padding="24,8"/>
+                </StackPanel>
 
             </StackPanel>
         </ScrollViewer>
