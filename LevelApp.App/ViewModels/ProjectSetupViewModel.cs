@@ -354,8 +354,10 @@ public sealed partial class ProjectSetupViewModel : ViewModelBase
         OperatorName   = project.Operator;
         Notes          = project.Notes;
 
-        var def = project.ObjectDefinition;
-        var p   = def.Parameters;
+        // The form starts from the project's latest measurement (its strategy and parameters).
+        var latest = project.Measurements.LastOrDefault();
+        var def    = latest is null ? project.ObjectDefinition : project.DefinitionFor(latest);
+        var p      = def.Parameters;
 
         if (def.GeometryModuleId == "ParallelWays")
         {
@@ -496,6 +498,8 @@ public sealed partial class ProjectSetupViewModel : ViewModelBase
                 Operator     = OperatorName,
                 InstrumentId = ActiveInstrumentId,
                 StrategyId   = strategy.StrategyId,
+                // Strategy, grid size ... of this measurement; the project's own definition stays as it is.
+                StrategyParameters = new Dictionary<string, object>(definition.Parameters),
                 InitialRound = new MeasurementRound { Steps = steps }
             };
             project.Measurements.Add(session);

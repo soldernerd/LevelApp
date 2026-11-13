@@ -10,12 +10,6 @@ public sealed partial class NewMeasurementDialog : ContentDialog
     public string OperatorName => OperatorBox.Text;
     public string Notes        => NotesBox.Text;
 
-    public string StrategyId => StrategyCombo.SelectedIndex switch
-    {
-        1    => "UnionJack",
-        _    => "FullGrid"
-    };
-
     private readonly IReadOnlyList<InstrumentChoice> _choices;
 
     /// <summary>The instrument picked in the dialog (null only if none is offered).</summary>
@@ -24,7 +18,7 @@ public sealed partial class NewMeasurementDialog : ContentDialog
             ? _choices[InstrumentCombo.SelectedIndex]
             : null;
 
-    public NewMeasurementDialog(ObjectDefinition definition, string defaultOperator,
+    public NewMeasurementDialog(string summary, string defaultOperator,
                                 IReadOnlyList<InstrumentChoice> instruments, int defaultInstrumentIndex)
     {
         InitializeComponent();
@@ -39,7 +33,7 @@ public sealed partial class NewMeasurementDialog : ContentDialog
             ? Microsoft.UI.Xaml.Visibility.Collapsed
             : Microsoft.UI.Xaml.Visibility.Visible;
 
-        GeometrySummaryText.Text = BuildGeometrySummary(definition);
+        GeometrySummaryText.Text = summary;
         OperatorBox.Text         = defaultOperator;
     }
 

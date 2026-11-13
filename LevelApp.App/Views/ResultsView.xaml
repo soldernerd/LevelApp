@@ -8,7 +8,7 @@
 
         <!-- ── Header ─────────────────────────────────────────────────────── -->
         <Grid Grid.Row="0" Padding="24,16,24,12"
-              ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+              ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
 
             <TextBlock Grid.Column="0"
                        Text="{x:Bind ViewModel.ProjectName, Mode=OneWay}"
@@ -31,9 +31,16 @@
                     VerticalAlignment="Center"
                     Margin="0,0,8,0"/>
 
+            <!-- Measure again: same strategy as the last measurement -->
             <Button Grid.Column="3"
                     x:Uid="Results_NewMeasurement"
                     Click="OnNewMeasurementClicked"
+                    VerticalAlignment="Center"/>
+
+            <!-- Another strategy: back to the setup page of this project -->
+            <Button Grid.Column="4"
+                    Content="With a different strategy&#x2026;"
+                    Command="{x:Bind ViewModel.StartDifferentStrategyCommand}"
                     VerticalAlignment="Center"/>
         </Grid>
 

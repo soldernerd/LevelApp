@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace LevelApp.Core.Models;
 
 public class MeasurementSession
@@ -11,6 +13,15 @@ public class MeasurementSession
     public string Notes { get; set; } = string.Empty;
     public MeasurementRound InitialRound { get; set; } = new();
     public List<CorrectionRound> Corrections { get; set; } = [];
+
+    /// <summary>
+    /// The geometry parameters this measurement was taken with (grid columns / rows, Union Jack
+    /// segments / rings, Parallel Ways rails ...), laid over the project's object definition. A project
+    /// can hold measurements with different strategies and sizes, so each measurement that differs
+    /// from the project's own definition carries its parameters here. Null = the project's definition.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Dictionary<string, object>? StrategyParameters { get; set; }
 
     /// <summary>
     /// True while the measurement has steps but no result yet: it was started and not finished

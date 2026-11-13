@@ -81,7 +81,7 @@
   <!-- ResultsView -->
   <data name="Results_PageTitle.Text" xml:space="preserve"><value>Ergebnisse</value></data>
   <data name="Results_SaveProject.Content" xml:space="preserve"><value>Projekt speichern</value></data>
-  <data name="Results_NewMeasurement.Content" xml:space="preserve"><value>Neue Messung</value></data>
+  <data name="Results_NewMeasurement.Content" xml:space="preserve"><value>Erneut messen</value></data>
   <data name="Results_StartCorrection.Content" xml:space="preserve"><value>Korrektursitzung starten</value></data>
   <data name="Results_NoFlaggedSteps.Text" xml:space="preserve"><value>Keine markierten Schritte</value></data>
   <data name="Results_FlaggedSteps_Header.Text" xml:space="preserve"><value>Markierte Schritte</value></data>
@@ -162,7 +162,7 @@
   <data name="RecalcDlg.CloseButtonText" xml:space="preserve"><value>Abbrechen</value></data>
 
   <!-- NewMeasurementDialog ContentDialog properties (x:Uid="NewMeasDlg") -->
-  <data name="NewMeasDlg.Title" xml:space="preserve"><value>Neue Messung</value></data>
+  <data name="NewMeasDlg.Title" xml:space="preserve"><value>Erneut messen</value></data>
   <data name="NewMeasDlg.PrimaryButtonText" xml:space="preserve"><value>Starten</value></data>
   <data name="NewMeasDlg.CloseButtonText" xml:space="preserve"><value>Abbrechen</value></data>
 
@@ -174,7 +174,7 @@
   <data name="About_CloseButton.Content" xml:space="preserve"><value>Schließen</value></data>
 
   <!-- NewMeasurementDialog -->
-  <data name="NewMeasurement_Title.Text" xml:space="preserve"><value>Neue Messung</value></data>
+  <data name="NewMeasurement_Title.Text" xml:space="preserve"><value>Erneut messen</value></data>
   <data name="NewMeasurement_Label_Label.Text" xml:space="preserve"><value>Bezeichnung</value></data>
   <data name="NewMeasurement_Operator_Label.Text" xml:space="preserve"><value>Bediener</value></data>
   <data name="NewMeasurement_Notes_Label.Text" xml:space="preserve"><value>Anmerkungen</value></data>

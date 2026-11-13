@@ -123,11 +123,9 @@ public sealed partial class ResultsView : Page
 
     private async void OnNewMeasurementClicked(object sender, RoutedEventArgs e)
     {
-        if (ViewModel.ActiveObjectDefinition is null) return;
-
         var choices = ViewModel.InstrumentChoices;
         var dialog = new NewMeasurementDialog(
-            ViewModel.ActiveObjectDefinition,
+            ViewModel.NewMeasurementSummary,
             ViewModel.ActiveOperator,
             choices,
             ViewModel.GetDefaultInstrumentIndex(choices))
@@ -137,7 +135,7 @@ public sealed partial class ResultsView : Page
 
         var result = await dialog.ShowAsync();
         if (result == ContentDialogResult.Primary)
-            ViewModel.StartNewMeasurement(dialog.OperatorName, dialog.Notes, dialog.StrategyId,
+            ViewModel.StartNewMeasurement(dialog.OperatorName, dialog.Notes,
                                           dialog.SelectedInstrument, dialog.Label);
     }
 }

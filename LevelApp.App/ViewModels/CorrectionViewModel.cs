@@ -57,7 +57,7 @@ public sealed partial class CorrectionViewModel : ViewModelBase
     {
         _project    = args.Project;
         _session    = args.Session;
-        _definition = _project.ObjectDefinition;
+        _definition = _project.DefinitionFor(_session);
 
         // Re-measure with the same instrument as the session (live reading, take reading, zero).
         _ = InstrumentReading.AttachAsync(_catalog.ResolveProvider(_session.InstrumentId, out _));

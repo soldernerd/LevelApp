@@ -212,9 +212,10 @@ Each element of `measurements` represents one complete measurement session
 | `label`        | string          | **Yes**  | Human-readable label, e.g. `"Measurement 2"`. |
 | `takenAt`      | string (ISO 8601) | **Yes** | UTC timestamp when the session was started. |
 | `operator`     | string          | **Yes**  | Name of the operator who took this session. May be empty string `""`. |
-| `instrumentId` | string          | **Yes**  | Identifier of the instrument used. The app currently always writes `"manual-entry"`. |
+| `instrumentId` | string          | **Yes**  | Identifier of the instrument plugin used: `"manual-entry"` or `"leveltronic"`. |
 | `strategyId`   | string          | **Yes**  | Identifies the measurement strategy. Must match a registered strategy: `"FullGrid"`, `"UnionJack"`, or `"ParallelWays"`. Must be consistent with `objectDefinition.geometryModuleId` and `parameters` (see §4). |
 | `notes`        | string          | **Yes**  | Per-session notes. May be empty string `""`. |
+| `strategyParameters` | object | No | Since v0.20.20. The geometry parameters this measurement was taken with (the same keys as `objectDefinition.parameters`: `widthMm`, `heightMm`, `columnsCount`, `rowsCount`, `segments`, `rings`, ...), laid over the project's `objectDefinition.parameters`. Present when the measurement was added with another strategy or size than the project's own definition, so one project can hold measurements with different strategies. Omitted (null) = use the project's definition. |
 | `initialRound` | object          | **Yes**  | The first and only full-pass measurement round. See §6. |
 | `corrections`  | array           | **Yes**  | Zero or more `CorrectionRound` objects applied after the initial round. See §9. Empty array `[]` when no corrections exist. |
 

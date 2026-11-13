@@ -411,7 +411,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         foreach (var session in project.Measurements)
         {
-            try { await RecalculateSessionAsync(session, project.ObjectDefinition); }
+            try { await RecalculateSessionAsync(session, project.DefinitionFor(session)); }
             catch { /* a bad session must not block the rest */ }
         }
     }

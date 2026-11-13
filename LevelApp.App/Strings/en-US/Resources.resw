@@ -81,7 +81,7 @@
   <!-- ResultsView -->
   <data name="Results_PageTitle.Text" xml:space="preserve"><value>Results</value></data>
   <data name="Results_SaveProject.Content" xml:space="preserve"><value>Save Project</value></data>
-  <data name="Results_NewMeasurement.Content" xml:space="preserve"><value>New Measurement</value></data>
+  <data name="Results_NewMeasurement.Content" xml:space="preserve"><value>Measure again</value></data>
   <data name="Results_StartCorrection.Content" xml:space="preserve"><value>Start Correction Session</value></data>
   <data name="Results_NoFlaggedSteps.Text" xml:space="preserve"><value>No flagged steps</value></data>
   <data name="Results_FlaggedSteps_Header.Text" xml:space="preserve"><value>Flagged Steps</value></data>

@@ -84,7 +84,7 @@ public sealed partial class MeasurementViewModel : ViewModelBase
         _project    = args.Project;
         _session    = args.Session;
         _steps      = _session.InitialRound.Steps;
-        _definition = _project.ObjectDefinition;
+        _definition = _project.DefinitionFor(_session);
 
         // Resolve the provider for the session's instrument. A hardware instrument that is
         // not registered falls back to manual entry with a visible warning.

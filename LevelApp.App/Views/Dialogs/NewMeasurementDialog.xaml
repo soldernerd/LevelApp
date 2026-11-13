@@ -12,7 +12,7 @@
                 CornerRadius="8"
                 Padding="12">
             <StackPanel Spacing="4">
-                <TextBlock Text="Object (read-only)"
+                <TextBlock Text="Same object and strategy as the last measurement"
                            Style="{StaticResource CaptionTextBlockStyle}"
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                 <TextBlock x:Name="GeometrySummaryText"
@@ -62,14 +62,6 @@
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
         </StackPanel>
 
-        <!-- Strategy -->
-        <ComboBox x:Name="StrategyCombo"
-                  Header="Strategy"
-                  SelectedIndex="0"
-                  HorizontalAlignment="Stretch">
-            <ComboBoxItem x:Uid="Strategy_FullGrid"/>
-            <ComboBoxItem x:Uid="Strategy_UnionJack"/>
-        </ComboBox>
 
     </StackPanel>
 

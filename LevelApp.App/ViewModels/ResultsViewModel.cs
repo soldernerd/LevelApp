@@ -104,13 +104,13 @@ public sealed partial class ResultsViewModel : ViewModelBase
         _session = args.Session;
         BuildSessionItems();
 
-        if (_project.ObjectDefinition.GeometryModuleId == "ParallelWays")
+        if (CurrentDefinition.GeometryModuleId == "ParallelWays")
         {
             var pwResult = _session.InitialRound.ParallelWaysResult
                 ?? throw new InvalidOperationException("Session has no Parallel Ways result to display.");
 
-            var pwp   = ParallelWaysParameters.From(_project.ObjectDefinition.Parameters);
-            var strat = ParallelWaysStrategyParameters.From(_project.ObjectDefinition.Parameters);
+            var pwp   = ParallelWaysParameters.From(CurrentDefinition.Parameters);
+            var strat = ParallelWaysStrategyParameters.From(CurrentDefinition.Parameters);
 
             UpdateParallelWaysDisplay(pwResult, pwp, strat);
             PlotContent = new ParallelWaysDisplay().Render(
@@ -125,7 +125,7 @@ public sealed partial class ResultsViewModel : ViewModelBase
                       ?? throw new InvalidOperationException("Session has no result to display.");
 
             var strategy   = StrategyFactory.Create(_session.StrategyId);
-            var definition = _project.ObjectDefinition;
+            var definition = CurrentDefinition;
 
             UpdateDisplay(result, GetCurrentCalculationParameters(result));
             PlotContent = new SurfacePlot3DDisplay().Render(result, strategy, definition, _session.InitialRound.Steps);
@@ -139,7 +139,7 @@ public sealed partial class ResultsViewModel : ViewModelBase
         _currentResult = result;
         IsParallelWays = false;
         var strategy   = StrategyFactory.Create(_session.StrategyId);
-        var definition = _project.ObjectDefinition;
+        var definition = CurrentDefinition;
 
         // ── Info panel ────────────────────────────────────────────────────────
         ProjectName        = _project.Name;
@@ -206,7 +206,7 @@ public sealed partial class ResultsViewModel : ViewModelBase
 
         ActiveResult     = result;
         ActiveSteps      = _session.InitialRound.Steps;
-        ActiveDefinition = _project.ObjectDefinition;
+        ActiveDefinition = CurrentDefinition;
     }
 
     // ── Info panel properties ─────────────────────────────────────────────────
@@ -262,7 +262,30 @@ public sealed partial class ResultsViewModel : ViewModelBase
 
     // ── Exposed for NewMeasurementDialog (used from ResultsView code-behind) ──
 
-    public ObjectDefinition? ActiveObjectDefinition => _project?.ObjectDefinition;
+    /// <summary>The object definition of the measurement being shown (the project's, plus its own parameters).</summary>
+    private ObjectDefinition CurrentDefinition => _project.DefinitionFor(_session);
+
+    /// <summary>
+    /// One line describing what "Measure again" will do: the object and the strategy of the last
+    /// measurement of the project, which the new one repeats.
+    /// </summary>
+    public string NewMeasurementSummary
+    {
+        get
+        {
+            var basis = _project.Measurements.LastOrDefault() ?? _session;
+            var def   = _project.DefinitionFor(basis);
+
+            string strategy;
+            try { strategy = StrategyFactory.Create(basis.StrategyId).DisplayName; }
+            catch { strategy = basis.StrategyId; }
+
+            if (def.GeometryModuleId == "ParallelWays")
+                return $"Parallel Ways · {strategy}";
+
+            return $"Surface plate {FormatDimensions(def)} · {strategy} {FormatStrategyParams(def, basis.StrategyId)}";
+        }
+    }
     public string            ActiveOperator         => _project?.Operator ?? string.Empty;
 
     /// <summary>Current CalculationParameters for initialising the RecalculateDialog.</summary>
@@ -271,18 +294,32 @@ public sealed partial class ResultsViewModel : ViewModelBase
 
     // ── Commands ──────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// "Measure with a different strategy": back to the setup page of this project, where the strategy,
+    /// rows, columns, segments ... are chosen; Start Measurement there adds the new measurement.
+    /// </summary>
+    [RelayCommand]
+    private void StartDifferentStrategy()
+        => _navigation.NavigateTo(PageKey.ProjectSetup, _project);
+
     [RelayCommand]
     private void StartCorrectionSession()
         => _navigation.NavigateTo(PageKey.Correction, new CorrectionArgs(_project, _session));
 
-    public void StartNewMeasurement(string operatorName, string notes, string strategyId,
+    /// <summary>
+    /// "Measure again": a new measurement with the strategy and geometry of the project's last one.
+    /// (Another strategy goes through <see cref="StartDifferentStrategyCommand"/>, which opens the setup page.)
+    /// </summary>
+    public void StartNewMeasurement(string operatorName, string notes,
                                     InstrumentChoice? instrument = null, string? label = null)
     {
         if (instrument is not null)
             _catalog.Select(instrument);
 
+        var basis      = _project.Measurements.LastOrDefault() ?? _session;
+        string strategyId = basis.StrategyId;
         var strategy   = StrategyFactory.Create(strategyId);
-        var definition = _project.ObjectDefinition;
+        var definition = _project.DefinitionFor(basis);
         var steps      = strategy.GenerateSteps(definition).ToList();
 
         var session = new MeasurementSession
@@ -293,6 +330,7 @@ public sealed partial class ResultsViewModel : ViewModelBase
             Notes        = notes,
             InstrumentId = instrument?.PluginId ?? "manual-entry",
             StrategyId   = strategyId,
+            StrategyParameters = basis.StrategyParameters is null ? null : new Dictionary<string, object>(basis.StrategyParameters),
             InitialRound = new MeasurementRound { Steps = steps }
         };
 
@@ -308,7 +346,7 @@ public sealed partial class ResultsViewModel : ViewModelBase
     public async Task RecalculateAsync(CalculationParameters parameters, bool saveParameters)
     {
         var strategy   = StrategyFactory.Create(_session.StrategyId);
-        var definition = _project.ObjectDefinition;
+        var definition = CurrentDefinition;
         var excluded   = new HashSet<int>(parameters.ManuallyExcludedStepIndices);
 
         // Merge original steps with any correction replacements
@@ -396,7 +434,7 @@ public sealed partial class ResultsViewModel : ViewModelBase
 
         ActiveResult     = null;
         ActiveSteps      = _session.InitialRound.Steps;
-        ActiveDefinition = _project.ObjectDefinition;
+        ActiveDefinition = CurrentDefinition;
     }
 
     /// <summary>
@@ -412,8 +450,8 @@ public sealed partial class ResultsViewModel : ViewModelBase
         {
             var pwResult = _session.InitialRound.ParallelWaysResult;
             if (pwResult is null) return;
-            var pwp   = ParallelWaysParameters.From(_project.ObjectDefinition.Parameters);
-            var strat = ParallelWaysStrategyParameters.From(_project.ObjectDefinition.Parameters);
+            var pwp   = ParallelWaysParameters.From(CurrentDefinition.Parameters);
+            var strat = ParallelWaysStrategyParameters.From(CurrentDefinition.Parameters);
             PlotContent = new ParallelWaysDisplay().Render(
                 pwResult, pwp, strat, _session.InitialRound.Steps);
         }
@@ -421,7 +459,7 @@ public sealed partial class ResultsViewModel : ViewModelBase
         {
             if (_currentResult is null) return;
             var strategy   = StrategyFactory.Create(_session.StrategyId);
-            var definition = _project.ObjectDefinition;
+            var definition = CurrentDefinition;
             PlotContent = new SurfacePlot3DDisplay().Render(
                 _currentResult, strategy, definition, _session.InitialRound.Steps);
         }
