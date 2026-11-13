@@ -61,8 +61,8 @@
             </Border>
 
             <!-- Right: orientation + instruction + reading -->
-            <StackPanel Grid.Column="1"
-                        Spacing="16">
+            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+            <StackPanel Spacing="16">
 
                 <!-- Orientation badge -->
                 <Grid>
@@ -170,6 +170,7 @@
                         IsEnabled="{x:Bind ViewModel.IsInputEnabled, Mode=OneWay}"/>
 
             </StackPanel>
+            </ScrollViewer>
         </Grid>
 
         <!-- ── Calculating overlay ────────────────────────────────────────── -->

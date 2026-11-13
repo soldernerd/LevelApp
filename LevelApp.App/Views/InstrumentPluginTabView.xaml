@@ -7,7 +7,11 @@
     <!-- Top: all known devices, each with its own Connect button, and Add Device.
          Below: what belongs to the connected device (actions, live screen, settings...),
          shown only while a device is connected. -->
-    <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12" Padding="0,12,0,0">
+    <!-- The page scrolls as a whole: on a small screen the device list, the actions and the tab strip leave
+         too little height for the tabs below, and nothing could be scrolled to. The grid is at least as
+         tall as the window (so the plugin surface still fills it) and the surface at least 560 tall. -->
+    <ScrollViewer x:Name="PageScroll" VerticalScrollBarVisibility="Auto" SizeChanged="OnPageScrollSizeChanged">
+    <Grid x:Name="PageGrid" RowDefinitions="Auto,Auto,*" RowSpacing="12" Padding="0,12,12,12">
 
         <!-- Devices -->
         <StackPanel Grid.Row="0" Spacing="8" MaxWidth="760" HorizontalAlignment="Left">
@@ -114,7 +118,7 @@
         </StackPanel>
 
         <!-- The plugin surface for the connected device (and the calibration view, one at a time) -->
-        <Grid x:Name="PluginHost" Grid.Row="2" Visibility="Collapsed">
+        <Grid x:Name="PluginHost" Grid.Row="2" Visibility="Collapsed" MinHeight="560">
             <ContentPresenter x:Name="PluginSpecificContent"
                               HorizontalContentAlignment="Stretch"
                               VerticalContentAlignment="Stretch"/>
@@ -125,4 +129,5 @@
         </Grid>
 
     </Grid>
+    </ScrollViewer>
 </UserControl>

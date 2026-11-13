@@ -52,6 +52,10 @@ public sealed partial class InstrumentPluginTabView : UserControl
             _host.ConnectionChanged += (_, _) => UpdateConnectedUi();
     }
 
+    /// <summary>Keeps the page at least as tall as its viewport, so the plugin surface fills a large window.</summary>
+    private void OnPageScrollSizeChanged(object sender, SizeChangedEventArgs e) =>
+        PageGrid.MinHeight = e.NewSize.Height;
+
     private void RefreshUI()
     {
         bool hasDevices = ViewModel.KnownDevices.Count > 0;
