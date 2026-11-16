@@ -11,9 +11,16 @@ public sealed record ShimSetup(double HeightMm, double BaselineMm);
 /// </summary>
 public interface ILeveltronicPreferences
 {
-    /// <summary>Offset subtracted from Diff, mm/m; null = not zeroed.</summary>
+    /// <summary>Offset subtracted from Diff, mm/m; null = not zeroed. Shorthand for the "diff" channel.</summary>
     double? GetTare(string serial);
     void SetTare(string serial, double? mmPerM);
+
+    /// <summary>
+    /// Offset subtracted from one reading channel ("s1", "s2" or "diff"), mm/m; null = not zeroed.
+    /// Every channel is zeroed on its own: it is the app-side "zero the current position", not a calibration.
+    /// </summary>
+    double? GetTare(string serial, string channelId);
+    void SetTare(string serial, string channelId, double? mmPerM);
 
     string? GetChannel(string serial);
     void SetChannel(string serial, string channelId);
@@ -25,7 +32,11 @@ public interface ILeveltronicPreferences
 /// <summary>The remembered values of one instrument (the JSON file's record).</summary>
 public sealed class PreferenceEntry
 {
+    /// <summary>Offset of the Diff channel (the original, single "Zero Diff" tare).</summary>
     public double? Tare { get; set; }
+    /// <summary>Offsets of the single sensors (absent in files written before they could be zeroed).</summary>
+    public double? TareS1 { get; set; }
+    public double? TareS2 { get; set; }
     public string? Channel { get; set; }
     public ShimSetup?[] Shim { get; set; } = new ShimSetup?[2];
 }
@@ -45,8 +56,37 @@ public class InMemoryLeveltronicPreferences : ILeveltronicPreferences
 
     protected virtual void Changed() { }
 
-    public double? GetTare(string serial) { lock (Gate) return For(serial).Tare; }
-    public void SetTare(string serial, double? v) { lock (Gate) { For(serial).Tare = v; Changed(); } }
+    public double? GetTare(string serial) => GetTare(serial, LeveltronicProvider.ChannelDiff);
+    public void SetTare(string serial, double? v) => SetTare(serial, LeveltronicProvider.ChannelDiff, v);
+
+    public double? GetTare(string serial, string channelId)
+    {
+        lock (Gate)
+        {
+            var e = For(serial);
+            return channelId switch
+            {
+                LeveltronicProvider.ChannelS1 => e.TareS1,
+                LeveltronicProvider.ChannelS2 => e.TareS2,
+                _ => e.Tare,
+            };
+        }
+    }
+
+    public void SetTare(string serial, string channelId, double? v)
+    {
+        lock (Gate)
+        {
+            var e = For(serial);
+            switch (channelId)
+            {
+                case LeveltronicProvider.ChannelS1: e.TareS1 = v; break;
+                case LeveltronicProvider.ChannelS2: e.TareS2 = v; break;
+                default: e.Tare = v; break;
+            }
+            Changed();
+        }
+    }
 
     public string? GetChannel(string serial) { lock (Gate) return For(serial).Channel; }
     public void SetChannel(string serial, string channelId) { lock (Gate) { For(serial).Channel = channelId; Changed(); } }

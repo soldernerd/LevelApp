@@ -8,9 +8,10 @@ namespace LevelApp.Instruments.Leveltronic.UI.ViewModels;
 
 /// <summary>
 /// The live screen (port of the phone app's instrument screen): S1, S2 and Diff with their quality
-/// state, battery and on-board temperature, "Zero Diff" (a precision measurement whose Diff is
-/// remembered per instrument and subtracted from the shown Diff) and a stand-alone "Precision"
-/// measurement, both reported in an inline panel. Holds no WinUI types.
+/// state, battery and on-board temperature, "Zero" (a precision measurement whose value of S1, S2,
+/// Diff or all three is remembered per instrument and subtracted from the shown reading: the app-side
+/// "zero the current position", not a calibration) and a stand-alone "Precision" measurement, both
+/// reported in an inline panel. Holds no WinUI types.
 /// </summary>
 public sealed partial class LiveViewModel : SessionViewModelBase
 {
@@ -19,7 +20,10 @@ public sealed partial class LiveViewModel : SessionViewModelBase
     private readonly ILeveltronicPreferences _prefs;
     private LiveFeed? _feed;
     private InstrumentSnapshot _snapshot = new();
-    private double? _tare;
+    private double? _tareS1;
+    private double? _tareS2;
+    private double? _tareDiff;
+    private string[] _zeroTargets = [];
     private bool _attached;
     private PrecisionRun? _run;
     private Purpose _purpose;
@@ -62,10 +66,12 @@ public sealed partial class LiveViewModel : SessionViewModelBase
     [ObservableProperty] private bool _charging;
     [ObservableProperty] private BatteryState _batteryChargeState = BatteryState.Unknown;
 
-    // ---- zero diff ----
+    // ---- zero ----
 
     [ObservableProperty] private bool _isZeroed;
-    [ObservableProperty] private string _zeroButtonText = "Zero Diff";
+    [ObservableProperty] private string _zeroButtonText = "Zero ▾";
+    [ObservableProperty] private string _s1SubLabel = "";
+    [ObservableProperty] private string _s2SubLabel = "";
     [ObservableProperty] private string _diffSubLabel = "S1 − S2";
     [ObservableProperty] private string _zeroNote = "";
 
@@ -123,7 +129,9 @@ public sealed partial class LiveViewModel : SessionViewModelBase
     protected override void OnAttached(LeveltronicSession session)
     {
         _attached = true;
-        _tare = _prefs.GetTare(session.Serial);
+        _tareS1 = _prefs.GetTare(session.Serial, LeveltronicProvider.ChannelS1);
+        _tareS2 = _prefs.GetTare(session.Serial, LeveltronicProvider.ChannelS2);
+        _tareDiff = _prefs.GetTare(session.Serial, LeveltronicProvider.ChannelDiff);
         _feed = session.Feed;
         _feed.Updated += OnFeedUpdated;
         DisplayOpacity = 1.0;
@@ -169,9 +177,9 @@ public sealed partial class LiveViewModel : SessionViewModelBase
         bool has = s.HasReading;
 
         bool show1 = has && live is not null;
-        S1Text = show1 ? LiveFormat.Micro(live!.TiltS1) : LiveFormat.Placeholder(2);
-        S2Text = show1 ? LiveFormat.Micro(live!.TiltS2) : LiveFormat.Placeholder(2);
-        double? shownDiff = LiveFormat.ApplyTare(live?.TiltDiff, _tare);
+        S1Text = show1 ? LiveFormat.Micro(LiveFormat.ApplyTare(live!.TiltS1, _tareS1)) : LiveFormat.Placeholder(2);
+        S2Text = show1 ? LiveFormat.Micro(LiveFormat.ApplyTare(live!.TiltS2, _tareS2)) : LiveFormat.Placeholder(2);
+        double? shownDiff = LiveFormat.ApplyTare(live?.TiltDiff, _tareDiff);
         DiffText = has && shownDiff is not null ? LiveFormat.Micro(shownDiff) : LiveFormat.Placeholder(2);
 
         bool s1Doubtful = live?.S1Doubtful ?? false;
@@ -198,31 +206,61 @@ public sealed partial class LiveViewModel : SessionViewModelBase
 
     private void UpdateZeroTexts()
     {
-        IsZeroed = _tare is not null;
-        ZeroButtonText = _tare is null ? "Zero Diff" : "Re-zero Diff";
-        DiffSubLabel = _tare is null ? "S1 − S2" : "zeroed";
-        ZeroNote = _tare is null ? "" : $"Diff is zeroed at {LiveFormat.Micro(_tare)} µm/m";
+        IsZeroed = _tareS1 is not null || _tareS2 is not null || _tareDiff is not null;
+        ZeroButtonText = IsZeroed ? "Re-zero ▾" : "Zero ▾";
+        S1SubLabel = _tareS1 is null ? "" : "zeroed";
+        S2SubLabel = _tareS2 is null ? "" : "zeroed";
+        DiffSubLabel = _tareDiff is null ? "S1 − S2" : "zeroed";
+
+        var parts = new List<string>(3);
+        if (_tareS1 is not null) parts.Add($"S1 {LiveFormat.Micro(_tareS1)}");
+        if (_tareS2 is not null) parts.Add($"S2 {LiveFormat.Micro(_tareS2)}");
+        if (_tareDiff is not null) parts.Add($"Diff {LiveFormat.Micro(_tareDiff)}");
+        ZeroNote = parts.Count == 0 ? "" : $"Zeroed: {string.Join(", ", parts)} µm/m";
     }
 
-    private void SetTare(double? value)
+    /// <summary>Remembers the zero offsets (mm/m) of the given channels; null clears one.</summary>
+    private void SetTares(bool s1, bool s2, bool diff, double? v1, double? v2, double? vDiff)
     {
-        _tare = value;
-        var session = Session;
-        if (session is not null) _prefs.SetTare(session.Serial, value);
+        var serial = Session?.Serial;
+        if (s1) { _tareS1 = v1; if (serial is not null) _prefs.SetTare(serial, LeveltronicProvider.ChannelS1, v1); }
+        if (s2) { _tareS2 = v2; if (serial is not null) _prefs.SetTare(serial, LeveltronicProvider.ChannelS2, v2); }
+        if (diff) { _tareDiff = vDiff; if (serial is not null) _prefs.SetTare(serial, LeveltronicProvider.ChannelDiff, vDiff); }
         ApplySnapshot(_snapshot);
     }
+
+    private string ZeroHeading() => _zeroTargets.Length > 1 ? "Zero S1, S2 and Diff"
+        : _zeroTargets.FirstOrDefault() switch
+        {
+            LeveltronicProvider.ChannelS1 => "Zero S1",
+            LeveltronicProvider.ChannelS2 => "Zero S2",
+            _ => "Zero Diff",
+        };
 
     private void UpdateCanStart() => CanStart = _attached && !IsPanelOpen;
 
     // ---- commands ----
 
-    /// <summary>Clears the Zero Diff offset.</summary>
+    /// <summary>Clears all zero offsets (S1, S2 and Diff).</summary>
     [RelayCommand]
-    private void ClearZero() => SetTare(null);
+    private void ClearZero() => SetTares(true, true, true, null, null, null);
 
-    /// <summary>Takes a precision measurement and remembers its Diff as the new zero.</summary>
+    /// <summary>
+    /// Takes a precision measurement and remembers its value as the new zero of the given channel:
+    /// "s1", "s2", "diff", or "all" for the three at once (anything else is Diff).
+    /// </summary>
     [RelayCommand]
-    private Task ZeroDiffAsync() => RunPrecisionAsync(Purpose.Zero);
+    private Task ZeroAsync(string? channel)
+    {
+        _zeroTargets = channel switch
+        {
+            "all" => [LeveltronicProvider.ChannelS1, LeveltronicProvider.ChannelS2, LeveltronicProvider.ChannelDiff],
+            LeveltronicProvider.ChannelS1 => [LeveltronicProvider.ChannelS1],
+            LeveltronicProvider.ChannelS2 => [LeveltronicProvider.ChannelS2],
+            _ => [LeveltronicProvider.ChannelDiff],
+        };
+        return RunPrecisionAsync(Purpose.Zero);
+    }
 
     /// <summary>Takes a precision measurement and shows its result in the panel.</summary>
     [RelayCommand]
@@ -262,7 +300,7 @@ public sealed partial class LiveViewModel : SessionViewModelBase
         // Measuring again from a shown result: that result becomes the "previous" one.
         _previous = purpose == Purpose.Measure && IsPanelOpen ? _last : null;
 
-        PanelHeading = purpose == Purpose.Zero ? "Zero Diff" : "Precision measurement";
+        PanelHeading = purpose == Purpose.Zero ? ZeroHeading() : "Precision measurement";
         PanelSubtitle = "Starting";
         PanelWarning = "";
         HasPanelWarning = false;
@@ -293,17 +331,20 @@ public sealed partial class LiveViewModel : SessionViewModelBase
             }
             else if (purpose == Purpose.Zero)
             {
-                SetTare(result.TiltDiff);
+                bool s1 = _zeroTargets.Contains(LeveltronicProvider.ChannelS1);
+                bool s2 = _zeroTargets.Contains(LeveltronicProvider.ChannelS2);
+                bool diff = _zeroTargets.Contains(LeveltronicProvider.ChannelDiff);
+                SetTares(s1, s2, diff, result.TiltS1, result.TiltS2, result.TiltDiff);
                 ClosePanelCore();
             }
             else
             {
                 _resultDiffRaw = result.TiltDiff;
                 var current = new Result(result.TiltS1, result.TiltS2, result.TiltDiff);
-                ResultS1 = LiveFormat.Micro(result.TiltS1);
-                ResultS2 = LiveFormat.Micro(result.TiltS2);
-                ResultDiff = LiveFormat.Micro(LiveFormat.ApplyTare(_resultDiffRaw, _tare));
-                ResultDiffNote = _tare is not null ? "zeroed" : "";
+                ResultS1 = LiveFormat.Micro(LiveFormat.ApplyTare(result.TiltS1, _tareS1));
+                ResultS2 = LiveFormat.Micro(LiveFormat.ApplyTare(result.TiltS2, _tareS2));
+                ResultDiff = LiveFormat.Micro(LiveFormat.ApplyTare(_resultDiffRaw, _tareDiff));
+                ResultDiffNote = _tareDiff is not null ? "zeroed" : "";
                 ShowComparisonWith(current);
                 _last = current;
                 SetPanel(running: false, done: true, failed: false);
@@ -333,9 +374,9 @@ public sealed partial class LiveViewModel : SessionViewModelBase
             return;
         }
 
-        PreviousS1   = LiveFormat.Micro(old.S1);
-        PreviousS2   = LiveFormat.Micro(old.S2);
-        PreviousDiff = LiveFormat.Micro(LiveFormat.ApplyTare(old.Diff, _tare));
+        PreviousS1   = LiveFormat.Micro(LiveFormat.ApplyTare(old.S1, _tareS1));
+        PreviousS2   = LiveFormat.Micro(LiveFormat.ApplyTare(old.S2, _tareS2));
+        PreviousDiff = LiveFormat.Micro(LiveFormat.ApplyTare(old.Diff, _tareDiff));
         DeltaS1      = LiveFormat.Micro(current.S1 - old.S1);
         DeltaS2      = LiveFormat.Micro(current.S2 - old.S2);
         DeltaDiff    = LiveFormat.Micro(current.Diff - old.Diff);

@@ -89,6 +89,8 @@ The `parameters` object must contain:
 
 `segments` and `rings` must **not** appear when `strategyId` is `"FullGrid"`.
 
+Optional, both strategies: `reverseDirection` (boolean, since v0.20.33; absent = `false`) — the operator measures the whole pattern the other way (see §7.2 / §7.3). It changes the stored steps only; no schema change.
+
 Example:
 ```json
 "parameters": {
@@ -274,28 +276,29 @@ index and `r` is the 0-based row index.
 
 The `orientation` field is restricted to `"East"`, `"West"`, `"North"`, `"South"`.
 
-**Row passes** (boustrophedon, one pass per row):
+Since v0.20.33 every pass runs in the same direction, so the instrument is never turned by 180°.
+Files written by older versions keep the alternating (boustrophedon) steps they were saved with; they are
+read and calculated as before, because every step carries its own `orientation`, `nodeId` and `toNodeId`.
 
-- Even rows (row 0, 2, 4, …) go **East**: `gridCol` increases from `0` to `columnsCount − 2`.
+**Row passes** (one pass per row, top row first):
+
+- Every row goes **East**: `gridCol` increases from `0` to `columnsCount − 2`.
   For each step: `gridRow = r`, `gridCol = c`, `orientation = "East"`,
   `nodeId = "col{c}_row{r}"`, `toNodeId = "col{c+1}_row{r}"`.
-- Odd rows go **West**: `gridCol` decreases from `columnsCount − 1` to `1`.
-  `orientation = "West"`, `nodeId = "col{c}_row{r}"`, `toNodeId = "col{c-1}_row{r}"`.
 
 Number of row-pass steps = `rowsCount × (columnsCount − 1)`.
 
-**Column passes** (boustrophedon, one pass per column, after all row passes; since v0.20.18 they
-continue where the last row pass ended, files written before that keep their stored order):
+**Column passes** (one pass per column, after all row passes, left column first):
 
-- The last row is traversed East when `rowsCount` is odd (the instrument ends at the bottom right) and West
-  when it is even (bottom left). The columns are measured starting at that end column and moving across the
-  plate to the other side: first column = `columnsCount − 1` (odd rows) or `0` (even rows).
-- The first column (and every second one after it) goes **North**: `gridRow` decreases from `rowsCount − 1` to `1`.
-  `orientation = "North"`, `nodeId = "col{c}_row{r}"`, `toNodeId = "col{c}_row{r-1}"`.
-- The other columns go **South**: `gridRow` increases from `0` to `rowsCount − 2`.
+- Every column goes **South**: `gridRow` increases from `0` to `rowsCount − 2`.
   `orientation = "South"`, `nodeId = "col{c}_row{r}"`, `toNodeId = "col{c}_row{r+1}"`.
 
 Number of column-pass steps = `columnsCount × (rowsCount − 1)`.
+
+**`reverseDirection = true`** mirrors this through the plate centre (step *i* of the reversed walk is step *i*
+of the normal walk with `col → columnsCount − 1 − col`, `row → rowsCount − 1 − row` and the opposite
+orientation): rows go **West** from `columnsCount − 1` to `1`, bottom row first; then columns go **North**
+from `rowsCount − 1` to `1`, right column first.
 
 **Total step count** = `rowsCount × (columnsCount − 1) + columnsCount × (rowsCount − 1)`.
 
@@ -343,10 +346,15 @@ NW arm tip → center → SE arm tip.
 NE arm tip → center → SW arm tip.
 
 **Pass 4… — Ring passes (one pass per active ring level):**
-Each ring at radius `r` is a clockwise rectangle of 8 steps visiting:
-SW→S (East), S→SE (East), SE→E (North), E→NE (North),
-NE→N (West), N→NW (West), NW→W (South), W→SW (South).
+Each ring at radius `r` has 8 steps, every edge measured one way (since v0.20.33; older files stored a
+clockwise walk with edges facing East, North, West, South):
+SW→S (East), S→SE (East), NW→N (East), N→NE (East),
+NW→W (South), W→SW (South), NE→E (South), E→SE (South).
 All node ids end in `_seg{r}`.
+
+**`reverseDirection = true`** mirrors the whole strategy through the centre (E↔W, N↔S, NE↔SW, NW↔SE in every
+node id, every orientation turned around, same step order): the horizontal arm runs `armE_seg{s}` → center →
+`armW_seg{s}` facing **West**, the vertical arm faces **North**, the diagonals **NorthWest** and **NorthEast**.
 
 Ring passes generated depend on `rings`:
 - `"None"`: no ring passes.
@@ -936,6 +944,7 @@ Bridge steps always go from a lower-indexed rail to a higher-indexed rail at the
 | `parameters.rowsCount` | **Yes** | FullGrid only |
 | `parameters.segments` | **Yes** | UnionJack only |
 | `parameters.rings` | **Yes** | UnionJack only; string value |
+| `parameters.reverseDirection` | No | SurfacePlate only; boolean, absent = `false` (since v0.20.33) |
 | `parameters.orientation` | **Yes** | ParallelWays only |
 | `parameters.referenceRailIndex` | **Yes** | ParallelWays only |
 | `parameters.rails` | **Yes** | ParallelWays only; min 2 entries |

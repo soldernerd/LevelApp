@@ -49,6 +49,8 @@
   <data name="Columns_Label_Tooltip.Content" xml:space="preserve"><value>Anzahl der Gitterspalten (Knoten in X-Richtung). Mehr Spalten erhöhen die Redundanz und Auflösung, aber auch die Gesamtzahl der Schritte.</value></data>
   <data name="Rows_Label.Text" xml:space="preserve"><value>Zeilen</value></data>
   <data name="Rows_Label_Tooltip.Content" xml:space="preserve"><value>Anzahl der Gitterzeilen (Knoten in Y-Richtung).</value></data>
+  <data name="ReverseDirection_CheckBox.Content" xml:space="preserve"><value>In umgekehrter Richtung messen</value></data>
+  <data name="ReverseDirection_Tooltip.Content" xml:space="preserve"><value>Läuft das ganze Muster in die andere Richtung ab: Zeilen und Spalten zeigen nach Westen und Norden statt nach Osten und Süden, beginnend an der gegenüberliegenden Ecke. Das Instrument wird in keinem Fall um 180 Grad gedreht. Das Ergebnis wird nicht beeinflusst.</value></data>
   <data name="Strategy_SectionHeader.Text" xml:space="preserve"><value>Messstrategie</value></data>
   <data name="Strategy_Label.Text" xml:space="preserve"><value>Strategie</value></data>
   <data name="Strategy_Label_Tooltip.Content" xml:space="preserve"><value>Das Traversierungsmuster, das verwendet wird, um alle Messpunkte zu besuchen. Verschiedene Strategien bieten unterschiedliche Redundanzniveaus.</value></data>
@@ -221,7 +223,7 @@
   <data name="Instrument_TakeAndAccept.Content" xml:space="preserve"><value>Messen und übernehmen</value></data>
   <data name="Instrument_TakeReading.Content" xml:space="preserve"><value>Messwert übernehmen</value></data>
   <data name="Instrument_Cancel.Content" xml:space="preserve"><value>Abbrechen</value></data>
-  <data name="Instrument_ZeroDiff.Content" xml:space="preserve"><value>Diff nullen</value></data>
+  <data name="Instrument_Zero.Content" xml:space="preserve"><value>Nullen</value></data>
   <data name="Instrument_ClearZero.Content" xml:space="preserve"><value>Nullpunkt löschen</value></data>
   <data name="Instrument_Retry.Content" xml:space="preserve"><value>Erneut versuchen</value></data>
   <data name="Instrument_Measuring.Text" xml:space="preserve"><value>Messung läuft – Tisch ruhig halten…</value></data>

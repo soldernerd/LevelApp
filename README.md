@@ -10,8 +10,9 @@ The software guides the operator through a defined measurement procedure, acquir
 
 - **Guided measurement workflow** — step-by-step instructions with a live map showing position, orientation arrow, and progress indicator
 - **Surface plate qualification** — Full Grid and Union Jack measurement strategies for granite surface plates and similar flat objects
-  - **Full Grid** — boustrophedon row and column traversal ensures every interior grid point is measured twice for redundancy
-  - **Union Jack** — eight arms from the centre with configurable segment count; Full (with closure loops) and Circumference variants
+  - **Full Grid** — row and column traversal ensures every interior grid point is measured twice for redundancy; every pass runs the same way (rows East, columns South), so the instrument is never turned by 180° and differential measurements stay possible
+  - **Union Jack** — eight arms from the centre with configurable segment count; Full (with closure loops) and Circumference variants; also one-way, never turned by 180°
+  - **Measure in reverse direction** — an option on the setup page that walks either pattern the other way round (from the opposite corner / tip); the result is not affected
   - **Least-squares surface fitting** — closure errors are distributed optimally across all steps simultaneously
   - **Outlier detection** — suspect readings flagged automatically when their residual exceeds a configurable sigma threshold (default: 2.5σ)
   - **Correction workflow** — flagged steps can be re-measured in a guided mini-session; original readings are always preserved
@@ -34,7 +35,7 @@ The software guides the operator through a defined measurement procedure, acquir
 - **Auto-update** — checks for new releases on GitHub at startup; if a newer version is available the app offers to download and install it automatically
 - **Contextual help** — ⓘ flyout buttons on all section headers and algorithmic concepts (least-squares, flagged steps, sigma threshold, correction rounds, etc.); tooltips on all metric labels and input fields
 - **Localised UI** — full English (en-US) and German (de-DE) localisation; the OS language setting selects the active locale automatically
-- **Instrument integration** — the **Leveltronic** precision electronic level over USB or Bluetooth LE (firmware 0.11+, API v3.1): a live screen (S1 / S2 / Diff in µm/m, battery, vibration, Zero Diff, Precision with side-by-side comparison), an oscilloscope view and diagnostics, "Take reading" and "Take reading and accept" right in the guided measurement (with last reading and Go back), a management view (info, settings, actions, calibration values), and the phase / gain / zero calibration wizards with an animated instrument diagram. Devices are listed with a Connect button each; the instrument stays connected between measurements. USB and Bluetooth scanning list one entry per instrument with its technical id. Manual keyboard entry always remains available. See [`docs/leveltronic.md`](docs/leveltronic.md)
+- **Instrument integration** — the **Leveltronic** precision electronic level over USB or Bluetooth LE (firmware 0.11+, API v3.1): a live screen (S1 / S2 / Diff in µm/m, battery, vibration, Zero for S1 / S2 / Diff, Precision with side-by-side comparison), an oscilloscope view and diagnostics, "Take reading" and "Take reading and accept" right in the guided measurement (with last reading and Go back), a management view (info, settings, actions, calibration values), and the phase / gain / zero calibration wizards with an animated instrument diagram. Devices are listed with a Connect button each; the instrument stays connected between measurements. USB and Bluetooth scanning list one entry per instrument with its technical id. Manual keyboard entry always remains available. See [`docs/leveltronic.md`](docs/leveltronic.md)
 - **Extensible architecture** — geometry modules, measurement strategies, instrument providers and display modules are all plugin-style interfaces; new object types and instruments can be added without touching existing code
 
 ---
@@ -154,7 +155,7 @@ LevelApp/
 - [x] Contextual help (tooltips + ⓘ flyouts) and en-US / de-DE localisation
 - [x] CI/CD pipeline — automated build, test, package, and GitHub Release on every push
 - [x] Auto-update — in-app check and one-click download/install of new releases
-- [x] Leveltronic instrument plugin on firmware API v3 — USB (Custom HID) and Bluetooth LE; live reading and settled measurement in the guided measurement (S1 / S2 / Diff, Zero Diff); management view; phase / gain / zero calibration wizards *(implemented; hardware test pending)*
+- [x] Leveltronic instrument plugin on firmware API v3 — USB (Custom HID) and Bluetooth LE; live reading and settled measurement in the guided measurement (S1 / S2 / Diff, zero per channel); management view; phase / gain / zero calibration wizards *(implemented; hardware test pending)*
 - [ ] Hardware sign-off of the Leveltronic integration (BLE + USB, live panel, wizards)
 - [ ] Firmware update feed for the Leveltronic (USB DFU is implemented, no image source yet)
 - [ ] Further instrument plugins (the phone app also supports the NeigMess2)

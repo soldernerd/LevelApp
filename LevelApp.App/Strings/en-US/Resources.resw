@@ -49,6 +49,8 @@
   <data name="Columns_Label_Tooltip.Content" xml:space="preserve"><value>Number of grid columns (nodes in the X direction). More columns increase measurement redundancy and resolution, but also the total number of steps.</value></data>
   <data name="Rows_Label.Text" xml:space="preserve"><value>Rows</value></data>
   <data name="Rows_Label_Tooltip.Content" xml:space="preserve"><value>Number of grid rows (nodes in the Y direction).</value></data>
+  <data name="ReverseDirection_CheckBox.Content" xml:space="preserve"><value>Measure in reverse direction</value></data>
+  <data name="ReverseDirection_Tooltip.Content" xml:space="preserve"><value>Walks the whole pattern the other way round: rows and columns face West and North instead of East and South, starting from the opposite corner. The instrument is never turned by 180 degrees either way. The result is not affected.</value></data>
   <data name="Strategy_SectionHeader.Text" xml:space="preserve"><value>Measurement Strategy</value></data>
   <data name="Strategy_Label.Text" xml:space="preserve"><value>Strategy</value></data>
   <data name="Strategy_Label_Tooltip.Content" xml:space="preserve"><value>The traversal pattern used to visit all measurement points. Different strategies offer different levels of redundancy.</value></data>
@@ -221,7 +223,7 @@
   <data name="Instrument_TakeAndAccept.Content" xml:space="preserve"><value>Take reading and accept</value></data>
   <data name="Instrument_TakeReading.Content" xml:space="preserve"><value>Take reading</value></data>
   <data name="Instrument_Cancel.Content" xml:space="preserve"><value>Cancel</value></data>
-  <data name="Instrument_ZeroDiff.Content" xml:space="preserve"><value>Zero Diff</value></data>
+  <data name="Instrument_Zero.Content" xml:space="preserve"><value>Zero</value></data>
   <data name="Instrument_ClearZero.Content" xml:space="preserve"><value>Clear zero</value></data>
   <data name="Instrument_Retry.Content" xml:space="preserve"><value>Retry</value></data>
   <data name="Instrument_Measuring.Text" xml:space="preserve"><value>Measuring – keep the table still…</value></data>

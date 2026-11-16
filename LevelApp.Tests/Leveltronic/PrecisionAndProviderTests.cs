@@ -170,6 +170,46 @@ public sealed class PreferencesTests
     }
 
     [Fact]
+    public void JsonStore_RemembersATareForEachChannel()
+    {
+        string path = Path.Combine(Path.GetTempPath(), $"lt-prefs-{Guid.NewGuid():N}.json");
+        try
+        {
+            var a = new JsonLeveltronicPreferences(path);
+            a.SetTare("AAAA0001", "s1", 0.4);
+            a.SetTare("AAAA0001", "s2", -0.2);
+            a.SetTare("AAAA0001", "diff", 0.6);
+
+            var b = new JsonLeveltronicPreferences(path);
+            Assert.Equal(0.4, b.GetTare("AAAA0001", "s1"));
+            Assert.Equal(-0.2, b.GetTare("AAAA0001", "s2"));
+            Assert.Equal(0.6, b.GetTare("AAAA0001", "diff"));
+            Assert.Equal(0.6, b.GetTare("AAAA0001"));          // the one-argument form is Diff
+
+            b.SetTare("AAAA0001", "s1", null);
+            var c = new JsonLeveltronicPreferences(path);
+            Assert.Null(c.GetTare("AAAA0001", "s1"));
+            Assert.Equal(-0.2, c.GetTare("AAAA0001", "s2"));   // the others stay
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public void JsonStore_ReadsAFileWrittenBeforeSensorsCouldBeZeroed()
+    {
+        string path = Path.Combine(Path.GetTempPath(), $"lt-prefs-{Guid.NewGuid():N}.json");
+        try
+        {
+            File.WriteAllText(path, "{ \"AAAA0001\": { \"Tare\": 0.25, \"Channel\": \"diff\", \"Shim\": [null, null] } }");
+            var p = new JsonLeveltronicPreferences(path);
+            Assert.Equal(0.25, p.GetTare("AAAA0001", "diff"));
+            Assert.Null(p.GetTare("AAAA0001", "s1"));
+            Assert.Null(p.GetTare("AAAA0001", "s2"));
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
     public void JsonStore_IgnoresACorruptFile()
     {
         string path = Path.Combine(Path.GetTempPath(), $"lt-prefs-{Guid.NewGuid():N}.json");
@@ -315,7 +355,7 @@ public sealed class ProviderTests
     }
 
     [Fact]
-    public async Task ZeroDiff_SubtractsTheOffsetFromDiffOnly_AndIsRemembered()
+    public async Task ZeroDiff_SubtractsTheOffsetFromDiff_AndIsRemembered()
     {
         var (rig, p) = await ConnectedAsync();
         Assert.True(p.SupportsZero);
@@ -330,11 +370,51 @@ public sealed class ProviderTests
         Assert.InRange(p.Latest!.ValueMicronsPerMetre, -1.0, 1.0);
         Assert.NotNull(rig.Prefs.GetTare(p.Session!.Serial));
 
-        p.SelectedChannelId = "s1"; // other channels are untouched
-        Assert.False(p.SupportsZero);
+        // The sensors have their own zero: they are still unzeroed.
+        p.SelectedChannelId = "s1";
+        Assert.True(p.SupportsZero);
+        Assert.False(p.IsZeroed);
         Assert.True(Math.Abs(p.Latest!.ValueMicronsPerMetre) > 10);
 
         p.SelectedChannelId = "diff";
+        p.ClearZero();
+        Assert.False(p.IsZeroed);
+        Assert.Equal(before, p.Latest!.ValueMicronsPerMetre, 1);
+        await rig.DisposeAsync();
+    }
+
+    [Theory]
+    [InlineData("s1")]
+    [InlineData("s2")]
+    public async Task ZeroOnASensor_ZeroesThatSensorOnly(string channel)
+    {
+        var (rig, p) = await ConnectedAsync();
+        p.SelectedChannelId = channel;
+        double before = p.Latest!.ValueMicronsPerMetre;
+        Assert.True(Math.Abs(before) > 100);               // 0.8 / 0.5 mm/m on the simulator's table
+
+        var zero = p.ZeroAsync(null, CancellationToken.None);
+        await TestKit.AdvanceUntilAsync(rig.Time, () => zero.IsCompleted, TimeSpan.FromSeconds(10));
+        await zero;
+
+        Assert.True(p.IsZeroed);
+        Assert.InRange(p.Latest!.ValueMicronsPerMetre, -1.0, 1.0);
+        Assert.NotNull(rig.Prefs.GetTare(p.Session!.Serial, channel));
+
+        // It is a software offset: the other channels and the instrument's own calibration are unaffected.
+        string other = channel == "s1" ? "s2" : "s1";
+        p.SelectedChannelId = other;
+        Assert.False(p.IsZeroed);
+        Assert.True(Math.Abs(p.Latest!.ValueMicronsPerMetre) > 100);
+        p.SelectedChannelId = "diff";
+        Assert.False(p.IsZeroed);
+
+        // A settled measurement on the zeroed sensor has the offset applied too.
+        p.SelectedChannelId = channel;
+        var measure = p.MeasureAsync(null, CancellationToken.None);
+        await TestKit.AdvanceUntilAsync(rig.Time, () => measure.IsCompleted, TimeSpan.FromSeconds(10));
+        Assert.InRange(await measure, -1.0, 1.0);
+
         p.ClearZero();
         Assert.False(p.IsZeroed);
         Assert.Equal(before, p.Latest!.ValueMicronsPerMetre, 1);

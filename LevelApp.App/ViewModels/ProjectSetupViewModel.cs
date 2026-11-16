@@ -234,6 +234,15 @@ public sealed partial class ProjectSetupViewModel : ViewModelBase
     [NotifyCanExecuteChangedFor(nameof(StartMeasurementCommand))]
     private int _waysOrientationIndex = 0;
 
+    // ── Walking direction (both surface-plate strategies) ─────────────────────
+
+    /// <summary>
+    /// Measure the other way: every pass runs in the opposite direction, starting at the opposite corner / tip.
+    /// Stored as the optional strategy parameter <c>reverseDirection</c>; the calculation is not affected.
+    /// </summary>
+    [ObservableProperty]
+    private bool _reverseDirection;
+
     /// <summary>0 = First Station Anchor, 1 = Linear Drift Correction, 2 = Least Squares</summary>
     [ObservableProperty] private int _driftCorrectionIndex = 2;
 
@@ -434,6 +443,8 @@ public sealed partial class ProjectSetupViewModel : ViewModelBase
             if (p.TryGetValue("widthMm",  out var w)) WidthMm  = Convert.ToDouble(w);
             if (p.TryGetValue("heightMm", out var h)) HeightMm = Convert.ToDouble(h);
 
+            ReverseDirection = WalkDirection.IsReversed(def);
+
             var lastSession = project.Measurements.LastOrDefault();
             if (lastSession?.StrategyId == "UnionJack")
             {
@@ -600,6 +611,10 @@ public sealed partial class ProjectSetupViewModel : ViewModelBase
             ["widthMm"]  = WidthMm,
             ["heightMm"] = HeightMm
         };
+
+        // Only stored when set, so existing projects and normal measurements stay unchanged.
+        if (ReverseDirection)
+            parameters[WalkDirection.ParameterName] = true;
 
         IMeasurementStrategy strategy;
 

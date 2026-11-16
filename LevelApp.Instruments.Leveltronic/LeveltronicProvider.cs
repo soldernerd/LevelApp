@@ -11,7 +11,7 @@ namespace LevelApp.Instruments.Leveltronic;
 /// <see cref="IInstrumentProvider"/> for the Leveltronic electronic level, over
 /// USB HID or BLE, on a shared <see cref="LeveltronicSession"/>. Implements
 /// <see cref="ILiveReadingSource"/>: live S1 / S2 / Diff reading, settled
-/// precision measurement and the app-side "Zero Diff" offset, all in µm/m (the
+/// precision measurement and the app-side zero offset of each channel, all in µm/m (the
 /// unit the guided measurement works in; the instrument reports mm/m).
 /// </summary>
 public sealed class LeveltronicProvider : IInstrumentProvider, ILiveReadingSource, IInstrumentDetails, IAsyncDisposable
@@ -145,8 +145,8 @@ public sealed class LeveltronicProvider : IInstrumentProvider, ILiveReadingSourc
             {
                 ChannelS1 => live.TiltS1,
                 ChannelS2 => live.TiltS2,
-                _ => live.TiltDiff - (Tare ?? 0),
-            };
+                _ => live.TiltDiff,
+            } - (Tare ?? 0);
             bool doubtful = _channel switch
             {
                 ChannelS1 => live.S1Doubtful,
@@ -164,31 +164,39 @@ public sealed class LeveltronicProvider : IInstrumentProvider, ILiveReadingSourc
         {
             ChannelS1 => status.TiltS1,
             ChannelS2 => status.TiltS2,
-            _ => status.TiltDiff - (Tare ?? 0),
-        };
+            _ => status.TiltDiff,
+        } - (Tare ?? 0);
         return mmPerM * 1000.0;
     }
 
-    public bool SupportsZero => _channel == ChannelDiff;
+    /// <summary>Every channel (S1, S2, Diff) can be zeroed at the current position.</summary>
+    public bool SupportsZero => true;
     public bool IsZeroed => Tare is not null;
     public double? ZeroOffsetMicronsPerMetre => Tare * 1000.0;
 
     public async Task ZeroAsync(IProgress<double>? progress, CancellationToken ct)
     {
-        if (!SupportsZero || Session is not { } s) return;
+        if (Session is not { } s) return;
+        string channel = _channel;
         var status = await RunPrecisionAsync(progress, ct).ConfigureAwait(false);
-        _prefs.SetTare(s.Serial, status.TiltDiff);
+        _prefs.SetTare(s.Serial, channel, channel switch
+        {
+            ChannelS1 => status.TiltS1,
+            ChannelS2 => status.TiltS2,
+            _ => status.TiltDiff,
+        });
         LiveReadingChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public void ClearZero()
     {
         if (Session is not { } s) return;
-        _prefs.SetTare(s.Serial, null);
+        _prefs.SetTare(s.Serial, _channel, null);
         LiveReadingChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    private double? Tare => Session is { } s ? _prefs.GetTare(s.Serial) : null;
+    /// <summary>The offset of the selected channel, mm/m.</summary>
+    private double? Tare => Session is { } s ? _prefs.GetTare(s.Serial, _channel) : null;
 
     private async Task<PrecisionStatus> RunPrecisionAsync(IProgress<double>? progress, CancellationToken ct)
     {

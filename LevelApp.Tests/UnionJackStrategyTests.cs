@@ -282,4 +282,95 @@ public class UnionJackStrategyTests
         Assert.Throws<ArgumentException>(() =>
             _sut.GenerateSteps(Def(0, UnionJackRings.None)));
     }
+
+    // ── One-way walk (never turned by 180°) and reversed direction ────────────
+
+    private static ObjectDefinition DefR(int segments, UnionJackRings rings, bool reverse)
+    {
+        var def = Def(segments, rings);
+        if (reverse) def.Parameters["reverseDirection"] = true;
+        return def;
+    }
+
+    [Theory]
+    [InlineData(1, UnionJackRings.Full,          false)]
+    [InlineData(3, UnionJackRings.Full,          false)]
+    [InlineData(3, UnionJackRings.Circumference, true)]
+    [InlineData(2, UnionJackRings.Full,          true)]
+    public void NoTwoStepsFaceOppositeDirections(int segments, UnionJackRings rings, bool reverse)
+    {
+        var facing = _sut.GenerateSteps(DefR(segments, rings, reverse)).Select(s => s.Orientation).Distinct().ToList();
+        foreach (var o in facing)
+            Assert.DoesNotContain(WalkDirection.Opposite(o), facing);
+    }
+
+    [Fact]
+    public void Rings_RunBottomAndTopEast_LeftAndRightSouth()
+    {
+        var ring = _sut.GenerateSteps(DefR(2, UnionJackRings.Circumference, false))
+                       .Where(s => s.PassId == 4).ToList();
+
+        Assert.Equal(8, ring.Count);
+        Assert.Equal(new[]
+        {
+            ("armSW_seg2", "armS_seg2",  Orientation.East),
+            ("armS_seg2",  "armSE_seg2", Orientation.East),
+            ("armNW_seg2", "armN_seg2",  Orientation.East),
+            ("armN_seg2",  "armNE_seg2", Orientation.East),
+            ("armNW_seg2", "armW_seg2",  Orientation.South),
+            ("armW_seg2",  "armSW_seg2", Orientation.South),
+            ("armNE_seg2", "armE_seg2",  Orientation.South),
+            ("armE_seg2",  "armSE_seg2", Orientation.South),
+        }, ring.Select(s => (s.NodeId, s.ToNodeId, s.Orientation)).ToArray());
+    }
+
+    [Fact]
+    public void Reversed_ArmsStartAtTheOppositeTipsAndFaceTheOtherWay()
+    {
+        var steps = _sut.GenerateSteps(DefR(2, UnionJackRings.None, true));
+
+        Assert.Equal(("armE_seg2", "armE_seg1", Orientation.West), (steps[0].NodeId, steps[0].ToNodeId, steps[0].Orientation));
+        Assert.Equal(Orientation.West,      steps.Where(s => s.PassId == 0).Select(s => s.Orientation).Distinct().Single());
+        Assert.Equal(Orientation.North,     steps.Where(s => s.PassId == 1).Select(s => s.Orientation).Distinct().Single());
+        Assert.Equal(Orientation.NorthWest, steps.Where(s => s.PassId == 2).Select(s => s.Orientation).Distinct().Single());
+        Assert.Equal(Orientation.NorthEast, steps.Where(s => s.PassId == 3).Select(s => s.Orientation).Distinct().Single());
+        Assert.Equal("armSE_seg2", steps.First(s => s.PassId == 2).NodeId);
+        Assert.Equal("armSW_seg2", steps.First(s => s.PassId == 3).NodeId);
+    }
+
+    [Theory]
+    [InlineData(1, UnionJackRings.Full)]
+    [InlineData(3, UnionJackRings.Full)]
+    [InlineData(2, UnionJackRings.Circumference)]
+    public void Reversed_IsThePointMirrorOfTheNormalWalk(int segments, UnionJackRings rings)
+    {
+        static string Mirror(string id)
+        {
+            if (id == "center") return id;
+            int sep = id.IndexOf("_seg", StringComparison.Ordinal);
+            string dir = id[3..sep];
+            string m = dir switch { "E" => "W", "W" => "E", "N" => "S", "S" => "N",
+                                    "NE" => "SW", "SW" => "NE", "NW" => "SE", _ => "NW" };
+            return "arm" + m + id[sep..];
+        }
+
+        var normal   = _sut.GenerateSteps(DefR(segments, rings, false));
+        var reversed = _sut.GenerateSteps(DefR(segments, rings, true));
+
+        Assert.Equal(normal.Count, reversed.Count);
+        for (int i = 0; i < normal.Count; i++)
+        {
+            Assert.Equal(Mirror(normal[i].NodeId),   reversed[i].NodeId);
+            Assert.Equal(Mirror(normal[i].ToNodeId), reversed[i].ToNodeId);
+            Assert.Equal(WalkDirection.Opposite(normal[i].Orientation), reversed[i].Orientation);
+        }
+    }
+
+    [Fact]
+    public void InstructionText_NamesTheSidesActuallyMeasured_WhenReversed()
+    {
+        var steps = _sut.GenerateSteps(DefR(2, UnionJackRings.None, true));
+        Assert.Contains("E side", steps[0].InstructionText);
+        Assert.Contains("facing West", steps[0].InstructionText);
+    }
 }

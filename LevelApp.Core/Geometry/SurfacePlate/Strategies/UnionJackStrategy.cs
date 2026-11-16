@@ -20,15 +20,21 @@ namespace LevelApp.Core.Geometry.SurfacePlate.Strategies;
 ///   Arm NE, seg k:       (width/2 + k×w/(2s),  height/2 − k×h/(2s))
 ///   Arm NW, seg k:       (width/2 − k×w/(2s),  height/2 − k×h/(2s))
 ///
-/// Step sequence:
+/// Step sequence (the instrument is never turned by 180°, so a differential measurement stays possible):
 ///   Pass 0  — H arm:    W-tip → center → E-tip  (East,      2×segments steps)
 ///   Pass 1  — V arm:    N-tip → center → S-tip  (South,     2×segments steps)
 ///   Pass 2  — SE diag:  NW-tip → SE-tip          (SouthEast, 2×segments steps)
 ///   Pass 3  — NE diag:  NE-tip → SW-tip          (SouthWest, 2×segments steps)
 ///   Rings option:
 ///     None          — no further passes
-///     Circumference — pass 4: one clockwise ring at r = segments (8 steps)
+///     Circumference — pass 4: one ring at r = segments (8 steps)
 ///     Full          — passes 4…3+segments: rings r = 1…segments (8 steps each)
+///   Every ring runs its horizontal edges East (bottom edge, then top edge) and its vertical edges South
+///   (left edge, then right edge): 4 × 2 steps, a ring is not walked around.
+///
+/// With the optional <c>reverseDirection</c> parameter the whole sequence is mirrored through the plate
+/// centre (E↔W, N↔S, NE↔SW, NW↔SE): the arms start at the opposite tips and face West / North / North-West /
+/// North-East, the ring edges face the other way. The order of the steps is unchanged.
 ///
 /// Total steps:
 ///   None          = 8 × segments
@@ -50,6 +56,8 @@ public sealed class UnionJackStrategy : IMeasurementStrategy
         if (segments < 1)
             throw new ArgumentException("segments must be at least 1.", nameof(definition));
 
+        bool reversed = WalkDirection.IsReversed(definition);
+
         int ringStepCount = ringsOption switch
         {
             UnionJackRings.None          => 0,
@@ -61,100 +69,86 @@ public sealed class UnionJackStrategy : IMeasurementStrategy
         var steps = new List<MeasurementStep>(8 * segments + 8 * ringStepCount);
         int index = 0;
 
-        // ── Pass 0: Horizontal arm — W-tip → center → E-tip (East) ───────────
-        int pass = 0;
-        for (int k = segments; k >= 1; k--)
+        // Everything below is written for the normal direction. In a reversed walk every arm / diagonal name
+        // and every orientation is replaced by its point mirror before the step is created.
+        string Dir(string d) => reversed ? MirrorDirection(d) : d;
+        Orientation Facing(Orientation o) => reversed ? WalkDirection.Opposite(o) : o;
+        string Arrow(Orientation o) => Facing(o) switch
         {
-            string from = $"armW_seg{k}";
-            string to   = k == 1 ? "center" : $"armW_seg{k - 1}";
-            steps.Add(MakeStep(index++, from, to, Orientation.East, pass,
-                $"H arm — W side, seg {k}→{k - 1}, facing East"));
-        }
-        for (int k = 1; k <= segments; k++)
+            Orientation.East      => "East",
+            Orientation.West      => "West",
+            Orientation.North     => "North",
+            Orientation.South     => "South",
+            Orientation.NorthEast => "NE",
+            Orientation.NorthWest => "NW",
+            Orientation.SouthEast => "SE",
+            _                     => "SW"
+        };
+
+        // One arm pass: tip A → center → tip B along the axis (dirA is the start tip, dirB the end tip).
+        void ArmPass(int pass, string label, string dirA, string dirB, Orientation orientation)
         {
-            string from = k == 1 ? "center" : $"armE_seg{k - 1}";
-            string to   = $"armE_seg{k}";
-            steps.Add(MakeStep(index++, from, to, Orientation.East, pass,
-                $"H arm — E side, seg {k - 1}→{k}, facing East"));
+            string a = Dir(dirA), b = Dir(dirB);
+            for (int k = segments; k >= 1; k--)
+            {
+                string from = $"arm{a}_seg{k}";
+                string to   = k == 1 ? "center" : $"arm{a}_seg{k - 1}";
+                steps.Add(MakeStep(index++, from, to, Facing(orientation), pass,
+                    $"{label} — {a} side, seg {k}→{k - 1}, facing {Arrow(orientation)}"));
+            }
+            for (int k = 1; k <= segments; k++)
+            {
+                string from = k == 1 ? "center" : $"arm{b}_seg{k - 1}";
+                string to   = $"arm{b}_seg{k}";
+                steps.Add(MakeStep(index++, from, to, Facing(orientation), pass,
+                    $"{label} — {b} side, seg {k - 1}→{k}, facing {Arrow(orientation)}"));
+            }
         }
 
-        // ── Pass 1: Vertical arm — N-tip → center → S-tip (South) ────────────
-        pass = 1;
-        for (int k = segments; k >= 1; k--)
-        {
-            string from = $"armN_seg{k}";
-            string to   = k == 1 ? "center" : $"armN_seg{k - 1}";
-            steps.Add(MakeStep(index++, from, to, Orientation.South, pass,
-                $"V arm — N side, seg {k}→{k - 1}, facing South"));
-        }
-        for (int k = 1; k <= segments; k++)
-        {
-            string from = k == 1 ? "center" : $"armS_seg{k - 1}";
-            string to   = $"armS_seg{k}";
-            steps.Add(MakeStep(index++, from, to, Orientation.South, pass,
-                $"V arm — S side, seg {k - 1}→{k}, facing South"));
-        }
+        ArmPass(0, "H arm",   "W",  "E",  Orientation.East);
+        ArmPass(1, "V arm",   "N",  "S",  Orientation.South);
+        ArmPass(2, "SE diag", "NW", "SE", Orientation.SouthEast);
+        ArmPass(3, "NE diag", "NE", "SW", Orientation.SouthWest);
 
-        // ── Pass 2: SE diagonal — NW-tip → center → SE-tip (SouthEast) ──────
-        pass = 2;
-        for (int k = segments; k >= 1; k--)
-        {
-            string from = $"armNW_seg{k}";
-            string to   = k == 1 ? "center" : $"armNW_seg{k - 1}";
-            steps.Add(MakeStep(index++, from, to, Orientation.SouthEast, pass,
-                $"SE diag — NW side, seg {k}→{k - 1}, facing SE"));
-        }
-        for (int k = 1; k <= segments; k++)
-        {
-            string from = k == 1 ? "center" : $"armSE_seg{k - 1}";
-            string to   = $"armSE_seg{k}";
-            steps.Add(MakeStep(index++, from, to, Orientation.SouthEast, pass,
-                $"SE diag — SE side, seg {k - 1}→{k}, facing SE"));
-        }
-
-        // ── Pass 3: NE diagonal — NE-tip → center → SW-tip (SouthWest) ──────
-        pass = 3;
-        for (int k = segments; k >= 1; k--)
-        {
-            string from = $"armNE_seg{k}";
-            string to   = k == 1 ? "center" : $"armNE_seg{k - 1}";
-            steps.Add(MakeStep(index++, from, to, Orientation.SouthWest, pass,
-                $"NE diag — NE side, seg {k}→{k - 1}, facing SW"));
-        }
-        for (int k = 1; k <= segments; k++)
-        {
-            string from = k == 1 ? "center" : $"armSW_seg{k - 1}";
-            string to   = $"armSW_seg{k}";
-            steps.Add(MakeStep(index++, from, to, Orientation.SouthWest, pass,
-                $"NE diag — SW side, seg {k - 1}→{k}, facing SW"));
-        }
-
-        // ── Ring passes (clockwise, 8 steps each) ─────────────────────────────
+        // ── Ring passes (8 steps each, one-way edges) ─────────────────────────
         // Circumference: one ring at r = segments.
         // Full:          rings r = 1 … segments.
         int ringPassId  = 4;
         int ringStart   = ringsOption == UnionJackRings.Circumference ? segments : 1;
         int ringEnd     = ringsOption == UnionJackRings.None          ? 0        : segments;
 
+        // One edge of a ring: three nodes from → mid → to in the given orientation.
+        void Edge(int r, string a, string m, string b, Orientation orientation)
+        {
+            string da = Dir(a), dm = Dir(m), db = Dir(b);
+            string text = Arrow(orientation);
+            steps.Add(MakeStep(index++, $"arm{da}_seg{r}", $"arm{dm}_seg{r}", Facing(orientation), ringPassId,
+                $"Ring {r} — {da}→{dm} ({text})"));
+            steps.Add(MakeStep(index++, $"arm{dm}_seg{r}", $"arm{db}_seg{r}", Facing(orientation), ringPassId,
+                $"Ring {r} — {dm}→{db} ({text})"));
+        }
+
         for (int r = ringStart; r <= ringEnd; r++)
         {
-            // Bottom edge (East): SW → S → SE
-            steps.Add(MakeStep(index++, $"armSW_seg{r}", $"armS_seg{r}",  Orientation.East,  ringPassId, $"Ring {r} — SW→S (East)"));
-            steps.Add(MakeStep(index++, $"armS_seg{r}",  $"armSE_seg{r}", Orientation.East,  ringPassId, $"Ring {r} — S→SE (East)"));
-            // Right edge (North): SE → E → NE
-            steps.Add(MakeStep(index++, $"armSE_seg{r}", $"armE_seg{r}",  Orientation.North, ringPassId, $"Ring {r} — SE→E (North)"));
-            steps.Add(MakeStep(index++, $"armE_seg{r}",  $"armNE_seg{r}", Orientation.North, ringPassId, $"Ring {r} — E→NE (North)"));
-            // Top edge (West): NE → N → NW
-            steps.Add(MakeStep(index++, $"armNE_seg{r}", $"armN_seg{r}",  Orientation.West,  ringPassId, $"Ring {r} — NE→N (West)"));
-            steps.Add(MakeStep(index++, $"armN_seg{r}",  $"armNW_seg{r}", Orientation.West,  ringPassId, $"Ring {r} — N→NW (West)"));
-            // Left edge (South): NW → W → SW
-            steps.Add(MakeStep(index++, $"armNW_seg{r}", $"armW_seg{r}",  Orientation.South, ringPassId, $"Ring {r} — NW→W (South)"));
-            steps.Add(MakeStep(index++, $"armW_seg{r}",  $"armSW_seg{r}", Orientation.South, ringPassId, $"Ring {r} — W→SW (South)"));
+            Edge(r, "SW", "S", "SE", Orientation.East);    // bottom edge
+            Edge(r, "NW", "N", "NE", Orientation.East);    // top edge
+            Edge(r, "NW", "W", "SW", Orientation.South);   // left edge
+            Edge(r, "NE", "E", "SE", Orientation.South);   // right edge
             ringPassId++;
         }
 
         return steps.AsReadOnly();
     }
+
+    /// <summary>Point mirror of an arm direction: E↔W, N↔S, NE↔SW, NW↔SE.</summary>
+    private static string MirrorDirection(string d) => d switch
+    {
+        "E"  => "W",  "W"  => "E",
+        "N"  => "S",  "S"  => "N",
+        "NE" => "SW", "SW" => "NE",
+        "NW" => "SE", "SE" => "NW",
+        _    => d
+    };
 
     // ── Node position ─────────────────────────────────────────────────────────
 

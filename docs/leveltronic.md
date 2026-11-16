@@ -107,10 +107,13 @@ vibration). The app side works in **µm/m**, the unit of the guided measurement'
   5 s, tracked through the Procedures PRECISION subscription (stale `done` ignored, 1 s fallback poll,
   9 s timeout). No clean window → `InstrumentMeasurementException` ("Keep the table still and measure
   again").
-* **Zero Diff** — an **app-side** offset (the firmware has no such function; its zero is a per-sensor
-  calibration and moving it would change S1 and S2 too): a precision measurement of Diff, stored per serial,
-  subtracted from Diff for the live value, Take reading and `GetReadingAsync`. S1 and S2 are untouched. The
-  panel shows "Zeroed at x µm/m".
+* **Zero** — an **app-side** offset per channel (the firmware has no such function; its zero is a per-sensor
+  calibration and moving it would change S1 and S2 and invalidate the flip calibration): "just zero the current
+  position", not a flip reversion. A precision measurement of the **selected channel** (S1, S2 or Diff) is stored
+  per serial and channel and subtracted from that channel for the live value, Take reading and
+  `GetReadingAsync`. The channels are zeroed independently (the Diff offset is the raw S1 − S2 at that moment,
+  not S1's minus S2's). The panel shows "Zeroed at x µm/m" for the selected channel; the Live screen of the
+  management view has a *Zero* menu (S1, S2, Diff, or all three from one measurement) and *Clear all zeros*.
 
 ## 5. Management view (Instruments → Leveltronic)
 
@@ -170,7 +173,7 @@ The phase range is the firmware's +-180 deg (-18000..18000 x 0.01 deg), as on th
 ## 7. Preferences
 
 `%LOCALAPPDATA%\LevelApp\leveltronic.json` (best effort — unreadable or unwritable just means values are
-not remembered), keyed by instrument serial: Zero Diff offset (mm/m), selected channel, gain-wizard shim
+not remembered), keyed by instrument serial: zero offsets of S1, S2 and Diff (mm/m; `TareS1`, `TareS2`, and `Tare` for Diff as before), selected channel, gain-wizard shim
 height and edge length per sensor. Interface `ILeveltronicPreferences`; `JsonLeveltronicPreferences` and
 `InMemoryLeveltronicPreferences`.
 
@@ -186,7 +189,7 @@ warning.
 
 ## 9. Tests
 
-`LevelApp.Tests/Leveltronic/` — 211 tests (393 in the whole suite); the test project references only the headless project.
+`LevelApp.Tests/Leveltronic/` — 215 tests (415 in the whole suite); the test project references only the headless project.
 
 * `SimulatedLeveltronicLink` is a C# port of the phone app's simulated instrument: API v3 at frame level,
   sensor physics (excitation phasors, k / zero / phase / invert), the flip and precision state machines,
@@ -212,7 +215,7 @@ warning.
 2. Management view **Connect** over BLE and over USB: identity/serial/firmware correct, battery and
    temperatures update, RTC set to PC time.
 3. New project with the Leveltronic → the measurement panel connects; live S1 / S2 / Diff match the phone;
-   **Take reading** matches the phone's precision measurement; Zero Diff behaves.
+   **Take reading** matches the phone's precision measurement; Zero behaves on S1, S2 and Diff.
 4. Settings read/write (e.g. auto power-off); service-mode message when writing a calibration without it.
 5. With service mode on at the instrument: phase → gain → zero wizards against a known shim / flip,
    compared with the phone app on the same unit.

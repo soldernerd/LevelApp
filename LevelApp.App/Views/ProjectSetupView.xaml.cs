@@ -65,6 +65,9 @@ public sealed partial class ProjectSetupView : Page
     private void OnRingsOptionChanged(object sender, SelectionChangedEventArgs e)
         => ViewModel.SchedulePreviewUpdate(DispatcherQueue);
 
+    private void OnReverseDirectionClick(object sender, RoutedEventArgs e)
+        => ViewModel.SchedulePreviewUpdate(DispatcherQueue);
+
     // ── Geometry type ─────────────────────────────────────────────────────────
 
     private void OnGeometryChanged(object sender, SelectionChangedEventArgs e)

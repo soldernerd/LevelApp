@@ -407,6 +407,16 @@
                         </ComboBox>
                     </Grid>
 
+                    <!-- Walking direction: measure the other way -->
+                    <CheckBox x:Uid="ReverseDirection_CheckBox"
+                              Margin="0,0,0,12"
+                              IsChecked="{x:Bind ViewModel.ReverseDirection, Mode=TwoWay}"
+                              Click="OnReverseDirectionClick">
+                        <ToolTipService.ToolTip>
+                            <ToolTip x:Uid="ReverseDirection_Tooltip"/>
+                        </ToolTipService.ToolTip>
+                    </CheckBox>
+
                 </StackPanel>
 
                 <!-- Parallel Ways strategy: tasks + algorithm settings -->

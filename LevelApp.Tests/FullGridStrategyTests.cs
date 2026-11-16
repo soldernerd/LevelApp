@@ -7,17 +7,22 @@ public class FullGridStrategyTests
 {
     private readonly FullGridStrategy _sut = new();
 
-    private static ObjectDefinition Def(int cols, int rows) => new()
+    private static ObjectDefinition Def(int cols, int rows, bool reverse = false)
     {
-        GeometryModuleId = "SurfacePlate",
-        Parameters = new Dictionary<string, object>
+        var def = new ObjectDefinition
         {
-            ["columnsCount"] = cols,
-            ["rowsCount"]    = rows,
-            ["widthMm"]      = 1000.0,
-            ["heightMm"]     = 1000.0
-        }
-    };
+            GeometryModuleId = "SurfacePlate",
+            Parameters = new Dictionary<string, object>
+            {
+                ["columnsCount"] = cols,
+                ["rowsCount"]    = rows,
+                ["widthMm"]      = 1000.0,
+                ["heightMm"]     = 1000.0
+            }
+        };
+        if (reverse) def.Parameters["reverseDirection"] = true;
+        return def;
+    }
 
     // ── Step count ────────────────────────────────────────────────────────────
 
@@ -42,104 +47,136 @@ public class FullGridStrategyTests
             Assert.Equal(i, steps[i].Index);
     }
 
-    // ── Row-pass boustrophedon ─────────────────────────────────────────────────
+    // ── One-way passes (the instrument is never turned by 180°) ───────────────
 
     [Theory]
     [InlineData(4, 3)]
     [InlineData(8, 5)]
-    public void RowPass_EvenRowsGoEast_OddRowsGoWest(int cols, int rows)
+    [InlineData(2, 2)]
+    public void RowPass_EveryRowGoesEast_ColumnPass_EveryColumnGoesSouth(int cols, int rows)
     {
-        var steps = _sut.GenerateSteps(Def(cols, rows))
-                        .Where(s => s.Orientation is Orientation.East or Orientation.West);
+        var steps = _sut.GenerateSteps(Def(cols, rows));
 
-        foreach (var step in steps)
-        {
-            var expected = step.GridRow % 2 == 0 ? Orientation.East : Orientation.West;
-            Assert.Equal(expected, step.Orientation);
-        }
+        Assert.Equal(rows * (cols - 1), steps.Count(s => s.Orientation == Orientation.East));
+        Assert.Equal(cols * (rows - 1), steps.Count(s => s.Orientation == Orientation.South));
+        Assert.Equal(steps.Count, steps.Count(s => s.Orientation is Orientation.East or Orientation.South));
     }
 
     [Fact]
-    public void RowPass_ColSequenceIsBoustrophedon()
+    public void RowPass_RunsTopToBottom_EachRowLeftToRight()
     {
         int cols = 4, rows = 3;
         var steps = _sut.GenerateSteps(Def(cols, rows));
 
-        // Row 0 (East): gridCol should increase 0 → cols-2
-        var row0Cols = steps
-            .Where(s => s.GridRow == 0 && s.Orientation == Orientation.East)
-            .Select(s => s.GridCol).ToList();
-        Assert.Equal(Enumerable.Range(0, cols - 1).ToList(), row0Cols);
-
-        // Row 1 (West): gridCol should decrease cols-1 → 1
-        var row1Cols = steps
-            .Where(s => s.GridRow == 1 && s.Orientation == Orientation.West)
-            .Select(s => s.GridCol).ToList();
-        Assert.Equal(Enumerable.Range(1, cols - 1).Reverse().ToList(), row1Cols);
-    }
-
-    // ── Column-pass boustrophedon ──────────────────────────────────────────────
-
-    [Theory]
-    [InlineData(3, 3)]   // odd rows: the row pass ends bottom right
-    [InlineData(4, 3)]
-    [InlineData(8, 5)]
-    [InlineData(4, 4)]   // even rows: the row pass ends bottom left
-    [InlineData(5, 2)]
-    public void ColumnPass_StartsWhereTheRowPassEnded_MeasuringUpwards(int cols, int rows)
-    {
-        var steps = _sut.GenerateSteps(Def(cols, rows));
-        var lastRowStep = steps.Last(s => s.Orientation is Orientation.East or Orientation.West);
-        var firstColumnStep = steps.First(s => s.Orientation is Orientation.North or Orientation.South);
-
-        // The instrument ends the row pass at the to-node of the last row step ...
-        Assert.Equal(lastRowStep.ToNodeId, firstColumnStep.NodeId);
-        // ... on the bottom row, and the column pass goes up from there.
-        Assert.Equal(rows - 1, firstColumnStep.GridRow);
-        Assert.Equal(Orientation.North, firstColumnStep.Orientation);
-    }
-
-    [Theory]
-    [InlineData(3, 3)]
-    [InlineData(4, 3)]
-    [InlineData(8, 5)]
-    [InlineData(4, 4)]
-    public void ColumnPass_AlternatesNorthAndSouth_AcrossTheWholePlate(int cols, int rows)
-    {
-        var steps = _sut.GenerateSteps(Def(cols, rows))
-                        .Where(s => s.Orientation is Orientation.North or Orientation.South)
-                        .ToList();
-
-        // Columns in the order they are measured.
-        var columns = steps.Select(s => s.GridCol).Distinct().ToList();
-        Assert.Equal(cols, columns.Count);
-        bool descending = columns[0] > columns[^1];
+        var rowSteps = steps.Where(s => s.Orientation == Orientation.East).ToList();
         Assert.Equal(
-            descending ? Enumerable.Range(0, cols).Reverse().ToList() : Enumerable.Range(0, cols).ToList(),
-            columns);
+            Enumerable.Range(0, rows).SelectMany(r => Enumerable.Range(0, cols - 1).Select(c => (c, r))).ToList(),
+            rowSteps.Select(s => (s.GridCol, s.GridRow)).ToList());
+    }
 
-        for (int k = 0; k < columns.Count; k++)
+    [Fact]
+    public void ColumnPass_RunsLeftToRight_EachColumnTopToBottom()
+    {
+        int cols = 3, rows = 4;
+        var steps = _sut.GenerateSteps(Def(cols, rows));
+
+        var colSteps = steps.Where(s => s.Orientation == Orientation.South).ToList();
+        Assert.Equal(
+            Enumerable.Range(0, cols).SelectMany(c => Enumerable.Range(0, rows - 1).Select(r => (c, r))).ToList(),
+            colSteps.Select(s => (s.GridCol, s.GridRow)).ToList());
+    }
+
+    [Fact]
+    public void RowPass_PrecedesColumnPass()
+    {
+        var steps = _sut.GenerateSteps(Def(5, 4));
+        int lastRow  = steps.ToList().FindLastIndex(s => s.Orientation == Orientation.East);
+        int firstCol = steps.ToList().FindIndex(s => s.Orientation == Orientation.South);
+        Assert.True(lastRow < firstCol);
+    }
+
+    // ── Reversed direction ────────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData(4, 3)]
+    [InlineData(8, 5)]
+    [InlineData(2, 2)]
+    public void Reversed_EveryRowGoesWest_EveryColumnGoesNorth(int cols, int rows)
+    {
+        var steps = _sut.GenerateSteps(Def(cols, rows, reverse: true));
+
+        Assert.Equal(rows * (cols - 1), steps.Count(s => s.Orientation == Orientation.West));
+        Assert.Equal(cols * (rows - 1), steps.Count(s => s.Orientation == Orientation.North));
+        Assert.Equal(steps.Count, steps.Count(s => s.Orientation is Orientation.West or Orientation.North));
+    }
+
+    [Theory]
+    [InlineData(4, 3)]
+    [InlineData(8, 5)]
+    public void Reversed_IsThePointMirrorOfTheNormalWalk(int cols, int rows)
+    {
+        var normal   = _sut.GenerateSteps(Def(cols, rows));
+        var reversed = _sut.GenerateSteps(Def(cols, rows, reverse: true));
+
+        Assert.Equal(normal.Count, reversed.Count);
+        for (int i = 0; i < normal.Count; i++)
         {
-            var expected = k % 2 == 0 ? Orientation.North : Orientation.South;
-            Assert.All(steps.Where(s => s.GridCol == columns[k]), s => Assert.Equal(expected, s.Orientation));
+            Assert.Equal(cols - 1 - normal[i].GridCol, reversed[i].GridCol);
+            Assert.Equal(rows - 1 - normal[i].GridRow, reversed[i].GridRow);
+            Assert.Equal(WalkDirection.Opposite(normal[i].Orientation), reversed[i].Orientation);
+            Assert.Equal(normal[i].PassId, reversed[i].PassId);
         }
     }
 
     [Fact]
-    public void ColumnPass_RowSequenceWithinAColumn()
+    public void Reversed_StartsAtTheBottomRightCorner()
     {
-        int cols = 3, rows = 3; // odd rows: the first column is the right one (col 2), measured upwards
-        var steps = _sut.GenerateSteps(Def(cols, rows));
+        var first = _sut.GenerateSteps(Def(4, 3, reverse: true))[0];
+        Assert.Equal(3, first.GridCol);
+        Assert.Equal(2, first.GridRow);
+        Assert.Equal(Orientation.West, first.Orientation);
+    }
 
-        var col2Rows = steps
-            .Where(s => s.GridCol == 2 && s.Orientation == Orientation.North)
-            .Select(s => s.GridRow).ToList();
-        Assert.Equal(Enumerable.Range(1, rows - 1).Reverse().ToList(), col2Rows);
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SameEdges_AreMeasuredEitherWay(bool reverse)
+    {
+        // Both directions measure the same set of grid edges (as unordered pairs of nodes).
+        var edges = _sut.GenerateSteps(Def(5, 4, reverse))
+                        .Select(s => string.CompareOrdinal(s.NodeId, s.ToNodeId) < 0
+                            ? (s.NodeId, s.ToNodeId) : (s.ToNodeId, s.NodeId))
+                        .OrderBy(e => e).ToList();
+        var normal = _sut.GenerateSteps(Def(5, 4))
+                        .Select(s => string.CompareOrdinal(s.NodeId, s.ToNodeId) < 0
+                            ? (s.NodeId, s.ToNodeId) : (s.ToNodeId, s.NodeId))
+                        .OrderBy(e => e).ToList();
+        Assert.Equal(normal, edges);
+    }
 
-        var col1Rows = steps
-            .Where(s => s.GridCol == 1 && s.Orientation == Orientation.South)
-            .Select(s => s.GridRow).ToList();
-        Assert.Equal(Enumerable.Range(0, rows - 1).ToList(), col1Rows);
+    [Fact]
+    public void ReverseParameter_AcceptsStringAndDefaultsToFalse()
+    {
+        var def = Def(3, 3);
+        Assert.False(WalkDirection.IsReversed(def));
+        def.Parameters["reverseDirection"] = false;
+        Assert.False(WalkDirection.IsReversed(def));
+        def.Parameters["reverseDirection"] = true;
+        Assert.True(WalkDirection.IsReversed(def));
+        def.Parameters["reverseDirection"] = "true";
+        Assert.True(WalkDirection.IsReversed(def));
+    }
+
+    // ── Never turned by 180° ──────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void NoTwoStepsFaceOppositeDirections(bool reverse)
+    {
+        var facing = _sut.GenerateSteps(Def(6, 5, reverse)).Select(s => s.Orientation).Distinct().ToList();
+        foreach (var o in facing)
+            Assert.DoesNotContain(WalkDirection.Opposite(o), facing);
     }
 
     // ── Grid bounds ───────────────────────────────────────────────────────────

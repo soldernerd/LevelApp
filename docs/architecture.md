@@ -160,7 +160,7 @@ LevelApp/
 │   ├── LiveFeed.cs                   ← LIVE + STATUS + ENV merged into an InstrumentSnapshot
 │   ├── PrecisionRun.cs               ← one triggered precision measurement (Procedures PRECISION)
 │   ├── LeveltronicSession.cs         ← link + client + API + feed; LeveltronicSessionManager (one session per instrument, leases)
-│   ├── LeveltronicProvider.cs        ← IInstrumentProvider + ILiveReadingSource (S1/S2/Diff, measure, Zero Diff), BLE auto-reconnect
+│   ├── LeveltronicProvider.cs        ← IInstrumentProvider + ILiveReadingSource (S1/S2/Diff, measure, per-channel zero), BLE auto-reconnect
 │   ├── LeveltronicFirmwareUpdater.cs ← IFirmwareUpdater over USB DFU (REBOOT_DFU is service-gated → DfuSession)
 │   ├── Preferences/LeveltronicPreferences.cs ← ILeveltronicPreferences; JSON store %LOCALAPPDATA%\LevelApp\leveltronic.json
 │   └── Calibration/
@@ -214,7 +214,7 @@ LevelApp/
 │   │   ├── IWindowContext.cs         ← XamlRoot?, Hwnd, SetHwnd(), SetXamlRoot() — injected into MainViewModel
 │   │   └── WindowContext.cs          ← internal singleton impl; MainWindow calls SetHwnd/SetXamlRoot after construction
 │   ├── Controls/
-│   │   └── InstrumentReadingPanel.xaml(.cs) ← live value, channel, Take reading, Zero Diff; hidden for manual entry (WP0.20)
+│   │   └── InstrumentReadingPanel.xaml(.cs) ← live value, channel, Take reading, Zero; hidden for manual entry (WP0.20)
 │   ├── Converters/
 │   │   └── BoolToVisibilityConverter.cs
 │   ├── Views/
@@ -506,6 +506,7 @@ Project
 │   └── Parameters                (Dictionary<string, object>; module interprets)
 │       ├── SurfacePlate:   widthMm, heightMm, columnsCount / rowsCount  (FullGrid)
 │       │                   widthMm, heightMm, segments, rings            (UnionJack)
+│       │                   reverseDirection (optional bool, both strategies; absent = false)
 │       └── ParallelWays:   orientation, referenceRailIndex, rails[], tasks[],
 │                           driftCorrection, solverMode
 └── Measurements[ ]
@@ -570,32 +571,33 @@ Project
 
 ### Full Grid
 
-The standard approach. Traverses all rows (boustrophedon — alternating direction to avoid instrument repositioning) then all columns. Every interior grid point is visited twice, once horizontally and once vertically.
+The standard approach. Traverses all rows then all columns, **every pass in the same direction** (rows East, columns South): the instrument is only carried back to the start of the next row or column and is never turned by 180°, which a differential measurement requires (since v0.20.33; before that the passes alternated, boustrophedon). Every interior grid point is visited twice, once horizontally and once vertically.
+
+The optional boolean parameter `reverseDirection` (setup page: *Measure in reverse direction*; absent = false) walks the whole pattern the other way: the exact point mirror through the plate centre, so rows face West starting with the bottom row, then columns face North starting with the right column. The calculation is not affected (closure loops are direction independent). `WalkDirection` (Core) holds the parameter name, the reader and `Opposite(Orientation)`.
 
 `GridCol`/`GridRow` on each step is the **from** endpoint; `Orientation` points toward the **to** endpoint.
 
 Total steps = `rows × (cols − 1) + cols × (rows − 1)`
 
 ```
-Row pass:
-  Row 0:  (0,0)→(1,0)→...→(cols-2,0)   orientation: East
-  Row 1:  (cols-1,1)→...→(1,1)          orientation: West
-  Row 2:  (0,2)→...→(cols-2,2)          orientation: East
+Row pass (every row East, top row first):
+  Row 0:  (0,0)→(1,0)→...→(cols-1,0)   orientation: East
+  Row 1:  (0,1)→...→(cols-1,1)          orientation: East
   ...
 
-Column pass (continues where the row pass ended: bottom right for an odd number of rows,
-bottom left for an even number; the first column is measured upwards from there, the next downwards, ...):
-  rows odd:   Col cols-1: (cols-1,rows-1)→...→(cols-1,1)   orientation: North
-              Col cols-2: (cols-2,0)→...→(cols-2,rows-2)    orientation: South
-              ...  ending at column 0
-  rows even:  the same, starting at column 0 and moving right
+Column pass (every column South, left column first):
+  Col 0:  (0,0)→(0,1)→...→(0,rows-1)   orientation: South
+  Col 1:  (1,0)→...→(1,rows-1)          orientation: South
+  ...
+
+reverseDirection = true: the mirror image of the above (West, bottom row first; North, right column first).
 ```
 
 
 
 ### Union Jack
 
-Eight arms radiate from the centre node in the cardinal and diagonal directions (N, NE, E, SE, S, SW, W, NW). Each arm is divided into a configurable number of equal segments. Two ring variants are supported:
+Eight arms radiate from the centre node in the cardinal and diagonal directions (N, NE, E, SE, S, SW, W, NW). Each arm is divided into a configurable number of equal segments. The arms are walked tip to tip (East, South, South-East, South-West) and every ring edge is measured one way (bottom and top edges East, left and right edges South), so the instrument is never turned by 180° (since v0.20.33). `reverseDirection` mirrors the whole sequence through the centre (arms start at the opposite tips and face West, North, North-West, North-East; the ring edges face the other way). Two ring variants are supported:
 
 - **Full** — a complete circumference ring is added, creating closure loops between adjacent arm tips. The solver can compute closure errors for each loop, and the Measurements tab colour-codes each triangular sector by its closure error relative to σ.
 - **Circumference** — only the eight arms are measured (no ring). There are no closure loops and no loop-error colour coding.
@@ -1294,7 +1296,7 @@ public static class AppVersion
 {
     public const int Major = 0;
     public const int Minor = 20;
-    public const int Patch = 32;
+    public const int Patch = 33;
 
     public static string Full    => $"{Major}.{Minor}.{Patch}";
     public static string Display => $"v{Full}";
@@ -1361,4 +1363,5 @@ When starting a new session with an AI assistant, paste this document as context
 - **v0.20.9–0.20.30 — measuring workflow and Leveltronic polish.** *Measuring:* every accepted reading is auto-saved (`MainViewModel.AutoSaveAsync`, atomic temp-file writes; projects without a file go to `%LOCALAPPDATA%\LevelApp
 ecovery`, offered at start); unfinished measurements are resumed at the first step without a reading (`MeasurementSession.IsUnfinished`); the results page has a measurement pull-down, *Measure again* (last strategy) and *With a different strategy…* (setup page of the loaded project, which then asks only for instrument and strategy); `MeasurementSession.StrategyParameters` carries each measurement's own geometry (`Project.DefinitionFor(session)` replaces, never merges, the project's) so one project can mix strategies; sessions also record `InstrumentName`, `InstrumentTechnicalId` and `InstrumentDetails` (`IInstrumentDetails`); Project tab on the results page (editable project name / operator / notes and measurement names); Full Grid column pass continues where the row pass ended; legacy files without node ids are repaired on load (`LegacyProjectRepair`). *Instruments:* `IInstrumentChoiceCatalog` keeps one provider per device so the instrument stays connected between measurements; `IDeviceManagementHost` gives the device list a Connect / Disconnect per device and shows the connected device's actions and surface only while connected; `KnownDevice.TechnicalName`; `IScanDiagnostics`. *Leveltronic:* the client keeps one request in flight (the firmware drops back-to-back requests, see `docs/leveltronic.md`), BLE service / characteristic lookups are retried, live screen / scope / diagnostics tabs in a `TabView`, Precision comparison, wizard pages rebuilt at most 10 times a second with stable buttons, dark wizard look with the animated `InstrumentDiagram`, calibration hub with numbered cards. **Verified on hardware (USB and BLE) as far as the session could; not otherwise tested by a user beyond the changes confirmed in the log of this session.**
 - **v0.20.31 — small screens.** The Instruments page and the measurement / correction side panels scroll.
+- **v0.20.33 — one-way measuring, reverse direction, zero for every channel.** *Strategies:* Full Grid rows always face East and columns South, Union Jack arms East / South / South-East / South-West and ring edges one way (bottom and top East, left and right South), so the instrument is never turned by 180° between two steps; the optional parameter `reverseDirection` (checkbox *Measure in reverse direction* on the setup page, carried over from the project's latest measurement) mirrors the walk through the centre. Steps of existing projects keep their stored order and orientations. *Leveltronic:* the app-side zero (a precision measurement stored per serial, not a calibration) now exists for S1 and S2 as well as Diff: `ILeveltronicPreferences.GetTare/SetTare(serial, channelId)` (`PreferenceEntry.TareS1/TareS2`; the old `Tare` stays the Diff offset), `LeveltronicProvider.SupportsZero` is true for every channel, the panel button is just *Zero*, and the Live screen's *Zero* menu offers S1, S2, Diff or all three with *Clear all zeros*.
 - **v0.20.32 — API 3.2: noise figures on the Diagnostics tab.** Firmware 0.15.1 adds Topics `NOISE` (`0x5/0x06`) and Commands `NOISE_RESET` (`0x1/0x53`). `NoiseFigures` (52 B decoder, `StepOverFloor`, `IsDoubtful` at √6), `InstrumentApi.SubscribeNoise` / `NoiseResetAsync`, `DiagnosticsMath` formatting (mm/m → µm/m), `ApiV3Codec.KnownApiMinor` = 2. `DiagnosticsViewModel` gains a noise table (S1, S2, Diff: σ, peak–peak, quadrature σ, step ÷ floor with Steady / Doubtful / Learning), the 10 s window progress and a *Restart window* command; subscribed only while the tab shows, skipped (with a note) when `DeviceIdentity.AtLeast(3, 2)` is false. The simulator models the window, the floors and `NOISE_RESET`. See `docs/leveltronic.md`. **Not run against firmware 0.15.1 hardware.**
