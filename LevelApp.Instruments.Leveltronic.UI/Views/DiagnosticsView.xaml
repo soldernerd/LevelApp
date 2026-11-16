@@ -51,6 +51,29 @@
                 </StackPanel>
             </Border>
         </DataTemplate>
+
+        <!-- One line of the noise table: sigma, peak-peak, quadrature, step / floor with verdict -->
+        <DataTemplate x:Key="NoiseRowTemplate" x:DataType="vm:NoiseRow">
+            <Grid Padding="0,6" ColumnSpacing="8" ColumnDefinitions="1.5*,*,*,*,1.2*">
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold"/>
+                    <TextBlock Text="{x:Bind FloorText, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                </StackPanel>
+                <TextBlock Grid.Column="1" Text="{x:Bind SigmaText, Mode=OneWay}"/>
+                <TextBlock Grid.Column="2" Text="{x:Bind P2pText, Mode=OneWay}"/>
+                <TextBlock Grid.Column="3" Text="{x:Bind QuadText, Mode=OneWay}"/>
+                <StackPanel Grid.Column="4">
+                    <TextBlock Text="{x:Bind RatioText, Mode=OneWay}"/>
+                    <TextBlock Text="{x:Bind VerdictText, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               Visibility="{x:Bind IsDoubtful, Mode=OneWay, Converter={StaticResource Vis}, ConverterParameter=invert}"/>
+                    <TextBlock Text="{x:Bind VerdictText, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}"
+                               FontWeight="SemiBold" Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                               Visibility="{x:Bind IsDoubtful, Mode=OneWay, Converter={StaticResource Vis}}"/>
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
     </UserControl.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -79,6 +102,52 @@
                         <TextBlock Grid.Column="0" Text="S2"/>
                         <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.TheoreticalTiltS2Text, Mode=OneWay}"/>
                     </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Noise of the raw batch readings (API 3.2) -->
+            <Border Padding="14" CornerRadius="6"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                <StackPanel Spacing="8">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0" Text="Noise" FontSize="18" FontWeight="Bold"/>
+                        <Button Grid.Column="1" Content="Restart window"
+                                Command="{x:Bind ViewModel.RestartNoiseWindowCommand}"
+                                IsEnabled="{x:Bind ViewModel.NoiseSupported, Mode=OneWay}"
+                                ToolTipService.ToolTip="Start a fresh 10 s window, to read the noise since you touched the table. The quiet floors are kept."/>
+                    </Grid>
+
+                    <TextBlock TextWrapping="Wrap" LineHeight="20"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               Text="Noise of the raw, unsmoothed batch readings (about 40 per second) over the last 10 s, in µm/m: the standard deviation (σ) and the peak-to-peak spread. Quadrature is the part of the signal that is not tilt, so it shows sensor noise independent of real movement. A reading is flagged doubtful when its step ÷ floor exceeds 2.45×."/>
+
+                    <TextBlock TextWrapping="Wrap" Text="{x:Bind ViewModel.NoiseNote, Mode=OneWay}"
+                               Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                               Visibility="{x:Bind ViewModel.NoiseNoteVisible, Mode=OneWay, Converter={StaticResource Vis}}"/>
+
+                    <StackPanel Spacing="4"
+                                Visibility="{x:Bind ViewModel.HasNoiseSample, Mode=OneWay, Converter={StaticResource Vis}}">
+                        <TextBlock Text="{x:Bind ViewModel.NoiseWindowText, Mode=OneWay}"
+                                   Style="{StaticResource CaptionTextBlockStyle}"/>
+                        <ProgressBar Minimum="0" Maximum="1" Value="{x:Bind ViewModel.NoiseWindowFraction, Mode=OneWay}"
+                                     Visibility="{x:Bind ViewModel.NoiseValid, Mode=OneWay, Converter={StaticResource Vis}, ConverterParameter=invert}"/>
+                    </StackPanel>
+
+                    <StackPanel Spacing="2"
+                                Visibility="{x:Bind ViewModel.ShowNoiseTable, Mode=OneWay, Converter={StaticResource Vis}}">
+                        <Grid ColumnSpacing="8" ColumnDefinitions="1.5*,*,*,*,1.2*" Opacity="0.7">
+                            <TextBlock Grid.Column="0" Text="SENSOR" Style="{StaticResource CaptionTextBlockStyle}"/>
+                            <TextBlock Grid.Column="1" Text="σ" Style="{StaticResource CaptionTextBlockStyle}"/>
+                            <TextBlock Grid.Column="2" Text="PEAK–PEAK" Style="{StaticResource CaptionTextBlockStyle}"/>
+                            <TextBlock Grid.Column="3" Text="QUADRATURE σ" Style="{StaticResource CaptionTextBlockStyle}"/>
+                            <TextBlock Grid.Column="4" Text="STEP ÷ FLOOR" Style="{StaticResource CaptionTextBlockStyle}"/>
+                        </Grid>
+                        <ItemsControl ItemsSource="{x:Bind ViewModel.NoiseRows}"
+                                      ItemTemplate="{StaticResource NoiseRowTemplate}"/>
+                        <TextBlock Text="{x:Bind ViewModel.NoiseFloorsText, Mode=OneWay}" TextWrapping="Wrap"
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}" Margin="0,6,0,0"/>
+                    </StackPanel>
                 </StackPanel>
             </Border>
         </StackPanel>

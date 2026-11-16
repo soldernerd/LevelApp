@@ -204,6 +204,54 @@ public sealed record SignalDiag(
 }
 
 /// <summary>
+/// Topics NOISE (API 3.2, 52 bytes): noise figures of the RAW, unsmoothed batch readings (about
+/// 40.7/s) over a sliding 10 s window (407 batches). Everything in mm/m, sign-corrected like the
+/// readings. They are meaningful only while <see cref="Valid"/>; <see cref="Floor"/> and
+/// <see cref="Step"/> read 0 until <see cref="FloorsReady"/>.
+/// </summary>
+/// <param name="Valid">The 10 s window is full.</param>
+/// <param name="FloorsReady">The quiet floors rest on two independent windows.</param>
+/// <param name="WindowBatches">Batches the figures are based on (407 when valid).</param>
+/// <param name="Sigma">Sample standard deviation over the window: S1, S2, Diff (= S1 − S2).</param>
+/// <param name="P2p">Maximum minus minimum over the window: S1, S2, Diff.</param>
+/// <param name="Quad">Standard deviation of the quadrature part Im(x) on the tilt scale: S1, S2. Independent of the tilt, so it separates sensor noise from real movement.</param>
+/// <param name="Floor">The instrument's quiet level, rms of the batch-to-batch step of Im(x): S1, S2.</param>
+/// <param name="Step">The same step over the newest 25 batches: S1, S2.</param>
+public sealed record NoiseFigures(
+    bool Valid, bool FloorsReady, int WindowBatches,
+    IReadOnlyList<double> Sigma, IReadOnlyList<double> P2p, IReadOnlyList<double> Quad,
+    IReadOnlyList<double> Floor, IReadOnlyList<double> Step)
+{
+    /// <summary>Batches in a full window (10 s at about 40.7 batches/s).</summary>
+    public const int FullWindowBatches = 407;
+
+    /// <summary>A reading is flagged doubtful when step &gt; √6 × floor (about 2.45×).</summary>
+    public static readonly double DoubtfulRatio = Math.Sqrt(6);
+
+    /// <summary>step / floor of sensor <paramref name="i"/> (0 = S1, 1 = S2), or null until the floors are known.</summary>
+    public double? StepOverFloor(int i) =>
+        FloorsReady && Floor[i] > 0 ? Step[i] / Floor[i] : null;
+
+    /// <summary>Whether the firmware would flag sensor <paramref name="i"/> doubtful right now.</summary>
+    public bool IsDoubtful(int i) => StepOverFloor(i) is { } r && r > DoubtfulRatio;
+
+    public static NoiseFigures? Decode(ReadOnlySpan<byte> d)
+    {
+        if (d.Length < 52) return null;
+        return new NoiseFigures(
+            d[0] != 0, d[1] != 0, BinaryPrimitives.ReadUInt16LittleEndian(d[2..]),
+            Floats(d, 4, 3), Floats(d, 16, 3), Floats(d, 28, 2), Floats(d, 36, 2), Floats(d, 44, 2));
+    }
+
+    private static double[] Floats(ReadOnlySpan<byte> d, int off, int n)
+    {
+        var v = new double[n];
+        for (int i = 0; i < n; i++) v[i] = Wire.F32(d, off + 4 * i);
+        return v;
+    }
+}
+
+/// <summary>
 /// One Topics PHASOR_STREAM push: the raw phasors of a 64-cycle batch (34 bytes). Since firmware
 /// 0.13.0 the wire order follows the ADC channels: S2, B, A, S1 (I then Q of each), then the sequence number.
 /// </summary>

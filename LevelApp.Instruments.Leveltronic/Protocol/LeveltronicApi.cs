@@ -58,6 +58,7 @@ public static class LeveltronicApi
         public const byte FactoryDefaults = 0x60; // service mode
         public const byte ClearCounters = 0x61;
         public const byte ServiceEnd = 0x62;
+        public const byte NoiseReset = 0x53;      // API 3.2
         public const byte TestBeep = 0x70;
     }
 
@@ -71,6 +72,7 @@ public static class LeveltronicApi
         public const byte Raw = 0x03;
         public const byte PhasorStream = 0x04;
         public const byte SignalDiag = 0x05;
+        public const byte Noise = 0x06;           // API 3.2
     }
 
     // ── Procedures (0x9) ─────────────────────────────────────────────────────

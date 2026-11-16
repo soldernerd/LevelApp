@@ -16,7 +16,9 @@ References (kept in the other repositories):
 | Reference host library | firmware `PythonTestCode/apiv3.py`, `apiv3_defs.py` |
 | Reference client with the same feature set | phone app `LevelAppMobile` (`lib/devices/leveltronic/`) |
 
-Only **firmware 0.11 and later (API v3)** is supported. v3 was a deliberate one-time break from v2; a v2
+Only **firmware 0.11 and later (API v3)** is supported; **API 3.2 (firmware 0.15.1)** adds the noise figures
+(see §5). The API version is `major.minor` (IDENTITY `api_version` + `api_minor`, since 3.1); a client for 3.n works
+with every 3.m, m ≥ n, so older firmware simply lacks the newer resources (`DeviceIdentity.AtLeast(3, 2)`). v3 was a deliberate one-time break from v2; a v2
 firmware is refused on connect ("This instrument speaks API v2 … needs API v3").
 
 ---
@@ -61,9 +63,9 @@ Resources the app uses (ids in `LeveltronicApi`, rows in `ValueCatalog`):
 | Area | Resources |
 |---|---|
 | System | IDENTITY `0x00` (50 B: fw, `api_version`, `max_payload`, product, serial, build), STATE `0x01`, HEALTH `0x02`, RTC `0x03` |
-| Topics | LIVE `0x02` (tilt S1/S2/Diff in mm/m + flags), STATUS `0x01`, ENV `0x00`, SIGNAL_DIAG `0x05`, PHASOR_STREAM `0x04` |
+| Topics | LIVE `0x02` (tilt S1/S2/Diff in mm/m + flags), STATUS `0x01`, ENV `0x00`, SIGNAL_DIAG `0x05`, PHASOR_STREAM `0x04`, NOISE `0x06` (API 3.2) |
 | Procedures | ZERO_CAL `0x00`, PRECISION `0x01` (status + result, subscribable) |
-| Commands | POWER_OFF `0x40`, REBOOT `0x41`, REBOOT_DFU `0x42`*, FORCE_CHARGE `0x43`, END_CHARGING `0x44`, CHARGE_INHIBIT `0x45`, TILT_DEMOD `0x50`, ZERO_CAL `0x51`*, PRECISION `0x52`, FACTORY_DEFAULTS `0x60`*, CLEAR_COUNTERS `0x61`, SERVICE_END `0x62`, TEST_BEEP `0x70` (* service mode) |
+| Commands | POWER_OFF `0x40`, REBOOT `0x41`, REBOOT_DFU `0x42`*, FORCE_CHARGE `0x43`, END_CHARGING `0x44`, CHARGE_INHIBIT `0x45`, TILT_DEMOD `0x50`, ZERO_CAL `0x51`*, PRECISION `0x52`, FACTORY_DEFAULTS `0x60`*, CLEAR_COUNTERS `0x61`, SERVICE_END `0x62`, NOISE_RESET `0x53` (API 3.2), TEST_BEEP `0x70` (* service mode) |
 | Settings | auto power-off, charge/battery thresholds, encoder, task periods (`0x40`–`0x61`) |
 | Calibrations | S1/S2 k, zero, phase, invert (`0x40`–`0x47`), battery divider, clock trim, temperature sensors — all service-gated |
 
@@ -120,9 +122,30 @@ Connect / Disconnect on a shared session, a service-mode card (with Leave), and 
 | Settings | catalog rows with range validation, per-row Read / Write; optional resources hidden when the firmware answers UNKNOWN_RESOURCE |
 | Actions | power off, reboot, force / end charge, inhibit / allow charging, test beep, clear counters, leave service mode, reboot to DFU, factory defaults (the destructive ones confirm) |
 | Calibration values | all calibration rows; reading is always allowed, writing needs service mode |
-| Diagnostics | SIGNAL_DIAG (subscribed only while the tab shows): RMS, peak-to-peak, phase per converter channel, theoretical tilt |
+| Diagnostics | SIGNAL_DIAG (500 ms) and NOISE (1 s), both subscribed only while the tab shows: RMS, peak-to-peak, phase per converter channel, calibrated phase, theoretical tilt; and the **noise card** (below) |
 
 `SERVICE_MODE_REQUIRED` anywhere becomes the instruction to switch service mode on at the instrument.
+
+### Noise figures (API 3.2)
+
+The Diagnostics tab has a **Noise** card fed by Topics NOISE (`0x5/0x06`, 52 B, about once a second): noise of the
+**raw, unsmoothed batch readings** (about 40.7 per second) over a sliding 10 s window of 407 batches. Unlike anything
+computed from LIVE (smoothed to about 4 Hz) these do not depend on the display bandwidth. The instrument reports
+mm/m; the card shows µm/m, the unit of the readings.
+
+| Column | Meaning |
+|---|---|
+| σ | sample standard deviation over the window: S1, S2, Diff (= S1 − S2) |
+| Peak–peak | maximum minus minimum over the window |
+| Quadrature σ | standard deviation of the quadrature part Im(x) of the sensor ratio on the tilt scale (S1, S2): independent of the tilt, so it separates sensor noise from real movement |
+| Step ÷ floor | the measure behind the *doubtful* flag: rms of the batch-to-batch step of Im(x) over the newest 25 batches (`step`) over the instrument's quiet level (`floor`, a running estimate). Above √6 (about 2.45×) the reading is flagged doubtful; the card says **Steady**, **Doubtful** or **Learning** |
+
+The figures are meaningful only while `valid` = 1 (the window is full): for 10 s after a start, a gap in the batch
+series, a degenerate batch or **Restart window** (Commands NOISE_RESET) the card shows the window filling instead.
+`floors_ready` = 0 until the quiet floor rests on two independent windows; step ÷ floor shows “—” (Learning) until then.
+**Restart window** starts a fresh window so “noise since I touched the table” can be read cleanly; the quiet floors are
+kept. Needs the demodulation running. Firmware older than API 3.2 shows a note instead (the subscription is not even
+attempted) and the button is disabled; an `UNKNOWN_RESOURCE` answer is handled the same way.
 
 ## 6. Calibration wizards (Instruments → Leveltronic → Calibration)
 
@@ -163,7 +186,7 @@ warning.
 
 ## 9. Tests
 
-`LevelApp.Tests/Leveltronic/` — 133 tests; the test project references only the headless project.
+`LevelApp.Tests/Leveltronic/` — 211 tests (393 in the whole suite); the test project references only the headless project.
 
 * `SimulatedLeveltronicLink` is a C# port of the phone app's simulated instrument: API v3 at frame level,
   sensor physics (excitation phasors, k / zero / phase / invert), the flip and precision state machines,
@@ -194,7 +217,8 @@ warning.
 5. With service mode on at the instrument: phase → gain → zero wizards against a known shim / flip,
    compared with the phone app on the same unit.
 6. Check the Diagnostics channel labels (firmware reference: S2, B, A, S1; the phone shows A, B, S1, S2).
-7. BLE: walk out of range and back — the connection bar should show Connecting and recover.
+7. Diagnostics tab on firmware 0.15.1+: the Noise card fills over 10 s; tap the table and watch Step ÷ floor go to Doubtful; **Restart window** empties and refills it; on an older firmware a note replaces the table.
+8. BLE: walk out of range and back — the connection bar should show Connecting and recover.
 
 ## One request at a time
 

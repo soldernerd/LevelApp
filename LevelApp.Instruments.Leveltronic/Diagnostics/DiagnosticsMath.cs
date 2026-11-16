@@ -33,6 +33,35 @@ public static class DiagnosticsMath
     public static string FormatTilt(double v) =>
         double.IsFinite(v) ? FormatSigned(v, 4) : "––.––––";
 
+    /// <summary>
+    /// A noise figure given in mm/m, shown in µm/m (the unit of the readings) with two decimals
+    /// below 100 µm/m and one above; "—" when not finite.
+    /// </summary>
+    public static string FormatNoise(double mmPerM)
+    {
+        if (!double.IsFinite(mmPerM)) return "—";
+        double um = mmPerM * 1000.0;
+        return um.ToString(Math.Abs(um) < 100 ? "0.00" : "0.0", CultureInfo.InvariantCulture) + " µm/m";
+    }
+
+    /// <summary>"1.8×", or "—" while the quiet floors are not known.</summary>
+    public static string FormatRatio(double? ratio) =>
+        ratio is { } r && double.IsFinite(r) ? r.ToString("0.0", CultureInfo.InvariantCulture) + "×" : "—";
+
+    /// <summary>
+    /// Progress of the 10 s noise window: "Window full" or "Window filling 120 / 407 batches (3 s)".
+    /// </summary>
+    public static string FormatWindow(bool valid, int batches, int full = 407)
+    {
+        if (valid) return "Window full (last 10 s)";
+        double seconds = batches * 10.0 / Math.Max(1, full);
+        return $"Window filling {batches} / {full} batches ({seconds.ToString("0", CultureInfo.InvariantCulture)} s)";
+    }
+
+    /// <summary>The 0…1 fill of the noise window, for a progress bar.</summary>
+    public static double WindowFraction(bool valid, int batches, int full = 407) =>
+        valid ? 1 : Math.Clamp((double)batches / Math.Max(1, full), 0, 1);
+
     /// <summary>"PGA ×16", or empty where the firmware cannot tell.</summary>
     public static string FormatPga(long? pga) => pga is { } p ? $"PGA ×{p}" : "";
 

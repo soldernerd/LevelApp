@@ -34,6 +34,7 @@ internal sealed class SimulatedLeveltronicLink : ILeveltronicLink
         Noise = noise;
         Product = product;
         _boot = time.GetUtcNow();
+        _noiseSince = _boot;
         ResetDefaults();
     }
 
@@ -57,6 +58,18 @@ internal sealed class SimulatedLeveltronicLink : ILeveltronicLink
 
     /// <summary>Marks the readings doubtful (vibration).</summary>
     public bool Disturbed { get; set; }
+
+    /// <summary>Topics NOISE: the quiet floors are established (false = "learning", floor/step read 0).</summary>
+    public bool NoiseFloorsReady { get; set; } = true;
+
+    /// <summary>Topics NOISE: sample standard deviation of S1 and S2 over the window, mm/m.</summary>
+    public double[] NoiseSigma { get; set; } = [0.0004, 0.0005];
+
+    /// <summary>Topics NOISE: quiet floor of the Im(x) step of S1 and S2, mm/m.</summary>
+    public double[] NoiseFloor { get; set; } = [0.0002, 0.00025];
+
+    /// <summary>Number of NOISE_RESET commands received.</summary>
+    public int NoiseResets { get; private set; }
 
     /// <summary>Makes a precision measurement never find a clean window.</summary>
     public bool PrecisionNeverClean { get; set; }
@@ -192,6 +205,11 @@ internal sealed class SimulatedLeveltronicLink : ILeveltronicLink
     private const int PTarget = 81;
 
     private bool _rotated; // physical tilt negated during flip step 2
+
+    // Topics NOISE: the sliding 10 s window restarts at a (re)start of the demodulation or a NOISE_RESET.
+    private DateTimeOffset _noiseSince;
+    private const double BatchesPerSecond = 40.7;
+    private const int NoiseWindowBatches = 407;
 
     private sealed class Sub
     {
@@ -453,6 +471,7 @@ internal sealed class SimulatedLeveltronicLink : ILeveltronicLink
                 if (p.Length != 1) return (ApiStatus.BadLength, null);
                 if (_phasorActive) return (ApiStatus.BusyExclusive, null);
                 _demodRunning = p[0] != 0;
+                if (_demodRunning) _noiseSince = _time.GetUtcNow(); // a restart refills the noise window
                 return (ApiStatus.Ok, null);
             case LeveltronicApi.Cmd.ZeroCal:
                 return NeedService(() => ZeroCalCommand(p));
@@ -466,6 +485,12 @@ internal sealed class SimulatedLeveltronicLink : ILeveltronicLink
                     ResetDefaults();
                     return (ApiStatus.Ok, null);
                 });
+            case LeveltronicApi.Cmd.NoiseReset:
+                if (ApiMinor < 2) return (ApiStatus.UnknownResource, null); // API 3.2
+                if (p.Length != 0) return (ApiStatus.BadLength, null);
+                NoiseResets++;
+                _noiseSince = _time.GetUtcNow();
+                return (ApiStatus.Ok, null);
             case LeveltronicApi.Cmd.ClearCounters:
             case LeveltronicApi.Cmd.TestBeep:
                 return (ApiStatus.Ok, null);
@@ -675,6 +700,7 @@ internal sealed class SimulatedLeveltronicLink : ILeveltronicLink
             case LeveltronicApi.Topic.Status: return StateBytes();
             case LeveltronicApi.Topic.Live: return LiveBytes();
             case LeveltronicApi.Topic.SignalDiag: return DiagBytes();
+            case LeveltronicApi.Topic.Noise: return ApiMinor >= 2 ? NoiseBytes() : null;
             default: return null;
         }
     }
@@ -689,6 +715,39 @@ internal sealed class SimulatedLeveltronicLink : ILeveltronicLink
         BinaryPrimitives.WriteSingleLittleEndian(b.AsSpan(3), (float)s1);
         BinaryPrimitives.WriteSingleLittleEndian(b.AsSpan(7), (float)s2);
         BinaryPrimitives.WriteSingleLittleEndian(b.AsSpan(11), (float)(s1 - s2));
+        return b;
+    }
+
+    /// <summary>Topics NOISE (52 bytes). Zeros until the 10 s window is full, like a restarted device.</summary>
+    private byte[] NoiseBytes()
+    {
+        var b = new byte[52];
+        double seconds = Math.Max(0, (_time.GetUtcNow() - _noiseSince).TotalSeconds);
+        int batches = _demodRunning ? Math.Min(NoiseWindowBatches, (int)(seconds * BatchesPerSecond)) : 0;
+        bool valid = batches >= NoiseWindowBatches;
+        b[0] = (byte)(valid ? 1 : 0);
+        b[1] = (byte)(NoiseFloorsReady ? 1 : 0);
+        BinaryPrimitives.WriteUInt16LittleEndian(b.AsSpan(2), (ushort)batches);
+        if (!valid) return b;
+
+        double s1 = NoiseSigma[0], s2 = NoiseSigma[1];
+        double[] sigma = [s1, s2, Math.Sqrt(s1 * s1 + s2 * s2)];
+        for (int i = 0; i < 3; i++)
+        {
+            BinaryPrimitives.WriteSingleLittleEndian(b.AsSpan(4 + 4 * i), (float)sigma[i]);
+            BinaryPrimitives.WriteSingleLittleEndian(b.AsSpan(16 + 4 * i), (float)(6 * sigma[i]));
+        }
+        BinaryPrimitives.WriteSingleLittleEndian(b.AsSpan(28), (float)(0.75 * s1));
+        BinaryPrimitives.WriteSingleLittleEndian(b.AsSpan(32), (float)(0.7 * s2));
+        if (NoiseFloorsReady)
+        {
+            double k = Disturbed ? 3.2 : 1.1; // step over floor: above sqrt(6) means doubtful
+            for (int i = 0; i < 2; i++)
+            {
+                BinaryPrimitives.WriteSingleLittleEndian(b.AsSpan(36 + 4 * i), (float)NoiseFloor[i]);
+                BinaryPrimitives.WriteSingleLittleEndian(b.AsSpan(44 + 4 * i), (float)(k * NoiseFloor[i]));
+            }
+        }
         return b;
     }
 
@@ -786,8 +845,10 @@ internal sealed class SimulatedLeveltronicLink : ILeveltronicLink
         }
     }
 
-    private static ApiStatus ValidateSubscribe(ApiCategory cat, byte res)
+    private ApiStatus ValidateSubscribe(ApiCategory cat, byte res)
     {
+        if (cat == ApiCategory.Topics && res == LeveltronicApi.Topic.Noise)
+            return ApiMinor >= 2 ? ApiStatus.Ok : ApiStatus.UnknownResource;
         if (cat == ApiCategory.Topics)
             return res is LeveltronicApi.Topic.Env or LeveltronicApi.Topic.Status or LeveltronicApi.Topic.Live
                 or LeveltronicApi.Topic.SignalDiag or LeveltronicApi.Topic.PhasorStream

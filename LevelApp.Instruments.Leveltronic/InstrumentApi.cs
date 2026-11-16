@@ -109,6 +109,8 @@ public sealed class InstrumentApi(LeveltronicDeviceClient client)
     public Task SetTiltDemodAsync(bool run, CancellationToken ct = default) =>
         ExecAsync(LeveltronicApi.Cmd.TiltDemod, "tilt demodulation", [(byte)(run ? 1 : 0)], ct);
     public Task TestBeepAsync(CancellationToken ct = default) => ExecAsync(LeveltronicApi.Cmd.TestBeep, "beep", ct: ct);
+    /// <summary>Restart the 10 s noise window of Topics NOISE (API 3.2); the quiet floors are kept.</summary>
+    public Task NoiseResetAsync(CancellationToken ct = default) => ExecAsync(LeveltronicApi.Cmd.NoiseReset, "restart noise window", ct: ct);
     public Task ClearCountersAsync(CancellationToken ct = default) => ExecAsync(LeveltronicApi.Cmd.ClearCounters, "clear counters", ct: ct);
     public Task ServiceEndAsync(CancellationToken ct = default) => ExecAsync(LeveltronicApi.Cmd.ServiceEnd, "leave service mode", ct: ct);
     public Task FactoryDefaultsAsync(CancellationToken ct = default) =>
@@ -156,6 +158,11 @@ public sealed class InstrumentApi(LeveltronicDeviceClient client)
     public IDisposable SubscribeEnv(Action<Environmental> onUpdate, Action<Exception>? onError = null,
         Action? onClosed = null, int intervalMs = 2000) =>
         Sub<Environmental>(ApiCategory.Topics, LeveltronicApi.Topic.Env, d => Environmental.Decode(d), onUpdate, onError, onClosed, intervalMs);
+
+    /// <summary>Noise figures of the raw batch readings (API 3.2; older firmware refuses with UNKNOWN_RESOURCE).</summary>
+    public IDisposable SubscribeNoise(Action<NoiseFigures> onUpdate, Action<Exception>? onError = null,
+        Action? onClosed = null, int intervalMs = 1000) =>
+        Sub<NoiseFigures>(ApiCategory.Topics, LeveltronicApi.Topic.Noise, d => NoiseFigures.Decode(d), onUpdate, onError, onClosed, intervalMs);
 
     public IDisposable SubscribeSignalDiag(Action<SignalDiag> onUpdate, Action<Exception>? onError = null,
         Action? onClosed = null, int intervalMs = 500) =>
